@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify"; // ✅ Import toast
-import "react-toastify/dist/ReactToastify.css"; // ✅ Import CSS
+import { toast } from "react-toastify"; 
+import "react-toastify/dist/ReactToastify.css"; 
 import "bootstrap/dist/css/bootstrap.min.css";
 
 function AddUser() {
@@ -11,13 +11,19 @@ function AddUser() {
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [role, setRole] = useState("");
-  const [fieldWorkType, setFieldWorkType] = useState("");
+  const [fieldWorkType, setFieldWorkType] = useState(""); // Only for employees
   const navigate = useNavigate();
 
   const handleAddUser = async (e) => {
     e.preventDefault();
+    
     if (!userName || !email || !role || !phoneNumber) {
-      toast.error("Please enter all required fields."); // 🔴 Show error toast
+      toast.error("⚠️ Please enter all required fields.");
+      return;
+    }
+
+    if (role === "employee" && !fieldWorkType) {
+      toast.error("⚠️ Please select a Field Work Type for the employee.");
       return;
     }
 
@@ -28,7 +34,7 @@ function AddUser() {
       email,
       phoneNumber,
       role,
-      fieldWorkType,
+      fieldWorkType: role === "employee" ? fieldWorkType : "", // Ensure it's empty if not an employee
     };
 
     try {
@@ -39,19 +45,17 @@ function AddUser() {
       });
 
       const result = await response.json();
-      console.log("Response from server:", result); // Debugging
+      console.log("Response from server:", result); 
 
       if (result.success) {
-        toast.success("✅ User added successfully! Redirecting...");
-        setTimeout(() => {
-          navigate("/users"); // ✅ Navigate after success
-        }, 1500);
+        toast.success("✅ User added successfully!");
+        setTimeout(() => navigate("/users"), 1500);
       } else {
-        toast.error("Failed to add user");
+        toast.error("❌ Failed to add user.");
       }
     } catch (err) {
       console.error("Error adding user:", err);
-      toast.error("Error adding user");
+      toast.error("❌ Error adding user.");
     }
   };
 
@@ -97,6 +101,8 @@ function AddUser() {
           placeholder="Phone Number"
           required
         />
+
+        {/* Role Selection */}
         <select
           className="form-control"
           value={role}
@@ -108,6 +114,7 @@ function AddUser() {
           <option value="employee">Employee</option>
         </select>
 
+        {/* Field Work Type (Only for Employees) */}
         {role === "employee" && (
           <select
             className="form-control"

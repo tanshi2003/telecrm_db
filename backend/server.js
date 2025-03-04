@@ -1,25 +1,35 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const authRoutes = require('./routes/authRoutes');
-const db = require('./models'); // Import the models to sync the database
+const express = require("express");
+const cors = require("cors");
+require("dotenv").config();
+const db = require("./config/db");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
+// ✅ Middlewares
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json()); // Use built-in JSON parsing
 
-app.use('/api/auth', authRoutes);
+// ✅ Routes
+app.use("/api/auth", authRoutes);
 
-// Add a simple route for the root URL
-app.get('/', (req, res) => {
-  res.send('Server is running');
+// ✅ Test Database Connection
+db.getConnection((err, connection) => {
+    if (err) {
+        console.error("❌ Database connection failed:", err);
+        process.exit(1);
+    }
+    console.log("✅ Connected to MySQL Database!");
+    connection.release();  // Release back to pool
+});
+
+// ✅ Global Error Handling Middleware
+app.use((err, req, res, next) => {
+    console.error("❌ Server Error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
 });
 
 const PORT = process.env.PORT || 5000;
-
-db.sequelize.sync().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-  });
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
 });

@@ -4,7 +4,7 @@ import axios from "axios";
 import { useCSVReader } from "react-papaparse";
 import { io } from "socket.io-client";
 
-const Dashboard = () => {
+const AdminDashboard = () => {
   const navigate = useNavigate();
   const { CSVReader } = useCSVReader();
   const [leads, setLeads] = useState([]);
@@ -14,6 +14,7 @@ const Dashboard = () => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const socket = io("http://localhost:5000");
+  console.log("Dashboard component is rendering");
 
   const checkAdminStatus = useCallback(async () => {
     // Check if the user is an admin
@@ -175,4 +176,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default AdminDashboard;
