@@ -1,46 +1,51 @@
 const bcrypt = require("bcryptjs");
 const db = require("../config/db");
+const responseFormatter = require("../utils/responseFormatter");
 
 const createAdmin = async () => {
   try {
-    console.log("🚀 Starting admin creation...");
+    console.log(responseFormatter(true, "🚀 Starting admin creation..."));
 
     const adminEmail = "tkhandelwal03@gmail.com";
     const adminName = "Tanshi";
     const adminPassword = "admin@123";
+    const adminPhoneNo = "1234567890";
+    const adminStatus = "active";
+    const adminRole = "admin"; // Setting role as 'admin'
+    const token = null;
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
-    console.log("🔍 Checking if admin exists...");
+    console.log(responseFormatter(true, "🔍 Checking if admin exists..."));
 
     // Check if admin already exists
-    const checkSql = "SELECT * FROM users WHERE email = ?";
+    const checkSql = "SELECT * FROM Admins WHERE email = ?";
     db.query(checkSql, [adminEmail], (err, results) => {
       if (err) {
-        console.error("❌ Database error while checking admin:", err);
+        console.error(responseFormatter(false, "❌ Database error while checking admin:", err));
         return;
       }
 
-      console.log("📊 Query executed, results:", results.length);
+      console.log(responseFormatter(true, "📊 Query executed, results:", results.length));
 
       if (results.length > 0) {
-        console.log("❌ Admin already exists. No new admin added.");
+        console.log(responseFormatter(false, "❌ Admin already exists. No new admin added."));
         return;
       }
 
-      console.log("📝 Inserting new admin...");
+      console.log(responseFormatter(true, "📝 Inserting new admin..."));
 
       // Insert new admin
-      const insertSql = "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)";
-      db.query(insertSql, [adminName, adminEmail, hashedPassword, "admin"], (insertErr, result) => {
+      const insertSql = "INSERT INTO Admins (name, email, password, phone_no, status, role, token) VALUES (?, ?, ?, ?, ?, ?, ?)";
+      db.query(insertSql, [adminName, adminEmail, hashedPassword, adminPhoneNo, adminStatus, adminRole, token], (insertErr, result) => {
         if (insertErr) {
-          console.error("❌ Error inserting admin:", insertErr);
+          console.error(responseFormatter(false, "❌ Error inserting admin:", insertErr));
         } else {
-          console.log("✅ Admin created successfully!");
+          console.log(responseFormatter(true, "✅ Admin created successfully!"));
         }
       });
     });
   } catch (error) {
-    console.error("❌ Error in createAdmin function:", error);
+    console.error(responseFormatter(false, "❌ Error in createAdmin function:", error));
   }
 };
 

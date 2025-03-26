@@ -1,35 +1,52 @@
 const express = require("express");
-const cors = require("cors");
-require("dotenv").config();
+const bodyParser = require("body-parser");
+const dotenv = require("dotenv");
 const db = require("./config/db");
-const authRoutes = require("./routes/authRoutes");
 
+// Load environment variables
+dotenv.config();
+
+// Initialize express app
 const app = express();
 
-// ✅ Middlewares
-app.use(cors());
-app.use(express.json()); // Use built-in JSON parsing
+// Middleware
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// ✅ Routes
-app.use("/api/auth", authRoutes);
+// Import Routes
+const adminRoutes = require("./routes/adminRoutes");
+const userRoutes = require("./routes/userRoutes");
+const leadRoutes = require("./routes/leadRoutes");
+const campaignRoutes = require("./routes/campaignRoutes");
+const employeeRoutes = require("./routes/employeeRoutes");
 
-// ✅ Test Database Connection
-db.getConnection((err, connection) => {
-    if (err) {
-        console.error("❌ Database connection failed:", err);
-        process.exit(1);
-    }
-    console.log("✅ Connected to MySQL Database!");
-    connection.release();  // Release back to pool
+// Use Routes
+app.use("/api/admins", adminRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/leads", leadRoutes);
+app.use("/api/campaigns", campaignRoutes);
+app.use("/api/employees", employeeRoutes);
+
+// Root Endpoint
+app.get("/", (req, res) => {
+    res.json({
+        success: true,
+        message: "Welcome to the API",
+        data: null
+    });
 });
 
-// ✅ Global Error Handling Middleware
+// Error handling
 app.use((err, req, res, next) => {
-    console.error("❌ Server Error:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({
+        success: false,
+        message: err.message,
+        data: null
+    });
 });
 
+// Start the server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`✅ Server is running on port ${PORT}`);
 });
