@@ -1,0 +1,95 @@
+.footer {
+  background-color: #1e3a8a; /* Dark blue background */
+  color: white;
+  padding: 1rem 2rem; /* Reduced padding */
+  font-size: 0.9rem; /* Slightly smaller font size */
+  width: 100%; /* Ensure it spans the full width */
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.1); /* Add subtle shadow */
+}
+
+.footer-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem; /* Reduced gap between sections */
+}
+
+.footer-section {
+  flex: 1;
+  min-width: 200px; /* Ensure sections don't shrink too much */
+}
+
+.footer-section h3,
+.footer-section h4 {
+  font-size: 1.2rem; /* Reduced heading size */
+  margin-bottom: 0.5rem;
+}
+
+.footer-section p,
+.footer-section ul {
+  margin: 0.5rem 0;
+  line-height: 1.4; /* Adjusted line height for better readability */
+}
+
+.footer-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-section ul li {
+  margin-bottom: 0.3rem;
+}
+
+.footer-section ul li a {
+  color: white;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer-section ul li a:hover {
+  color: #97b2f3; /* Lighter blue on hover */
+}
+
+.footer-divider {
+  border: none;
+  border-top: 1px solid #2b6cb0; /* Subtle divider */
+  margin: 1rem 0;
+}
+
+.footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem; /* Smaller font size for bottom section */
+}
+
+.footer-bottom-links {
+  display: flex;
+  gap: 1rem;
+}
+
+.footer-bottom-links a {
+  color: white;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer-bottom-links a:hover {
+  color: #97b2f3; /* Lighter blue on hover */
+}
+
+.social-icons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.social-icons a {
+  color: white;
+  font-size: 1rem; /* Adjusted icon size */
+  transition: color 0.3s ease;
+}
+
+.social-icons a:hover {
+  color: #97b2f3; /* Lighter blue on hover */
+}
