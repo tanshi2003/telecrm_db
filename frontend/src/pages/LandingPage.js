@@ -7,16 +7,18 @@ const LandingPage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Main Content */}
-      <div className="flex-grow text-center px-6 py-20">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Welcome to TeleCRM</h1>
+      <div className="flex-grow text-center px-8 py-16"> {/* Reduced padding for upward adjustment */}
+        <h1 className="text-5xl font-bold text-gray-900 mb-6"> {/* Increased font size */}
+          Welcome to TeleCRM
+        </h1>
         <p className="text-gray-600 text-lg mb-8">
           A powerful CRM solution to streamline lead management and improve customer interactions.
         </p>
         <button
-          onClick={() => navigate('/register')}
-          className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-full text-lg font-semibold shadow hover:opacity-90 transition"
+          onClick={() => navigate('/login')}
+          className="bg-white text-black px-6 py-3 rounded-full text-lg font-semibold shadow-[0_4px_6px_rgba(0,0,255,0.3)] hover:opacity-90 transition"
         >
           Get Started
         </button>
@@ -28,7 +30,7 @@ const LandingPage = () => {
             .map((card, index) => (
               <div
                 key={index}
-                className="bg-gradient-to-r from-blue-400 to-purple-500 text-white p-6 rounded-2xl shadow-lg transition transform hover:scale-105"
+                className="bg-white text-gray-800 p-6 rounded-2xl shadow-md hover:shadow-lg transition transform hover:scale-105"
               >
                 <h3 className="text-xl font-semibold mb-2">{card.title}</h3>
                 <p className="text-sm">{card.text}</p>

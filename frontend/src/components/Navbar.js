@@ -11,11 +11,6 @@ const Navbar = () => {
     setIsLoggedIn(!!token);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    setIsLoggedIn(false);
-    navigate('/login');
-  };
 
   return (
     <nav className="bg-indigo-700 text-white px-4 py-2 flex justify-between items-center shadow-md"> {/* Reduced padding */}
@@ -30,9 +25,6 @@ const Navbar = () => {
         <button onClick={() => navigate('/contact')} className="hover:text-gray-300">Contact Us</button>
         {!isLoggedIn && (
           <button onClick={() => navigate('/login')} className="hover:text-gray-300">Login</button>
-        )}
-        {isLoggedIn && (
-          <button onClick={handleLogout} className="hover:text-gray-300">Logout</button>
         )}
       </div>
     </nav>

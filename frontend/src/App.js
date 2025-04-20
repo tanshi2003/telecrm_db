@@ -1,14 +1,18 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useContext } from "react";
+import { AuthContext } from "./context/AuthContext";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import Navbar from "./components/Navbar";
+import Sidebar from "./components/Sidebar";
 import LandingPage from "./pages/LandingPage";
 import Contact from "./pages/Contact";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
-import AdminDashboard from "./pages/AdminDashboard"; 
-import UserDashboard from "./pages/UserDashboard"; 
+import AdminDashboard from "./pages/AdminDashboard";
+import CallerDashboard from "./pages/CallerDashboard";
 import Leads from "./pages/Leads";
+import FieldDashboard from "./pages/FieldDashboard";
+import ManagerDashboard from "./pages/ManagerDashboard";
+import ProtectedRoute from "./components/ProtectedRoute";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -23,22 +27,69 @@ function ScrollToTop() {
 }
 
 function App() {
+  const { user } = useContext(AuthContext);
+
   return (
     <Router>
-      <Navbar /> {/* Navbar remains persistent across all routes */}
       <ScrollToTop />
-      <AnimatePresence mode="wait">
-        <Routes>
-          <Route path="/" element={<LandingPage />} /> {/* Default route to LandingPage */}
-          <Route path="/landingpage" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/admin-dashboard" element={<AdminDashboard />} /> 
-          <Route path="/user-dashboard" element={<UserDashboard />} /> 
-          <Route path="/leads" element={<Leads />} />
-          <Route path="/contact" element={<Contact />} /> 
-        </Routes>
-      </AnimatePresence>
+      <div className="flex min-h-screen">
+        {/* Sidebar is conditionally rendered based on user login status */}
+        {user?.isLoggedIn && <Sidebar role={user.role} />}
+        <div className={user?.isLoggedIn ? "ml-64 flex-grow" : "w-full"}>
+          <Navbar />
+          <AnimatePresence mode="wait">
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/landingpage" element={<LandingPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/contact" element={<Contact />} />
+
+              {/* Protected Routes */}
+              <Route
+                path="/admin-dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/caller-dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={["caller"]}>
+                    <CallerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/field_employee-dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={["field_employee"]}>
+                    <FieldDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/manager-dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={["manager"]}>
+                    <ManagerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/leads"
+                element={
+                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                    <Leads />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </AnimatePresence>
+        </div>
+      </div>
     </Router>
   );
 }
