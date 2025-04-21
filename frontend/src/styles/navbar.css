@@ -2,7 +2,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 1rem; /* Reduced padding */
+  padding: 2rem 12rem; /* Reduced padding */
   background-color: #1e3a8a; /* Dark blue background */
   color: white;
 }
