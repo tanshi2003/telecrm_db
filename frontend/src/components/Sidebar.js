@@ -17,6 +17,8 @@ const Sidebar = ({ user }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
 
+  const role = localStorage.getItem("role");
+
   const toggleSidebar = () => {
     setIsExpanded(!isExpanded);
   };
@@ -27,7 +29,7 @@ const Sidebar = ({ user }) => {
   };
 
   const getInitials = (name) => {
-    if (!name) return "U"; // Default to "U" for "User"
+    if (!name) return "U";
     const nameParts = name
       .trim()
       .split(/\s+/)
@@ -40,7 +42,7 @@ const Sidebar = ({ user }) => {
   };
 
   const formatRole = (role) => {
-    if (!role) return "Role"; // Default to "Role" if undefined
+    if (!role) return "Role";
     return role
       .toLowerCase()
       .split("_")
@@ -68,54 +70,24 @@ const Sidebar = ({ user }) => {
 
       {/* Sidebar Menu Items */}
       <div className="flex-1 mt-2 space-y-1">
-        <div
-          className={`flex items-center ${
-            isExpanded ? "gap-4 px-4 py-3" : "justify-center p-3"
-          } cursor-pointer text-gray-700 hover:bg-gray-100 transition-all rounded-md`}
-        >
-          <LayoutDashboard size={20} />
-          {isExpanded && <span className="text-sm font-medium">Dashboard</span>}
-        </div>
-        <div
-          className={`flex items-center ${
-            isExpanded ? "gap-4 px-4 py-3" : "justify-center p-3"
-          } cursor-pointer text-gray-700 hover:bg-gray-100 transition-all rounded-md`}
-        >
-          <UserCircle size={20} />
-          {isExpanded && <span className="text-sm font-medium">Profile</span>}
-        </div>
-        <div
-          className={`flex items-center ${
-            isExpanded ? "gap-4 px-4 py-3" : "justify-center p-3"
-          } cursor-pointer text-gray-700 hover:bg-gray-100 transition-all rounded-md`}
-        >
-          <Phone size={20} />
-          {isExpanded && <span className="text-sm font-medium">Calls</span>}
-        </div>
-        <div
-          className={`flex items-center ${
-            isExpanded ? "gap-4 px-4 py-3" : "justify-center p-3"
-          } cursor-pointer text-gray-700 hover:bg-gray-100 transition-all rounded-md`}
-        >
-          <Megaphone size={20} />
-          {isExpanded && <span className="text-sm font-medium">Campaigns</span>}
-        </div>
-        <div
-          className={`flex items-center ${
-            isExpanded ? "gap-4 px-4 py-3" : "justify-center p-3"
-          } cursor-pointer text-gray-700 hover:bg-gray-100 transition-all rounded-md`}
-        >
-          <BarChart2 size={20} />
-          {isExpanded && <span className="text-sm font-medium">Analytics</span>}
-        </div>
-        <div
-          className={`flex items-center ${
-            isExpanded ? "gap-4 px-4 py-3" : "justify-center p-3"
-          } cursor-pointer text-gray-700 hover:bg-gray-100 transition-all rounded-md`}
-        >
-          <Settings size={20} />
-          {isExpanded && <span className="text-sm font-medium">Settings</span>}
-        </div>
+        {[
+          { icon: LayoutDashboard, label: "Dashboard" },
+          { icon: UserCircle, label: "Profile" },
+          { icon: Phone, label: "Calls" },
+          { icon: Megaphone, label: "Campaigns" },
+          { icon: BarChart2, label: "Analytics" },
+          { icon: Settings, label: "Settings" },
+        ].map(({ icon: Icon, label }) => (
+          <div
+            key={label}
+            className={`flex items-center ${
+              isExpanded ? "gap-4 px-4 py-3" : "justify-center p-3"
+            } cursor-pointer text-gray-700 hover:bg-gray-100 transition-all rounded-md`}
+          >
+            <Icon size={20} />
+            {isExpanded && <span className="text-sm font-medium">{label}</span>}
+          </div>
+        ))}
       </div>
 
       {/* Profile Section */}
@@ -132,7 +104,7 @@ const Sidebar = ({ user }) => {
           {isExpanded && (
             <div className="truncate">
               <p className="text-sm font-semibold text-gray-800">{user?.name || "User"}</p>
-              <p className="text-xs text-gray-500 capitalize">{formatRole(user?.role)}</p>
+              <p className="text-xs text-gray-500 capitalize">{formatRole(role)}</p>
             </div>
           )}
         </div>

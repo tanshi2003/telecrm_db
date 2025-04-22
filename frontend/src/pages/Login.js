@@ -91,7 +91,7 @@ function Login() {
               <option value="admin">Admin</option>
               <option value="manager">Manager</option>
               <option value="caller">Caller</option>
-              <option value="field">Field Employee</option>
+              <option value="field_employee">Field Employee</option>
             </select>
 
             {/* Email Input */}
