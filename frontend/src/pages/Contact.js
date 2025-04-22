@@ -41,7 +41,7 @@ const Contact = () => {
         </section>
 
         {/* Contact Form */}
-        <section className="mt-6 w-full max-w-md bg-white p-4 rounded-lg shadow-md">
+        <section className="w-full max-w-md bg-white p-4 rounded-lg shadow-md">
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label className="block text-darkblue font-medium mb-1" htmlFor="name">Name</label>

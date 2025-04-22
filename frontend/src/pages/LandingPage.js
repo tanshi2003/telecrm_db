@@ -9,7 +9,7 @@ const LandingPage = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Main Content */}
-      <div className="flex-grow text-center px-8 py-16"> {/* Reduced padding for upward adjustment */}
+      <div className="flex-grow text-center px-8 py-16 mt-16"> {/* Added mt-16 to shift content down */}
         <h1 className="text-5xl font-bold text-gray-900 mb-6"> {/* Increased font size */}
           Welcome to TeleCRM
         </h1>

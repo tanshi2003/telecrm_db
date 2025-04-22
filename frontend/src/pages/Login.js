@@ -50,7 +50,7 @@ function Login() {
       // Update AuthContext
       login({ token, role: userRole, user });
 
-      // Debugging: Check the role
+     // Debugging: Check the role
       console.log("User Role:", userRole);
       if (userRole === "admin") {
         navigate("/admin-dashboard");

@@ -1,15 +1,26 @@
-// src/components/Navbar.js
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // State to track login status
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if the user is logged in by verifying the token in localStorage
-    const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token); // Update login status based on token presence
+    const checkLoginStatus = () => {
+      const token = localStorage.getItem('token');
+      setIsLoggedIn(!!token);
+    };
+
+    // Listen to changes in localStorage (in case of multiple tabs)
+    window.addEventListener('storage', checkLoginStatus);
+
+    // Optional: Interval checker (useful in same-tab updates)
+    const intervalId = setInterval(checkLoginStatus, 1000);
+
+    return () => {
+      window.removeEventListener('storage', checkLoginStatus);
+      clearInterval(intervalId);
+    };
   }, []);
 
   return (
@@ -26,20 +37,19 @@ const Navbar = () => {
       </div>
 
       {/* Navigation Links */}
-      <div className="space-x-3 text-base font-['Open_Sans']">
-        <button onClick={() => navigate('/landingpage')} className="hover:text-gray-300">
-          About Us
-        </button>
-        <button onClick={() => navigate('/contact')} className="hover:text-gray-300">
-          Contact Us
-        </button>
-        {/* Show Login button only if the user is not logged in */}
-        {!isLoggedIn && (
+      {!isLoggedIn && (
+        <div className="space-x-3 text-base font-['Open_Sans']">
+          <button onClick={() => navigate('/landingpage')} className="hover:text-gray-300">
+            About Us
+          </button>
+          <button onClick={() => navigate('/contact')} className="hover:text-gray-300">
+            Contact Us
+          </button>
           <button onClick={() => navigate('/login')} className="hover:text-gray-300">
             Login
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </nav>
   );
 };
