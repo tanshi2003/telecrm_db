@@ -12,6 +12,7 @@ import CallerDashboard from "./pages/CallerDashboard";
 import Leads from "./pages/Leads";
 import FieldDashboard from "./pages/FieldDashboard";
 import ManagerDashboard from "./pages/ManagerDashboard";
+import ManageCampaigns from "./pages/ManageCampaigns";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -83,6 +84,22 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["admin", "manager"]}>
                     <Leads />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/campaigns"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <ManageCampaigns />
                   </ProtectedRoute>
                 }
               />

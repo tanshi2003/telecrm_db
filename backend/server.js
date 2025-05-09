@@ -1,5 +1,4 @@
 const express = require("express");
-const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const db = require("./config/db");
@@ -12,14 +11,14 @@ const app = express();
 
 // ✅ CORS FIRST — before routes!
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
+    origin: process.env.CORS_ORIGIN || '*', // Use a more secure setting for production
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
 }));
 
 // Middleware
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json()); // Using built-in express.json instead of body-parser
+app.use(express.urlencoded({ extended: true })); // Using built-in express.urlencoded
 
 // Import Routes
 const adminRoutes = require("./routes/adminRoutes");
@@ -37,22 +36,23 @@ app.use("/api/campaigns", campaignRoutes);
 app.get("/", (req, res) => {
     res.json({
         success: true,
-        message: "Welcome to the API",
+        message: process.env.NODE_ENV === 'production' ? "Welcome to the production API" : "Welcome to the development API",
         data: null
     });
 });
 
-// Error handling
-app.use((err, req, res, next) => {
-    res.status(500).json({
-        success: false,
-        message: err.message,
-        data: null
-    });
-});
-
-// Start the server
+// Start the server (no need for DB connection in this case, pool is already managing it)
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`✅ Server is running on port ${PORT}`);
+});
+
+// Error handling (Global)
+app.use((err, req, res, next) => {
+    console.error(err.stack); // Log error for debugging
+    res.status(err.status || 500).json({
+        success: false,
+        message: err.message || "Internal Server Error",
+        data: null
+    });
 });
