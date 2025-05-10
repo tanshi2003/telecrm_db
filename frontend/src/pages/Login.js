@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Footer from "../components/Footer";
 import "../styles/auth.css";
+import { Eye, EyeOff } from "lucide-react"; // Import eye icons
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -12,6 +13,7 @@ function Login() {
   const [role, setRole] = useState("admin"); // Default role
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(""); // Error state
+  const [showPassword, setShowPassword] = useState(false); // State to toggle password visibility
 
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -43,15 +45,9 @@ function Login() {
       localStorage.setItem("role", userRole);
       localStorage.setItem("user", JSON.stringify(user));
 
-      // Debugging: Check if token and role are stored
-      console.log("Token:", localStorage.getItem("token"));
-      console.log("Role:", localStorage.getItem("role"));
-
       // Update AuthContext
       login({ token, role: userRole, user });
 
-     // Debugging: Check the role
-      console.log("User Role:", userRole);
       if (userRole === "admin") {
         navigate("/admin-dashboard");
       } else if (userRole === "manager") {
@@ -104,22 +100,36 @@ function Login() {
               className="w-full p-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
 
-            {/* Password Input */}
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full p-3 mb-6 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
+            {/* Password Input with Eye Icon */}
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"} // Toggle input type
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full p-3 mb-6 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <div
+                className="absolute right-3 top-3 cursor-pointer"
+                onClick={() => setShowPassword((prev) => !prev)} // Toggle visibility
+              >
+                {showPassword ? (
+                  <EyeOff size={20} className="text-gray-500" />
+                ) : (
+                  <Eye size={20} className="text-gray-500" />
+                )}
+              </div>
+            </div>
 
             {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
               className={`w-full py-3 font-bold rounded-full shadow-lg transition ${
-                loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-900 hover:bg-blue-700 text-white"
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-900 hover:bg-blue-700 text-white"
               }`}
             >
               {loading ? "Logging in..." : "Login"}
