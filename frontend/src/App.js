@@ -10,6 +10,8 @@ import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import CallerDashboard from "./pages/CallerDashboard";
 import Leads from "./pages/Leads";
+import Lead1 from "./pages/Lead1";
+import Excelupload from "./pages/Excelupload"; 
 import FieldDashboard from "./pages/FieldDashboard";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import ManageCampaigns from "./pages/ManageCampaigns";
@@ -103,6 +105,24 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/lead1"
+                element={
+                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                    <Lead1 />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* 🆕 Excel Upload Route */}
+              <Route
+                path="/excelupload"
+                element={
+                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                    <Excelupload />
+                  </ProtectedRoute>
+                }
+                />
             </Routes>
           </AnimatePresence>
         </div>

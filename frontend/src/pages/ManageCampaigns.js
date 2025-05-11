@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Sidebar from "../components/Sidebar";
+import BackButton from "../components/BackButton";
 
 const ManageCampaigns = () => {
   const [campaigns, setCampaigns] = useState([]);
@@ -136,6 +137,8 @@ const ManageCampaigns = () => {
 
       <div className="flex-1 ml-64 mt-16 p-6 bg-gray-100 min-h-screen">
         <h1 className="text-3xl font-bold mb-6">Manage Campaigns</h1>
+
+        <BackButton />
 
         {/* Feedback messages */}
         {successMessage && (

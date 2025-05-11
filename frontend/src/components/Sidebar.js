@@ -363,14 +363,14 @@ const Sidebar = ({ user }) => {
           </div>
           <div
             className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-            onClick={() => navigate("/lead1")}
+            onClick={() => navigate("/lead1")} // Navigate to Lead1 page
           >
             <UserPlus size={16} className="text-blue-500" />
             <span className="text-sm text-gray-800">Add Single Lead</span>
           </div>
           <div
             className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-            onClick={() => navigate("/add-from-excel")}
+            onClick={() => navigate("/excelupload")} // Navigate to Excelupload page
           >
             <FilePlus size={16} className="text-green-500" />
             <span className="text-sm text-gray-800">Add From Excel</span>

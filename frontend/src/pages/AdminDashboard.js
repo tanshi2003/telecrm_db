@@ -70,7 +70,7 @@ const AdminDashboard = () => {
             <p>Assign leads to users, filter by status, category, and campaign. Add or import leads.</p>
             <button
               className="mt-4 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
-              onClick={() => handleNavigation("/admin/leads")}
+              onClick={() => handleNavigation("/leads")} // Updated path
             >
               View Leads
             </button>
