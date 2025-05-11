@@ -46,7 +46,7 @@ const AdminDashboard = () => {
             <p>Register, assign roles, deactivate/activate users, and manage employee profiles.</p>
             <button
               className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              onClick={() => handleNavigation("/admin/users")}
+              onClick={() => handleNavigation("/admin/manage-users")}
             >
               Manage Users
             </button>

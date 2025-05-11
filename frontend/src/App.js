@@ -15,6 +15,7 @@ import Excelupload from "./pages/Excelupload";
 import FieldDashboard from "./pages/FieldDashboard";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import ManageCampaigns from "./pages/ManageCampaigns";
+import ManageUsers from "./pages/ManageUsers";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -122,7 +123,17 @@ function App() {
                     <Excelupload />
                   </ProtectedRoute>
                 }
-                />
+              />
+
+              {/* 🆕 Manage Users Route */}
+              <Route
+                path="/admin/manage-users"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <ManageUsers />
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
           </AnimatePresence>
         </div>

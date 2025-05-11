@@ -181,23 +181,33 @@ const ManageCampaigns = () => {
           {campaigns.length === 0 ? (
             <p>No campaigns available. Add a new campaign to get started.</p>
           ) : (
-            <ul>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {campaigns.map((campaign) => (
-                <li key={campaign.id} className="mb-6 border-b pb-4">
-                  <h3 className="text-lg font-semibold">{campaign.name}</h3>
-                  <p>{campaign.description}</p>
-                  <p>Status: <strong>{campaign.status}</strong></p>
-                  <p>Priority: <strong>{campaign.priority}</strong></p>
-                  <p>Start: {new Date(campaign.start_date).toLocaleDateString()}</p>
-                  <p>End: {campaign.end_date ? new Date(campaign.end_date).toLocaleDateString() : "N/A"}</p>
+                <div key={campaign.id} className="bg-white p-4 rounded-lg shadow-md">
+                  <h3 className="text-lg font-semibold mb-2">{campaign.name}</h3>
+                  <p className="text-sm text-gray-600 mb-1">Description: <strong>{campaign.description || "N/A"}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Status: <strong>{campaign.status || "N/A"}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Priority: <strong>{campaign.priority || "N/A"}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Start Date: {campaign.start_date ? new Date(campaign.start_date).toLocaleDateString() : "N/A"}</p>
+                  <p className="text-sm text-gray-600 mb-1">End Date: {campaign.end_date ? new Date(campaign.end_date).toLocaleDateString() : "N/A"}</p>
 
-                  <div className="mt-3 flex gap-2">
-                    <button onClick={() => handleEditCampaign(campaign.id)} className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">Edit</button>
-                    <button onClick={() => handleDeleteCampaign(campaign.id)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Delete</button>
+                  <div className="mt-3 flex gap-2 justify-center">
+                    <button
+                      onClick={() => handleEditCampaign(campaign.id)}
+                      className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCampaign(campaign.id)}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    >
+                      Delete
+                    </button>
                   </div>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </div>
       </div>

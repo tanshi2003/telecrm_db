@@ -187,52 +187,40 @@ const Leads = () => {
           {filteredLeads.length === 0 ? (
             <p>No leads available. Add a new lead to get started.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th className="border p-2">Lead Title</th>
-                    <th className="border p-2">Customer Name</th>
-                    <th className="border p-2">Phone Number</th>
-                    <th className="border p-2">Status</th>
-                    <th className="border p-2">Category</th>
-                    <th className="border p-2">Assigned To</th>
-                    <th className="border p-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLeads.map((lead) => (
-                    <tr key={lead.id} className="text-sm">
-                      <td className="border p-2">{lead.title || "N/A"}</td>
-                      <td className="border p-2">{lead.name || "N/A"}</td>
-                      <td className="border p-2">{lead.phone_no || "N/A"}</td>
-                      <td className="border p-2">{lead.status || "N/A"}</td>
-                      <td className="border p-2">{lead.lead_category || "N/A"}</td>
-                      <td className="border p-2">{lead.assigned_to || "N/A"}</td>
-                      <td className="border p-2 flex flex-wrap gap-2">
-                        <button
-                          className="px-2 py-1 bg-blue-500 text-white rounded"
-                          onClick={() => navigate(`/leads/${lead.id}`)}
-                        >
-                          View
-                        </button>
-                        <button
-                          className="px-2 py-1 bg-green-500 text-white rounded"
-                          onClick={() => navigate(`/leads/edit/${lead.id}`)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="px-2 py-1 bg-red-500 text-white rounded"
-                          onClick={() => console.log("Delete lead", lead.id)}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredLeads.map((lead) => (
+                <div key={lead.id} className="bg-white p-4 rounded-lg shadow-md">
+                  <h3 className="text-lg font-semibold mb-2">{lead.title || "N/A"}</h3>
+                  <p className="text-sm text-gray-600 mb-1">Customer Name: <strong>{lead.name || "N/A"}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Phone Number: <strong>{lead.phone_no || "N/A"}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Status: <strong>{lead.status || "N/A"}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Category: <strong>{lead.lead_category || "N/A"}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Assigned To: <strong>{lead.assigned_to || "N/A"}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Created At: {new Date(lead.created_at).toLocaleDateString()}</p>
+                  <p className="text-sm text-gray-600 mb-1">Updated At: {new Date(lead.updated_at).toLocaleDateString()}</p>
+
+                  <div className="mt-3 flex flex-wrap gap-2 justify-center">
+                    <button
+                      onClick={() => navigate(`/leads/${lead.id}`)}
+                      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => navigate(`/leads/edit/${lead.id}`)}
+                      className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => console.log("Delete lead", lead.id)}
+                      className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

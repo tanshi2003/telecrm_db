@@ -21,12 +21,18 @@ exports.registerUser = (req, res) => {
         total_leads = 0
     } = req.body;
 
+    // Log the incoming request body
+    console.log("Request Body:", req.body);
+
     if (!name || !email || !phone_no || !password || !role || !status) {
         return res.status(400).json({ message: "All fields are required" });
     }
 
     bcrypt.hash(password, 10, (err, hashedPassword) => {
-        if (err) return res.status(500).json({ message: "Error hashing password" });
+        if (err) {
+            console.error("Error hashing password:", err);
+            return res.status(500).json({ message: "Error hashing password" });
+        }
 
         const newUser = {
             name,
@@ -38,18 +44,27 @@ exports.registerUser = (req, res) => {
             working_hours,
             campaigns_handled,
             performance_rating,
-            manager_id,
+            manager_id: manager_id || null,
             location,
             total_leads
         };
 
+        // Log the new user object before inserting into the database
+        console.log("New User Object:", newUser);
+
         db.query("INSERT INTO Users SET ?", newUser, (err, result) => {
-            if (err) return res.status(500).json({ message: "Error registering user", error: err });
+            if (err) {
+                console.error("Error inserting user into database:", err);
+                return res.status(500).json({ message: "Error registering user", error: err });
+            }
 
             const token = jwt.sign({ id: result.insertId, role }, process.env.JWT_SECRET, { expiresIn: "24h" });
 
             db.query("UPDATE Users SET token = ? WHERE id = ?", [token, result.insertId], (err) => {
-                if (err) return res.status(500).json({ message: "Error saving token", error: err });
+                if (err) {
+                    console.error("Error saving token:", err);
+                    return res.status(500).json({ message: "Error saving token", error: err });
+                }
 
                 res.status(201).json({
                     message: "User registered successfully",
