@@ -16,6 +16,7 @@ import FieldDashboard from "./pages/FieldDashboard";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import ManageCampaigns from "./pages/ManageCampaigns";
 import ManageUsers from "./pages/ManageUsers";
+import SearchPage from "./pages/Search";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -134,6 +135,9 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
+              {/* 🆕 Search Route */}
+              <Route path="/search" element={<SearchPage />} />
             </Routes>
           </AnimatePresence>
         </div>

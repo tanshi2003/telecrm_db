@@ -6,6 +6,7 @@ import axios from "axios";
 const Leads = () => {
   const [user, setUser] = useState(null);
   const [leads, setLeads] = useState([]); // State to store leads
+  const [users, setUsers] = useState([]); // State to store users
   const [filters, setFilters] = useState({
     status: "",
     category: "",
@@ -25,9 +26,9 @@ const Leads = () => {
     }
   }, []);
 
-  // Ensure leads are fetched and displayed correctly
+  // Fetch leads and users
   useEffect(() => {
-    const fetchLeads = async () => {
+    const fetchLeadsAndUsers = async () => {
       try {
         const token = localStorage.getItem("token");
         if (!token) {
@@ -35,29 +36,49 @@ const Leads = () => {
           return;
         }
 
-        const response = await axios.get("http://localhost:5000/api/leads", {
+        // Fetch leads
+        const leadsResponse = await axios.get("http://localhost:5000/api/leads", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (response.data && response.data.data) {
-          setLeads(response.data.data); // Populate leads state
+        if (leadsResponse.data && leadsResponse.data.data) {
+          setLeads(leadsResponse.data.data); // Populate leads state
         } else {
-          console.error("Unexpected API response format:", response.data);
+          console.error("Unexpected API response format for leads:", leadsResponse.data);
+        }
+
+        // Fetch users
+        const usersResponse = await axios.get("http://localhost:5000/api/users", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (usersResponse.data && usersResponse.data.data) {
+          setUsers(usersResponse.data.data); // Populate users state
+        } else {
+          console.error("Unexpected API response format for users:", usersResponse.data);
         }
       } catch (error) {
-        console.error("Error fetching leads:", error.response?.data || error.message);
+        console.error("Error fetching leads or users:", error.response?.data || error.message);
       }
     };
 
-    fetchLeads();
+    fetchLeadsAndUsers();
   }, []);
 
   // Handle filter changes
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Map assigned_to ID to user name
+  const getAssignedUserName = (userId) => {
+    const user = users.find((u) => u.id === userId);
+    return user ? user.name : "N/A";
   };
 
   // Filtered leads based on filters
@@ -195,7 +216,7 @@ const Leads = () => {
                   <p className="text-sm text-gray-600 mb-1">Phone Number: <strong>{lead.phone_no || "N/A"}</strong></p>
                   <p className="text-sm text-gray-600 mb-1">Status: <strong>{lead.status || "N/A"}</strong></p>
                   <p className="text-sm text-gray-600 mb-1">Category: <strong>{lead.lead_category || "N/A"}</strong></p>
-                  <p className="text-sm text-gray-600 mb-1">Assigned To: <strong>{lead.assigned_to || "N/A"}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Assigned To: <strong>{getAssignedUserName(lead.assigned_to)}</strong></p>
                   <p className="text-sm text-gray-600 mb-1">Created At: {new Date(lead.created_at).toLocaleDateString()}</p>
                   <p className="text-sm text-gray-600 mb-1">Updated At: {new Date(lead.updated_at).toLocaleDateString()}</p>
 

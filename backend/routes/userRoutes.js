@@ -7,19 +7,22 @@ const roleMiddleware = require("../middlewares/role");
 // Register a new user
 router.post("/register", userController.registerUser);
 
-// Login a user 
+// Login a user
 router.post("/login", userController.loginUser);
 
 // Get all users
 router.get("/", authMiddleware, roleMiddleware(['admin']), userController.getUsers);
 
-// Update a user 
+// Get a user by ID
+router.get('/:id', authMiddleware, roleMiddleware(['admin']), userController.getUserById);
+
+// Update a user
 router.put("/:id", authMiddleware, roleMiddleware(['admin']), userController.updateUser);
 
-// Update working hours and total leads (if needed separately)
-router.put("/metrics/:id", authMiddleware, roleMiddleware(['admin']), userController.updateMetrics);
+// Update a role
+router.put("/update-role/:id", userController.updateUserRole);
 
-// Delete a user 
+// Delete a user
 router.delete("/:id", authMiddleware, roleMiddleware(['admin']), userController.deleteUser);
 
 module.exports = router;

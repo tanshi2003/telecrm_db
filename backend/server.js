@@ -25,12 +25,14 @@ const adminRoutes = require("./routes/adminRoutes");
 const userRoutes = require("./routes/userRoutes");
 const leadRoutes = require("./routes/leadRoutes");
 const campaignRoutes = require("./routes/campaignRoutes");
+const searchRoutes = require("./routes/searchRoutes"); // Import the search routes
 
 // Use Routes
 app.use("/api/admins", adminRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/campaigns", campaignRoutes);
+app.use("/api/search", searchRoutes); // Register the search route
 
 // Root Endpoint
 app.get("/", (req, res) => {

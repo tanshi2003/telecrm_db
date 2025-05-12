@@ -2,7 +2,6 @@ const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const responseFormatter = require("../utils/responseFormatter");
-const User = require("../models/User");
 
 // Register a new user
 exports.registerUser = (req, res) => {
@@ -13,12 +12,8 @@ exports.registerUser = (req, res) => {
         password,
         role,
         status,
-        working_hours = 0,
-        campaigns_handled = 0,
-        performance_rating = null,
         manager_id = null,
-        location = null,
-        total_leads = 0
+        location = null
     } = req.body;
 
     // Log the incoming request body
@@ -41,16 +36,9 @@ exports.registerUser = (req, res) => {
             password: hashedPassword,
             role,
             status,
-            working_hours,
-            campaigns_handled,
-            performance_rating,
-            manager_id: manager_id || null,
-            location,
-            total_leads
+            manager_id,
+            location
         };
-
-        // Log the new user object before inserting into the database
-        console.log("New User Object:", newUser);
 
         db.query("INSERT INTO Users SET ?", newUser, (err, result) => {
             if (err) {
@@ -75,12 +63,8 @@ exports.registerUser = (req, res) => {
                         phone_no,
                         role,
                         status,
-                        working_hours,
-                        campaigns_handled,
-                        performance_rating,
                         manager_id,
                         location,
-                        total_leads,
                         token
                     }
                 });
@@ -106,10 +90,8 @@ exports.loginUser = (req, res) => {
         bcrypt.compare(password, user.password, (err, isMatch) => {
             if (err || !isMatch) return res.status(400).json(responseFormatter(false, "Invalid email or password"));
 
-            // Generate a new JWT token
             const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "24h" });
 
-            // Update the user's token and last login timestamp in the database
             const lastLogin = new Date();
             db.query(
                 "UPDATE Users SET token = ?, last_login = ? WHERE id = ?",
@@ -117,7 +99,6 @@ exports.loginUser = (req, res) => {
                 (err) => {
                     if (err) return res.status(500).json(responseFormatter(false, "Error updating token", err));
 
-                    // Return the response with the updated user data and token
                     res.status(200).json(responseFormatter(true, "Login successful", {
                         id: user.id,
                         name: user.name,
@@ -125,12 +106,8 @@ exports.loginUser = (req, res) => {
                         phone_no: user.phone_no,
                         role: user.role,
                         status: user.status,
-                        working_hours: user.working_hours,
-                        campaigns_handled: user.campaigns_handled,
-                        performance_rating: user.performance_rating,
                         manager_id: user.manager_id,
                         location: user.location,
-                        total_leads: user.total_leads,
                         token,
                         last_login: lastLogin
                     }));
@@ -143,9 +120,9 @@ exports.loginUser = (req, res) => {
 // Get all users
 exports.getUsers = (req, res) => {
     const query = `
-        SELECT id, name, email, phone_no, role, status, working_hours, campaigns_handled,
-               performance_rating, manager_id, location, total_leads
-        FROM Users`;
+        SELECT id, name, email, role, total_leads, campaigns_handled, total_working_hours
+        FROM user_stats_view
+    `;
 
     db.query(query, (err, results) => {
         if (err) return res.status(500).json(responseFormatter(false, "Database error", err));
@@ -153,37 +130,57 @@ exports.getUsers = (req, res) => {
     });
 };
 
+// Get user by ID
+exports.getUserById = (req, res) => {
+    const { id } = req.params;
+
+    db.query("SELECT * FROM Users WHERE id = ?", [id], (err, results) => {
+        if (err) return res.status(500).json({ message: "Database error", error: err });
+        if (results.length === 0) return res.status(404).json({ message: "User not found" });
+
+        res.status(200).json({ user: results[0] });
+    });
+};
+
 // Update a user
 exports.updateUser = (req, res) => {
     const { id } = req.params;
     const {
-        name, email, phone_no, role, status, working_hours,
-        campaigns_handled, performance_rating, manager_id, location, total_leads
+        name, email, phone_no, role, status, manager_id, location
     } = req.body;
 
     const updatedUser = {
-        name, email, phone_no, role, status, working_hours,
-        campaigns_handled, performance_rating, manager_id, location, total_leads
+        name, email, phone_no, role, status, manager_id, location
     };
 
-    User.update(id, updatedUser, (err, result) => {
-        if (err) return res.status(500).json({ message: "Error updating user" });
+    db.query("UPDATE Users SET ? WHERE id = ?", [updatedUser, id], (err, result) => {
+        if (err) return res.status(500).json({ message: "Error updating user", error: err });
         if (result.affectedRows === 0) return res.status(404).json({ message: "User not found" });
 
-        res.status(200).json({ message: "User updated successfully", user: result });
+        res.status(200).json({ message: "User updated successfully" });
     });
 };
 
-// Update working hours, campaigns handled, and total leads
-exports.updateMetrics = (req, res) => {
+// Update User role
+exports.updateUserRole = (req, res) => {
     const { id } = req.params;
-    const { working_hours, campaigns_handled, total_leads } = req.body;
+    const { role } = req.body;
 
-    User.updateMetrics(id, working_hours, campaigns_handled, total_leads, (err, result) => {
-        if (err) return res.status(500).json({ message: "Error updating metrics" });
+    if (!role) {
+        return res.status(400).json({ message: "Role is required" });
+    }
+
+    db.query("UPDATE Users SET role = ? WHERE id = ?", [role, id], (err, result) => {
+        if (err) return res.status(500).json({ message: "Database error", error: err });
         if (result.affectedRows === 0) return res.status(404).json({ message: "User not found" });
 
-        res.status(200).json({ message: "Metrics updated successfully", user: result });
+        db.query("SELECT * FROM Users WHERE id = ?", [id], (err, rows) => {
+            if (err) return res.status(500).json({ message: "Error fetching updated user", error: err });
+            res.status(200).json({
+                message: "User role updated successfully",
+                updatedUser: rows[0]
+            });
+        });
     });
 };
 
