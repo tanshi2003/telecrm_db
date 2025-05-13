@@ -43,6 +43,7 @@ const Sidebar = ({ user }) => {
   const navigate = useNavigate();
   const localUser = JSON.parse(localStorage.getItem("user") || "{}");
   const role = localStorage.getItem("role");
+  //console.log("Role from localStorage:",localStorage);
 
   const toggleSidebar = () => {
     setIsExpanded(!isExpanded);
