@@ -134,13 +134,28 @@ exports.getUsers = (req, res) => {
 exports.getUserById = (req, res) => {
     const { id } = req.params;
 
-    db.query("SELECT * FROM Users WHERE id = ?", [id], (err, results) => {
+    const query = `
+        SELECT 
+            u.*, 
+            COUNT(DISTINCT cu.campaign_id) AS campaigns_handled
+        FROM 
+            Users u
+        LEFT JOIN 
+            campaign_users cu ON u.id = cu.user_id
+        WHERE 
+            u.id = ?
+        GROUP BY 
+            u.id
+    `;
+
+    db.query(query, [id], (err, results) => {
         if (err) return res.status(500).json({ message: "Database error", error: err });
         if (results.length === 0) return res.status(404).json({ message: "User not found" });
 
         res.status(200).json({ user: results[0] });
     });
 };
+
 
 // Update a user
 exports.updateUser = (req, res) => {

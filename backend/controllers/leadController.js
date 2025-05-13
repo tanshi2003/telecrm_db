@@ -69,30 +69,42 @@ exports.createLead = (req, res) => {
 
 // 📌 Get all leads
 exports.getLeads = (req, res) => {
-    db.query("SELECT * FROM Leads", (err, leads) => {
-        if (err) {
-            console.error("Fetch leads error:", err);
-            return res.status(500).json(responseFormatter(false, "Server error", err.message));
+    db.query(
+        `SELECT Leads.*, Users.name AS assigned_to_name 
+         FROM Leads 
+         LEFT JOIN Users ON Leads.assigned_to = Users.id`,
+        (err, leads) => {
+            if (err) {
+                console.error("Fetch leads error:", err);
+                return res.status(500).json(responseFormatter(false, "Server error", err.message));
+            }
+            res.json(responseFormatter(true, "Leads fetched successfully", leads));
         }
-        res.json(responseFormatter(true, "Leads fetched successfully", leads));
-    });
+    );
 };
 
 // 📌 Get a lead by ID
 exports.getLeadById = (req, res) => {
     const { id } = req.params;
 
-    db.query("SELECT * FROM Leads WHERE id = ?", [id], (err, lead) => {
-        if (err) {
-            return res.status(500).json(responseFormatter(false, "Server error", err.message));
-        }
+    db.query(
+        `SELECT Leads.*, Users.name AS assigned_to_name 
+         FROM Leads 
+         LEFT JOIN Users ON Leads.assigned_to = Users.id 
+         WHERE Leads.id = ?`,
+        [id],
+        (err, lead) => {
+            if (err) {
+                return res.status(500).json(responseFormatter(false, "Server error", err.message));
+            }
 
-        if (lead.length === 0) {
-            return res.status(404).json(responseFormatter(false, "Lead not found"));
-        }
+            if (lead.length === 0) {
+                return res.status(404).json(responseFormatter(false, "Lead not found"));
+            }
 
-        res.json(responseFormatter(true, "Lead retrieved", lead[0]));
-    });
+            res.json(responseFormatter(true, "Lead retrieved", lead[0]));
+        }
+    );
 };
 
 // 📌 Update a lead

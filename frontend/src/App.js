@@ -12,6 +12,9 @@ import CallerDashboard from "./pages/CallerDashboard";
 import Leads from "./pages/Leads";
 import Lead1 from "./pages/Lead1";
 import Excelupload from "./pages/Excelupload"; 
+import Viewlead from "./pages/Viewlead";
+import EditLead from "./pages/EditLead";
+import Updatelead from "./pages/Updatelead";
 import FieldDashboard from "./pages/FieldDashboard";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import ManageCampaigns from "./pages/ManageCampaigns";
@@ -19,14 +22,13 @@ import ManageUsers from "./pages/manage-user";
 import SearchPage from "./pages/Search";
 import RegisterUser from "./pages/RegisterUser";
 import AllUsers from "./pages/AllUsers";
-import AccessLogs from "./pages/AccessLogs"
+import AccessLogs from "./pages/AccessLogs";
 import ManageRoles from "./pages/ManageRoles";
 import ManageStatus from "./pages/ManageStatus";
 import EmployeeProfile from "./pages/EmployeeProfile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
-// import RegisterUser from "./pages/RegisterUser";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -56,16 +58,16 @@ function App() {
               <Route path="/landingpage" element={<LandingPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/contact" element={<Contact />} />
-              <Route path="/admin/users" element={<ManageUsers/>} />
-              <Route path="/admin/users/register" element={<RegisterUser/>} />
-              <Route path="/admin/users/all-user" element={<AllUsers/>} />
-              <Route path="/admin/users/access-logs" element={<AccessLogs/>} />
-              <Route path="/admin/users/manage-roles" element={<ManageRoles/>} />
-              <Route path="/admin/users/manage-status" element={<ManageStatus/>} />
-              <Route path="/admin/users/employee-profile" element={<EmployeeProfile/>} />
-              
-              
+              <Route path="/Updatelead" element={<Updatelead />} />
 
+              {/* Admin/User Management Routes */}
+              <Route path="/admin/users" element={<ManageUsers />} />
+              <Route path="/admin/users/register" element={<RegisterUser />} />
+              <Route path="/admin/users/all-user" element={<AllUsers />} />
+              <Route path="/admin/users/access-logs" element={<AccessLogs />} />
+              <Route path="/admin/users/manage-roles" element={<ManageRoles />} />
+              <Route path="/admin/users/manage-status" element={<ManageStatus />} />
+              <Route path="/admin/users/employee-profile" element={<EmployeeProfile />} />
 
               {/* Protected Routes */}
               <Route
@@ -132,23 +134,36 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
+              <Route
+                path="/viewlead/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                    <Viewlead />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/editlead/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                    <EditLead />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Updatelead/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                    <Updatelead />
+                  </ProtectedRoute>
+                }
+              />
               {/* 🆕 Excel Upload Route */}
               <Route
                 path="/excelupload"
                 element={
                   <ProtectedRoute allowedRoles={["admin", "manager"]}>
                     <Excelupload />
-                  </ProtectedRoute>
-                }
-              />
-
-              {/* 🆕 Manage Users Route */}
-              <Route
-                path="/admin/manage-users"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <ManageUsers />
                   </ProtectedRoute>
                 }
               />
