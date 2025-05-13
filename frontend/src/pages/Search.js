@@ -51,9 +51,7 @@ const SearchPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(`http://localhost:5000/api/users/${userId}/leads`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
       console.log("Leads fetched for user:", response.data.data);
       setFilteredLeads(response.data.data); // Set the leads data
@@ -68,9 +66,7 @@ const SearchPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(`http://localhost:5000/api/users/${userId}/campaigns`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
       console.log("Campaigns fetched for user:", response.data.data);
       setFilteredCampaigns(response.data.data); // Set the campaigns data
@@ -78,6 +74,33 @@ const SearchPage = () => {
     } catch (error) {
       console.error("Error fetching campaigns for user:", error.response?.data || error.message);
       alert("Failed to fetch campaigns.");
+    }
+  };
+
+  const fetchUserStats = async (userId) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      // Fetch total leads count
+      const leadsResponse = await axios.get(`http://localhost:5000/api/users/${userId}/leads`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const totalLeads = leadsResponse.data.data.length;
+
+      // Fetch total campaigns count
+      const campaignsResponse = await axios.get(`http://localhost:5000/api/users/${userId}/campaigns`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const totalCampaigns = campaignsResponse.data.data.length;
+
+      setSelectedResult((prev) => ({
+        ...prev,
+        totalLeads,
+        totalCampaigns,
+      }));
+    } catch (error) {
+      console.error("Error fetching user stats:", error.response?.data || error.message);
+      alert("Failed to fetch user stats.");
     }
   };
 
@@ -107,6 +130,31 @@ const SearchPage = () => {
       setErrorMessage("Failed to fetch search results.");
     } finally {
       setIsLoading(false); // Stop loading
+    }
+  };
+
+  const handleRoleUpdate = async (newRole) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `http://localhost:5000/api/users/update-role/${selectedResult.id}`,
+        { role: newRole },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("Role updated successfully!");
+      setSelectedResult({ ...selectedResult, role: newRole });
+    } catch (error) {
+      console.error("Error updating role:", error.response?.data || error.message);
+      alert("Failed to update role.");
+    }
+  };
+
+  const handleUserClick = async (user) => {
+    try {
+      setSelectedResult(user); // Set initial user details
+      await fetchUserStats(user.id); // Fetch stats and update selectedResult
+    } catch (error) {
+      console.error("Error handling user click:", error);
     }
   };
 
@@ -170,39 +218,12 @@ const SearchPage = () => {
                   <li
                     key={index}
                     className="p-4 border rounded-lg shadow-sm hover:shadow-md transition cursor-pointer bg-gray-50 hover:bg-gray-100"
-                    onClick={() => {
-                      console.log("Clicked result:", result); // Debugging: Log the clicked result
-                      if (searchCategory === "leads") {
-                        fetchLeadById(result.id); // Fetch lead details
-                      } else if (searchCategory === "campaigns") {
-                        fetchCampaignById(result.id); // Fetch campaign details
-                      } else {
-                        setSelectedResult(result); // For users
-                      }
-                    }}
+                    onClick={() => handleUserClick(result)}
                   >
                     <div className="flex items-center gap-2">
-                      {searchCategory === "users" && <FaUser className="text-blue-500" />}
-                      {searchCategory === "campaigns" && <FaClipboardList className="text-green-500" />}
-                      {searchCategory === "leads" && <FaListAlt className="text-orange-500" />}
-                      <p className="font-bold text-lg text-blue-600">{result.name || result.title}</p>
+                      <FaUser className="text-blue-500" />
+                      <p className="font-bold text-lg text-blue-600">{result.name}</p>
                     </div>
-                    {searchCategory === "campaigns" ? (
-                      <>
-                        <p className="text-sm text-gray-600">Description: {result.description}</p>
-                        <p className="text-sm text-gray-600">Status: {result.status}</p>
-                      </>
-                    ) : searchCategory === "leads" ? (
-                      <>
-                        <p className="text-sm text-gray-600">Assigned To: {result.assigned_to_name || "N/A"}</p>
-                        <p className="text-sm text-gray-600">Status: {result.status}</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-sm text-gray-600">Role: {result.role}</p>
-                        <p className="text-sm text-gray-600">Email: {result.email}</p>
-                      </>
-                    )}
                   </li>
                 ))}
               </ul>
@@ -216,6 +237,7 @@ const SearchPage = () => {
           {selectedResult ? (
             <div className="space-y-4">
               {console.log("Selected result:", selectedResult)} {/* Debugging: Log the selected result */}
+              {console.log("Selected user:", selectedResult)} {/* Debugging: Log the selected user */}
               {searchCategory === "users" ? (
                 <>
                   <p className="font-bold text-lg">
@@ -228,7 +250,15 @@ const SearchPage = () => {
                     <span className="font-semibold">Phone:</span> {selectedResult.phone_no}
                   </p>
                   <p className="text-sm text-gray-600">
-                    <span className="font-semibold">Role:</span> {selectedResult.role}
+                    <span className="font-semibold">Role:</span>
+                    <select
+                      value={selectedResult.role}
+                      onChange={(e) => handleRoleUpdate(e.target.value)}
+                      className="p-2 border rounded-lg">
+                      <option value="manager">Manager</option>
+                      <option value="caller">Caller</option>
+                      <option value="field">Field Employee</option>
+                    </select>
                   </p>
                   <p className="text-sm text-gray-600">
                     <span className="font-semibold">Location:</span> {selectedResult.location}
@@ -237,10 +267,22 @@ const SearchPage = () => {
                     <span className="font-semibold">Last Login:</span> {selectedResult.last_login ? new Date(selectedResult.last_login).toLocaleString() : "N/A"}
                   </p>
                   <p className="text-sm text-gray-600">
-                    <span className="font-semibold">Total Leads:</span> {selectedResult.total_leads}
+                    <span className="font-semibold">Total Leads:</span>
+                    <span
+                      className="text-blue-500 cursor-pointer"
+                      onClick={() => fetchLeadsForUser(selectedResult.id)}
+                    >
+                      {selectedResult.totalLeads || 0}
+                    </span>
                   </p>
                   <p className="text-sm text-gray-600">
-                    <span className="font-semibold">Campaigns Handled:</span> {selectedResult.campaigns_handled || "N/A"}
+                    <span className="font-semibold">Campaigns Handled:</span>
+                    <span
+                      className="text-blue-500 cursor-pointer"
+                      onClick={() => fetchCampaignsForUser(selectedResult.id)}
+                    >
+                      {selectedResult.totalCampaigns || 0}
+                    </span>
                   </p>
                 </>
               ) : searchCategory === "leads" ? (
@@ -309,6 +351,7 @@ const SearchPage = () => {
             >
               &times;
             </button>
+            {console.log("Leads fetched:", filteredLeads)} {/* Debugging: Log the fetched leads */}
             {filteredLeads.length === 0 ? (
               <p className="text-gray-600">No leads assigned to this user.</p>
             ) : (
@@ -338,6 +381,7 @@ const SearchPage = () => {
             >
               &times;
             </button>
+            {console.log("Campaigns fetched:", filteredCampaigns)} {/* Debugging: Log the fetched campaigns */}
             {filteredCampaigns.length === 0 ? (
               <p className="text-gray-600">No campaigns assigned to this user.</p>
             ) : (

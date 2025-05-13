@@ -25,4 +25,13 @@ router.put("/update-role/:id", userController.updateUserRole);
 // Delete a user
 router.delete("/:id", authMiddleware, roleMiddleware(['admin']), userController.deleteUser);
 
+// Get campaigns handled by a user
+router.get("/:id/campaigns",authMiddleware, roleMiddleware(['admin']), userController.getCampaignsHandledByUser);
+
+// Get leads assigned to a user
+router.get('/:id/leads', authMiddleware, roleMiddleware(['admin']), userController.getLeadsByUserId);
+
+// Get campaigns assigned to a user
+router.get('/:id/campaigns', authMiddleware, roleMiddleware(['admin']), userController.getCampaignsByUserId);
+
 module.exports = router;

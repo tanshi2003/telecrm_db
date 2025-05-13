@@ -156,6 +156,82 @@ exports.getUserById = (req, res) => {
     });
 };
 
+// Get campaigns handled by a user
+exports.getCampaignsHandledByUser = (req, res) => {
+    console.log("Fetching campaigns for user ID:", req.params.id);
+
+    const { id } = req.params;
+
+    const query = `
+        SELECT 
+            c.id, c.name, c.description, c.status, c.priority, c.start_date, c.end_date
+        FROM 
+            campaigns c
+        INNER JOIN 
+            campaign_users cu ON c.id = cu.campaign_id
+        WHERE 
+            cu.user_id = ?
+    `;
+
+    db.query(query, [id], (err, results) => {
+        if (err) {
+            console.error("Error fetching campaigns handled by user:", err);
+            return res.status(500).json(responseFormatter(false, "Database error", err.message));
+        }
+
+        res.status(200).json(responseFormatter(true, "Campaigns handled fetched successfully", results));
+    });
+};
+
+// Get leads assigned to a user
+exports.getLeadsByUserId = (req, res) => {
+    console.log("Fetching leads for user ID:", req.params.id);
+
+    const { id } = req.params;
+
+    const query = `
+        SELECT 
+            l.id, l.title, l.description, l.status, l.lead_category, l.name, l.phone_no, l.address, l.notes
+        FROM 
+            leads l
+        WHERE 
+            l.assigned_to = ?
+    `;
+
+    db.query(query, [id], (err, results) => {
+        if (err) {
+            console.error("Error fetching leads for user:", err);
+            return res.status(500).json(responseFormatter(false, "Database error", err.message));
+        }
+
+        res.status(200).json(responseFormatter(true, "Leads fetched successfully", results));
+    });
+};
+
+// Get campaigns assigned to a user
+exports.getCampaignsByUserId = (req, res) => {
+    const { id } = req.params;
+
+    const query = `
+        SELECT 
+            c.id, c.name, c.description, c.status, c.priority, c.start_date, c.end_date
+        FROM 
+            campaigns c
+        INNER JOIN 
+            campaign_users cu ON c.id = cu.campaign_id
+        WHERE 
+            cu.user_id = ?
+    `;
+
+    db.query(query, [id], (err, results) => {
+        if (err) {
+            console.error("Error fetching campaigns for user:", err);
+            return res.status(500).json(responseFormatter(false, "Database error", err.message));
+        }
+
+        res.status(200).json(responseFormatter(true, "Campaigns fetched successfully", results));
+    });
+};
 
 // Update a user
 exports.updateUser = (req, res) => {

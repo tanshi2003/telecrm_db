@@ -19,7 +19,7 @@ import FieldDashboard from "./pages/FieldDashboard";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import ManageCampaigns from "./pages/ManageCampaigns";
 import Campaign from "./pages/Campaign";
-import ManageUsers from "./pages/manage-user";
+import ManageUsers from "./pages/ManageUser";
 import SearchPage from "./pages/Search";
 import RegisterUser from "./pages/RegisterUser";
 import AllUsers from "./pages/AllUsers";
@@ -69,6 +69,14 @@ function App() {
               <Route path="/admin/users/manage-roles" element={<ManageRoles />} />
               <Route path="/admin/users/manage-status" element={<ManageStatus />} />
               <Route path="/admin/users/employee-profile" element={<EmployeeProfile />} />
+              <Route
+                path="/admin/ManageUsers"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <ManageUsers />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Protected Routes */}
               <Route
