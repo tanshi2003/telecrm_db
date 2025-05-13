@@ -72,6 +72,23 @@ exports.getCampaigns = (req, res) => {
     });
 };
 
+// 📤 Get Campaign by ID
+exports.getCampaignById = (req, res) => {
+    const { id } = req.params;
+
+    db.query("SELECT * FROM campaigns WHERE id = ?", [id], (err, campaign) => {
+        if (err) {
+            return res.status(500).json(responseFormatter(false, "Server error", err.message));
+        }
+
+        if (campaign.length === 0) {
+            return res.status(404).json(responseFormatter(false, "Campaign not found"));
+        }
+
+        res.json(responseFormatter(true, "Campaign retrieved", campaign[0]));
+    });
+};
+
 // 🧾 Update Campaign
 exports.updateCampaign = (req, res) => {
     const { id } = req.params;

@@ -1,78 +1,85 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import Sidebar from "../components/Sidebar"; // Import Sidebar
-import { FaUser, FaClipboardList } from "react-icons/fa"; // Import icons
+import { FaUser, FaClipboardList, FaListAlt } from "react-icons/fa"; // Import icons
 
 const SearchPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchCategory, setSearchCategory] = useState("users"); // Default category
   const [results, setResults] = useState([]);
-  const [selectedResult, setSelectedResult] = useState(null); // For showing details of the selected user
+  const [selectedResult, setSelectedResult] = useState(null); // For showing details of the selected result
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showRoleModal, setShowRoleModal] = useState(false); // For role change modal
-  const [showCampaignsModal, setShowCampaignsModal] = useState(false); // For campaigns list modal
-  const [showLeadsModal, setShowLeadsModal] = useState(false); // For leads list modal
-  const [campaigns, setCampaigns] = useState([]); // Campaigns fetched from backend
-  const [leads, setLeads] = useState([]); // Leads fetched from backend
-  const [filteredLeads, setFilteredLeads] = useState([]); // Leads filtered for the selected user
-  const [filteredCampaigns, setFilteredCampaigns] = useState([]); // Campaigns filtered for the selected user
+  const [showLeadsModal, setShowLeadsModal] = useState(false);
+  const [showCampaignsModal, setShowCampaignsModal] = useState(false);
+  const [filteredLeads, setFilteredLeads] = useState([]); // Leads assigned to the user
+  const [filteredCampaigns, setFilteredCampaigns] = useState([]); // Campaigns handled by the user
 
-  const fetchCampaigns = async () => {
+  const fetchLeadById = async (leadId) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/campaigns", {
+      const response = await axios.get(`http://localhost:5000/api/leads/${leadId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      setCampaigns(response.data.data || []);
+      console.log("Lead fetched:", response.data.data); // Debugging: Log the fetched lead
+      setSelectedResult(response.data.data); // Update the selected result with lead data
     } catch (error) {
-      console.error("Error fetching campaigns:", error);
+      console.error("Error fetching lead:", error.response?.data || error.message);
+      alert("Failed to fetch lead details.");
     }
   };
 
-  const fetchLeads = async () => {
+  const fetchCampaignById = async (campaignId) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/leads", {
+      const response = await axios.get(`http://localhost:5000/api/campaigns/${campaignId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      setLeads(response.data.data || []);
+      console.log("Campaign fetched:", response.data.data); // Debugging: Log the fetched campaign
+      setSelectedResult(response.data.data); // Update the selected result with campaign data
     } catch (error) {
-      console.error("Error fetching leads:", error);
+      console.error("Error fetching campaign:", error.response?.data || error.message);
+      alert("Failed to fetch campaign details.");
     }
   };
 
-  const filterCampaignsForUser = useCallback(() => {
-    if (!selectedResult) return;
-    const userCampaigns = campaigns.filter((campaign) => campaign.assigned_to === selectedResult.id);
-    setFilteredCampaigns(userCampaigns);
-  }, [campaigns, selectedResult]);
+  const fetchLeadsForUser = async (userId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`http://localhost:5000/api/users/${userId}/leads`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      console.log("Leads fetched for user:", response.data.data);
+      setFilteredLeads(response.data.data); // Set the leads data
+      setShowLeadsModal(true); // Open the leads modal
+    } catch (error) {
+      console.error("Error fetching leads for user:", error.response?.data || error.message);
+      alert("Failed to fetch leads.");
+    }
+  };
 
-  const filterLeadsForUser = useCallback(() => {
-    const userLeads = leads.filter((lead) => lead.assigned_to === selectedResult.id);
-    setFilteredLeads(userLeads);
-  }, [leads, selectedResult]);
-
-  // Fetch campaigns and leads when modals are opened
-  useEffect(() => {
-    if (showCampaignsModal && selectedResult) filterCampaignsForUser();
-  }, [showCampaignsModal, selectedResult, filterCampaignsForUser]);
-
-  useEffect(() => {
-    if (showLeadsModal && selectedResult) filterLeadsForUser();
-  }, [showLeadsModal, selectedResult, filterLeadsForUser]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      await fetchCampaigns();
-      await fetchLeads();
-    };
-    fetchData();
-  }, []);
+  const fetchCampaignsForUser = async (userId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`http://localhost:5000/api/users/${userId}/campaigns`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      console.log("Campaigns fetched for user:", response.data.data);
+      setFilteredCampaigns(response.data.data); // Set the campaigns data
+      setShowCampaignsModal(true); // Open the campaigns modal
+    } catch (error) {
+      console.error("Error fetching campaigns for user:", error.response?.data || error.message);
+      alert("Failed to fetch campaigns.");
+    }
+  };
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -93,45 +100,13 @@ const SearchPage = () => {
           },
         }
       );
+      console.log("Search results:", response.data.results); // Debugging: Log the results
       setResults(response.data.results || []);
     } catch (error) {
       console.error("Error during search:", error);
       setErrorMessage("Failed to fetch search results.");
     } finally {
       setIsLoading(false); // Stop loading
-    }
-  };
-
-  const handleRoleChange = async (newRole) => {
-    try {
-      const token = localStorage.getItem("token");
-      // Make the API call to update the user's role
-      await axios.put(
-        `http://localhost:5000/api/users/update-role/${selectedResult.id}`,
-        { role: newRole },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      alert("Role updated successfully!");
-      setShowRoleModal(false);
-
-      // Refresh the selected result to reflect the updated role
-      const updatedUserResponse = await axios.get(
-        `http://localhost:5000/api/users/${selectedResult.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      setSelectedResult(updatedUserResponse.data.user); // Update the selected user with the new data
-    } catch (error) {
-      console.error("Error updating role:", error.response?.data || error.message);
-      alert("Failed to update role.");
     }
   };
 
@@ -195,11 +170,39 @@ const SearchPage = () => {
                   <li
                     key={index}
                     className="p-4 border rounded-lg shadow-sm hover:shadow-md transition cursor-pointer bg-gray-50 hover:bg-gray-100"
-                    onClick={() => setSelectedResult(result)} // Set the selected result
+                    onClick={() => {
+                      console.log("Clicked result:", result); // Debugging: Log the clicked result
+                      if (searchCategory === "leads") {
+                        fetchLeadById(result.id); // Fetch lead details
+                      } else if (searchCategory === "campaigns") {
+                        fetchCampaignById(result.id); // Fetch campaign details
+                      } else {
+                        setSelectedResult(result); // For users
+                      }
+                    }}
                   >
-                    <p className="font-bold text-lg text-blue-600">{result.name}</p>
-                    <p className="text-sm text-gray-600">Role: {result.role}</p>
-                    <p className="text-sm text-gray-600">Email: {result.email}</p>
+                    <div className="flex items-center gap-2">
+                      {searchCategory === "users" && <FaUser className="text-blue-500" />}
+                      {searchCategory === "campaigns" && <FaClipboardList className="text-green-500" />}
+                      {searchCategory === "leads" && <FaListAlt className="text-orange-500" />}
+                      <p className="font-bold text-lg text-blue-600">{result.name || result.title}</p>
+                    </div>
+                    {searchCategory === "campaigns" ? (
+                      <>
+                        <p className="text-sm text-gray-600">Description: {result.description}</p>
+                        <p className="text-sm text-gray-600">Status: {result.status}</p>
+                      </>
+                    ) : searchCategory === "leads" ? (
+                      <>
+                        <p className="text-sm text-gray-600">Assigned To: {result.assigned_to_name || "N/A"}</p>
+                        <p className="text-sm text-gray-600">Status: {result.status}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-gray-600">Role: {result.role}</p>
+                        <p className="text-sm text-gray-600">Email: {result.email}</p>
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -212,42 +215,82 @@ const SearchPage = () => {
           <h2 className="text-3xl font-bold text-blue-600 mb-6">Details</h2>
           {selectedResult ? (
             <div className="space-y-4">
-              <p className="font-bold text-lg">
-                <span className="text-gray-700">Name:</span> {selectedResult.name}
-              </p>
-              <p className="text-sm text-gray-600">
-                <span className="font-semibold">Email:</span> {selectedResult.email}
-              </p>
-              <p className="text-sm text-gray-600">
-                <span className="font-semibold">Phone:</span> {selectedResult.phone_no}
-              </p>
-              <p
-                className="text-sm text-blue-600 cursor-pointer hover:underline"
-                onClick={() => setShowRoleModal(true)} // Open role change modal
-              >
-                Role: {selectedResult.role}
-              </p>
-              <p className="text-sm text-gray-600">
-                <span className="font-semibold">Status:</span> {selectedResult.status}
-              </p>
-              <p
-                className="text-sm text-blue-600 cursor-pointer hover:underline"
-                onClick={() => setShowCampaignsModal(true)} // Open campaigns modal
-              >
-                Campaigns Handled: {selectedResult.campaigns_handled}
-              </p>
-              <p className="text-sm text-gray-600">Performance Rating: {selectedResult.performance_rating}</p>
-              <p className="text-sm text-gray-600">Manager ID: {selectedResult.manager_id || "N/A"}</p>
-              <p className="text-sm text-gray-600">Location: {selectedResult.location}</p>
-              <p
-                className="text-sm text-blue-600 cursor-pointer hover:underline"
-                onClick={() => setShowLeadsModal(true)} // Open leads modal
-              >
-                Total Leads: {selectedResult.total_leads}
-              </p>
-              <p className="text-sm text-gray-600">
-                Last Login: {new Date(selectedResult.last_login).toLocaleString()}
-              </p>
+              {console.log("Selected result:", selectedResult)} {/* Debugging: Log the selected result */}
+              {searchCategory === "users" ? (
+                <>
+                  <p className="font-bold text-lg">
+                    <span className="text-gray-700">Name:</span> {selectedResult.name}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Email:</span> {selectedResult.email}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Phone:</span> {selectedResult.phone_no}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Role:</span> {selectedResult.role}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Location:</span> {selectedResult.location}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Last Login:</span> {selectedResult.last_login ? new Date(selectedResult.last_login).toLocaleString() : "N/A"}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Total Leads:</span> {selectedResult.total_leads}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Campaigns Handled:</span> {selectedResult.campaigns_handled || "N/A"}
+                  </p>
+                </>
+              ) : searchCategory === "leads" ? (
+                <>
+                  <p className="font-bold text-lg">
+                    <span className="text-gray-700">Title:</span> {selectedResult.title}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Description:</span> {selectedResult.description}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Status:</span> {selectedResult.status}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Category:</span> {selectedResult.lead_category}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Assigned To:</span> {selectedResult.assigned_to_name || "N/A"}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Notes:</span> {selectedResult.notes || "N/A"}
+                  </p>
+                </>
+              ) : searchCategory === "campaigns" ? (
+                <>
+                  <p className="font-bold text-lg">
+                    <span className="text-gray-700">Name:</span> {selectedResult.name}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Description:</span> {selectedResult.description}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Status:</span> {selectedResult.status}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Priority:</span> {selectedResult.priority}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Lead Count:</span> {selectedResult.lead_count}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">Start Date:</span> {selectedResult.start_date ? new Date(selectedResult.start_date).toLocaleDateString() : "N/A"}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-semibold">End Date:</span> {selectedResult.end_date ? new Date(selectedResult.end_date).toLocaleDateString() : "N/A"}
+                  </p>
+                </>
+              ) : (
+                <p className="text-gray-500">No details available.</p>
+              )}
             </div>
           ) : (
             <p className="text-gray-500">Select a result to view details.</p>
@@ -255,101 +298,63 @@ const SearchPage = () => {
         </div>
       </div>
 
-      {/* Role Change Modal */}
-      {showRoleModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg w-96">
-            <h2 className="text-xl font-bold mb-4">Change Role</h2>
+      {/* Leads Modal */}
+      {showLeadsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-1/2 max-h-[80vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-4">Leads Assigned</h3>
             <button
-              className="block w-full p-2 mb-2 bg-gray-100 hover:bg-gray-200 rounded"
-              onClick={() => handleRoleChange("caller")}
+              className="absolute top-4 right-6 text-gray-500 hover:text-red-600 text-xl"
+              onClick={() => setShowLeadsModal(false)}
             >
-              Caller
+              &times;
             </button>
-            <button
-              className="block w-full p-2 mb-2 bg-gray-100 hover:bg-gray-200 rounded"
-              onClick={() => handleRoleChange("manager")}
-            >
-              Manager
-            </button>
-            <button
-              className="block w-full p-2 mb-2 bg-gray-100 hover:bg-gray-200 rounded"
-              onClick={() => handleRoleChange("field_employee")}
-            >
-              Field Employee
-            </button>
-            <button
-              className="block w-full p-2 bg-red-500 text-white hover:bg-red-600 rounded"
-              onClick={() => setShowRoleModal(false)}
-            >
-              Cancel
-            </button>
+            {filteredLeads.length === 0 ? (
+              <p className="text-gray-600">No leads assigned to this user.</p>
+            ) : (
+              <ul className="space-y-4">
+                {filteredLeads.map((lead, index) => (
+                  <li key={index} className="p-4 border rounded-lg shadow-sm">
+                    <p className="font-semibold text-blue-600">{lead.title}</p>
+                    <p className="text-sm">{lead.description}</p>
+                    <p className="text-sm">Category: {lead.lead_category}</p>
+                    <p className="text-sm">Status: {lead.status}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       )}
 
-      {/* Leads Modal */}
-      {showLeadsModal && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-    <div className="bg-white p-6 rounded-lg shadow-lg w-1/2 max-h-[80vh] overflow-y-auto">
-      <h3 className="text-xl font-bold mb-4">Leads Assigned</h3>
-      <button
-        className="absolute top-4 right-6 text-gray-500 hover:text-red-600 text-xl"
-        onClick={() => setShowLeadsModal(false)}
-      >
-        &times;
-      </button>
-      {filteredLeads.length === 0 ? (
-        <p className="text-gray-600">No leads assigned to this user.</p>
-      ) : (
-        <ul className="space-y-4">
-          {filteredLeads.map((lead, index) => (
-            <li key={index} className="p-4 border rounded-lg shadow-sm">
-              <p className="font-semibold text-blue-600">{lead.title}</p>
-              <p className="text-sm">{lead.description}</p>
-              <p className="text-sm">Category: {lead.lead_category}</p>
-              <p className="text-sm">Status: {lead.status}</p>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  </div>
-)}
-
       {/* Campaigns Modal */}
       {showCampaignsModal && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-    <div className="bg-white p-6 rounded-lg shadow-lg w-1/2 max-h-[80vh] overflow-y-auto">
-      <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-        <FaClipboardList className="text-blue-500" /> Campaigns Handled
-      </h3>
-      <button
-        className="absolute top-4 right-6 text-gray-500 hover:text-red-600 text-xl"
-        onClick={() => setShowCampaignsModal(false)}
-      >
-        &times;
-      </button>
-      {filteredCampaigns.length === 0 ? (
-        <p className="text-gray-600">No campaigns assigned to this user.</p>
-      ) : (
-        <ul className="space-y-4">
-          {filteredCampaigns.map((campaign, index) => (
-            <li key={index} className="p-4 border rounded-lg shadow-sm">
-              <p className="font-semibold text-blue-600 flex items-center gap-2">
-                <FaClipboardList className="text-gray-500" /> {campaign.name}
-              </p>
-              <p className="text-sm text-gray-600">{campaign.description}</p>
-              <p className="text-sm">Status: {campaign.status}</p>
-              <p className="text-sm">Priority: {campaign.priority}</p>
-            </li>
-          ))}
-        </ul>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-1/2 max-h-[80vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-4">Campaigns Handled</h3>
+            <button
+              className="absolute top-4 right-6 text-gray-500 hover:text-red-600 text-xl"
+              onClick={() => setShowCampaignsModal(false)}
+            >
+              &times;
+            </button>
+            {filteredCampaigns.length === 0 ? (
+              <p className="text-gray-600">No campaigns assigned to this user.</p>
+            ) : (
+              <ul className="space-y-4">
+                {filteredCampaigns.map((campaign, index) => (
+                  <li key={index} className="p-4 border rounded-lg shadow-sm">
+                    <p className="font-semibold text-blue-600">{campaign.name}</p>
+                    <p className="text-sm">{campaign.description}</p>
+                    <p className="text-sm">Status: {campaign.status}</p>
+                    <p className="text-sm">Priority: {campaign.priority}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       )}
-    </div>
-  </div>
-)}
-
     </div>
   );
 };
