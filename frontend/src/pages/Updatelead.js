@@ -12,7 +12,6 @@ import {
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { AuthContext } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
 
 const Updatelead = () => {
   // ...existing state...
@@ -24,7 +23,6 @@ const Updatelead = () => {
   const [isEditing, setIsEditing] = useState(false); // <-- NEW
   const [editForm, setEditForm] = useState({}); // <-- NEW
   const { user } = useContext(AuthContext);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchLeads = async () => {

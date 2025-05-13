@@ -138,7 +138,7 @@ const Leads = () => {
             </p>
             <button
               className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              onClick={() => navigate("/update-lead")}
+              onClick={() => navigate("/Updatelead")}
             >
               + Update Lead
             </button>
