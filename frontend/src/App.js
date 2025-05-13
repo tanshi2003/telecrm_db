@@ -12,6 +12,9 @@ import CallerDashboard from "./pages/CallerDashboard";
 import Leads from "./pages/Leads";
 import Lead1 from "./pages/Lead1";
 import Excelupload from "./pages/Excelupload"; 
+import Viewlead from "./pages/Viewlead";
+import EditLead from "./pages/EditLead";
+import Updatelead from "./pages/Updatelead";
 import FieldDashboard from "./pages/FieldDashboard";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import ManageCampaigns from "./pages/ManageCampaigns";
@@ -49,6 +52,7 @@ function App() {
               <Route path="/landingpage" element={<LandingPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/contact" element={<Contact />} />
+               <Route path="/Updatelead" element={<Updatelead />} />
 
               {/* Protected Routes */}
               <Route
@@ -115,7 +119,30 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
+              <Route
+                path="/viewlead/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                    <Viewlead />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/editlead/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                    <EditLead />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Updatelead/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                    <Updatelead />
+                  </ProtectedRoute>
+                }
+              />
               {/* 🆕 Excel Upload Route */}
               <Route
                 path="/excelupload"
