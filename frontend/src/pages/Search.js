@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import Sidebar from "../components/Sidebar"; // Import Sidebar
 import { FaUser, FaClipboardList } from "react-icons/fa"; // Import icons
@@ -46,21 +46,33 @@ const SearchPage = () => {
     }
   };
 
-  const filterCampaignsForUser = () => {
+  const filterCampaignsForUser = useCallback(() => {
+    if (!selectedResult) return;
     const userCampaigns = campaigns.filter((campaign) => campaign.assigned_to === selectedResult.id);
     setFilteredCampaigns(userCampaigns);
-  };
+  }, [campaigns, selectedResult]);
 
-  const filterLeadsForUser = () => {
+  const filterLeadsForUser = useCallback(() => {
     const userLeads = leads.filter((lead) => lead.assigned_to === selectedResult.id);
     setFilteredLeads(userLeads);
-  };
+  }, [leads, selectedResult]);
 
   // Fetch campaigns and leads when modals are opened
   useEffect(() => {
     if (showCampaignsModal && selectedResult) filterCampaignsForUser();
+  }, [showCampaignsModal, selectedResult, filterCampaignsForUser]);
+
+  useEffect(() => {
     if (showLeadsModal && selectedResult) filterLeadsForUser();
-  }, [showCampaignsModal, showLeadsModal, selectedResult]);
+  }, [showLeadsModal, selectedResult, filterLeadsForUser]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await fetchCampaigns();
+      await fetchLeads();
+    };
+    fetchData();
+  }, []);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -132,7 +144,9 @@ const SearchPage = () => {
       <div className="flex-1 ml-64 mt-16 p-6 bg-gray-50 min-h-screen flex gap-6">
         {/* Left Section: Search and Results */}
         <div className="w-1/3 bg-white p-6 rounded-lg shadow-lg">
-          <h1 className="text-3xl font-bold text-blue-600 mb-6">Search</h1>
+          <h1 className="text-3xl font-bold text-blue-600 mb-6 flex items-center gap-2">
+            <FaUser className="text-blue-500" /> Search
+          </h1>
 
           {/* Search Bar */}
           <div className="flex flex-col gap-4 mb-6">
@@ -307,7 +321,9 @@ const SearchPage = () => {
       {showCampaignsModal && (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
     <div className="bg-white p-6 rounded-lg shadow-lg w-1/2 max-h-[80vh] overflow-y-auto">
-      <h3 className="text-xl font-bold mb-4">Campaigns Handled</h3>
+      <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+        <FaClipboardList className="text-blue-500" /> Campaigns Handled
+      </h3>
       <button
         className="absolute top-4 right-6 text-gray-500 hover:text-red-600 text-xl"
         onClick={() => setShowCampaignsModal(false)}
@@ -320,7 +336,9 @@ const SearchPage = () => {
         <ul className="space-y-4">
           {filteredCampaigns.map((campaign, index) => (
             <li key={index} className="p-4 border rounded-lg shadow-sm">
-              <p className="font-semibold text-blue-600">{campaign.name}</p>
+              <p className="font-semibold text-blue-600 flex items-center gap-2">
+                <FaClipboardList className="text-gray-500" /> {campaign.name}
+              </p>
               <p className="text-sm text-gray-600">{campaign.description}</p>
               <p className="text-sm">Status: {campaign.status}</p>
               <p className="text-sm">Priority: {campaign.priority}</p>
