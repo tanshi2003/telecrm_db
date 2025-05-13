@@ -21,6 +21,7 @@ import {
   Save, // Icon for Saved Filters
 } from "lucide-react"; // Added new icons for filters dropdown
 import { useNavigate } from "react-router-dom";
+
 import axios from "axios"; // Import axios for API calls
 
 const Sidebar = ({ user }) => {
@@ -345,38 +346,44 @@ const Sidebar = ({ user }) => {
         </div>
       </div>
 
-      {/* Add Leads Dropdown */}
-      {showAddLeadOptions && (
-        <div
-          className="fixed bg-white border rounded shadow-lg z-50 w-56 p-2"
-          style={{
-            top: `${dropdownCoords.top}px`,
-            left: `${dropdownCoords.left}px`,
-          }}
-        >
-          {/* Arrow on the left */}
-          <div
-            className="absolute -left-2 top-4 w-4 h-4 bg-white border-l border-t transform rotate-45 z-40"
-          ></div>
-          <div className="text-gray-800 text-sm font-semibold mb-2">
-            Add Leads
-          </div>
-          <div
-            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-            onClick={() => navigate("/lead1")} // Navigate to Lead1 page
-          >
-            <UserPlus size={16} className="text-blue-500" />
-            <span className="text-sm text-gray-800">Add Single Lead</span>
-          </div>
-          <div
-            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-            onClick={() => navigate("/excelupload")} // Navigate to Excelupload page
-          >
-            <FilePlus size={16} className="text-green-500" />
-            <span className="text-sm text-gray-800">Add From Excel</span>
-          </div>
-        </div>
-      )}
+    {/* Add Leads Dropdown */}
+{showAddLeadOptions && (
+  <div
+    className="fixed bg-white border rounded shadow-lg z-50 w-56 p-2"
+    style={{
+      top: `${dropdownCoords.top}px`,
+      left: `${dropdownCoords.left}px`,
+    }}
+  >
+    {/* Arrow on the left */}
+    <div
+      className="absolute -left-2 top-4 w-4 h-4 bg-white border-l border-t transform rotate-45 z-40"
+    ></div>
+    
+    <div className="text-gray-800 text-sm font-semibold mb-2">
+      Add Leads
+    </div>
+
+    {/* Add Single Lead */}
+    <div
+  className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
+  onClick={() => navigate("/Lead1")} // Redirect to the Add Single Lead page
+>
+  <UserPlus size={16} className="text-blue-500" />
+  <span className="text-sm text-gray-800">Add Single Lead</span>
+</div>
+
+    {/* Add From Excel */}
+    <div
+      className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
+      onClick={() => navigate("/excelupload")}
+    >
+      <FilePlus size={16} className="text-green-500" />
+      <span className="text-sm text-gray-800">Add From Excel</span>
+    </div>
+  </div>
+)}
+
 
       {/* Campaigns Dropdown */}
       {showCampaignOptions && (

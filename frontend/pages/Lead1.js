@@ -191,7 +191,7 @@ const Lead1 = () => {
           </div>
 
           <div>
-            <label className="block font-semibold">Assigned To (User ID)</label>
+            <label className="block font-semibold">Assigned To </label>
             <input
               value={assignedTo}
               onChange={(e) => setAssignedTo(e.target.value)}

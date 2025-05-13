@@ -1,0 +1,76 @@
+/* filepath: c:\Users\HP\telecrm_db\frontend\src\pages\Viewlead.css */
+.container {
+  padding: 20px;
+  font-family: sans-serif;
+  max-width: 800px;
+  margin: auto;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.purple-text {
+  color: #5b4fd1;
+  font-weight: 600;
+}
+
+.badge {
+  background: #eee;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.show-fields {
+  color: #5b4fd1;
+  cursor: pointer;
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.button {
+  flex: 1;
+  min-width: 100px;
+  padding: 10px;
+  border: none;
+  background: #f8f8f8;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-list {
+  margin-top: 10px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-top: 1px solid #eee;
+}
+
+.days {
+  color: #888;
+  font-size: 12px;
+}
