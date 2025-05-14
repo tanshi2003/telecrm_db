@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useLocation, useNavigate } from "react-router-dom"; // Import useNavigate
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import axios from "axios";
 
 const EditLead = () => {
-  const { id } = useParams(); // Get the lead ID from the URL
-  const { state } = useLocation(); // Access the state passed from Leads.js
-  const navigate = useNavigate(); // Initialize navigate
-  const [lead, setLead] = useState(state?.lead || null); // Use passed lead data if available
+  const { id } = useParams();
+  const { state } = useLocation();
+  const navigate = useNavigate();
+  const [lead, setLead] = useState(state?.lead || null);
   const [user, setUser] = useState(null);
+  const [users, setUsers] = useState([]); // <-- Add this
 
   // Fetch user from localStorage
   useEffect(() => {
@@ -19,6 +20,24 @@ const EditLead = () => {
     } else {
       console.error("Unauthorized access.");
     }
+  }, []);
+
+  // Fetch users for Assigned To dropdown
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get("http://localhost:5000/api/users", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.data?.data) {
+          setUsers(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching users:", error.response?.data || error.message);
+      }
+    };
+    fetchUsers();
   }, []);
 
   // Fetch lead details if not passed via state
@@ -62,7 +81,7 @@ const EditLead = () => {
       });
 
       alert("Lead updated successfully!");
-      navigate("/leads"); // Redirect to the Leads page
+      navigate("/leads");
     } catch (error) {
       console.error("Failed to update lead:", error.response?.data || error.message);
     }
@@ -144,12 +163,18 @@ const EditLead = () => {
               {/* Assigned To */}
               <div className="mb-4">
                 <label className="block text-gray-700">Assigned To</label>
-                <input
-                  type="text"
+                <select
                   value={lead.assigned_to || ""}
                   onChange={(e) => setLead({ ...lead, assigned_to: e.target.value })}
                   className="w-full p-2 border rounded"
-                />
+                >
+                  <option value="">Select User</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Submit Button */}

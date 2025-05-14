@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
-import BackButton from "../components/BackButton"; // Import BackButton
+import BackButton from "../components/BackButton";
 import { FaPhone } from "react-icons/fa";
 import axios from "axios";
 
@@ -13,10 +13,11 @@ const Lead1 = () => {
   const [leadCategory, setLeadCategory] = useState("");
   const [address, setAddress] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
-  const [adminId, setAdminId] = useState("");
-  const [campaignId, setCampaignId] = useState("");
+  const [campaignName, setCampaignName] = useState("");
   const [notes, setNotes] = useState("");
-  const [userName, setUserName] = useState(""); // State to store the user's name
+  const [userName, setUserName] = useState("");
+  const [users, setUsers] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
 
   useEffect(() => {
     // Fetch the user's name from localStorage
@@ -24,8 +25,44 @@ const Lead1 = () => {
     if (storedUser && storedUser.name) {
       setUserName(storedUser.name);
     } else {
-      setUserName("User"); // Default fallback
+      setUserName("User");
     }
+  }, []);
+
+  useEffect(() => {
+    // Fetch users for Assigned To dropdown
+    const fetchUsers = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get("http://localhost:5000/api/users", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.data?.data) {
+          setUsers(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching users:", error.response?.data || error.message);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    // Fetch campaigns for Campaign Name dropdown
+    const fetchCampaigns = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get("http://localhost:5000/api/campaigns", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.data?.data) {
+          setCampaigns(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching campaigns:", error.response?.data || error.message);
+      }
+    };
+    fetchCampaigns();
   }, []);
 
   const handleAddLead = async () => {
@@ -36,7 +73,6 @@ const Lead1 = () => {
         return;
       }
 
-      // Make the API request
       await axios.post(
         "http://localhost:5000/api/leads",
         {
@@ -48,8 +84,7 @@ const Lead1 = () => {
           lead_category: leadCategory,
           address,
           assigned_to: assignedTo,
-          admin_id: adminId,
-          campaign_id: campaignId,
+          campaign_name: campaignName,
           notes,
         },
         {
@@ -59,7 +94,6 @@ const Lead1 = () => {
         }
       );
 
-      // Show success message and reset form
       alert("✅ Lead added successfully!");
       setName("");
       setPhone("");
@@ -69,8 +103,7 @@ const Lead1 = () => {
       setLeadCategory("");
       setAddress("");
       setAssignedTo("");
-      setAdminId("");
-      setCampaignId("");
+      setCampaignName("");
       setNotes("");
     } catch (error) {
       console.error("❌ Error adding lead:", error.response?.data || error.message);
@@ -87,7 +120,7 @@ const Lead1 = () => {
           <div className="company-box text-lg font-semibold">
             Engineering Techno World 🛠️
           </div>
-          <BackButton /> {/* Add Back Button */}
+          <BackButton />
         </div>
 
         {/* Welcome Message */}
@@ -191,30 +224,35 @@ const Lead1 = () => {
           </div>
 
           <div>
-            <label className="block font-semibold">Assigned To </label>
-            <input
+            <label className="block font-semibold">Assigned To</label>
+            <select
               value={assignedTo}
               onChange={(e) => setAssignedTo(e.target.value)}
-              className="w-full p-2 rounded border shadow"
-            />
+              className="w-full p-2 rounded border shadow bg-white"
+            >
+              <option value="">Select User</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
-            <label className="block font-semibold">Admin ID</label>
-            <input
-              value={adminId}
-              onChange={(e) => setAdminId(e.target.value)}
-              className="w-full p-2 rounded border shadow"
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold">Campaign ID</label>
-            <input
-              value={campaignId}
-              onChange={(e) => setCampaignId(e.target.value)}
-              className="w-full p-2 rounded border shadow"
-            />
+            <label className="block font-semibold">Campaign Name</label>
+            <select
+              value={campaignName}
+              onChange={(e) => setCampaignName(e.target.value)}
+              className="w-full p-2 rounded border shadow bg-white"
+            >
+              <option value="">Select Campaign</option>
+              {campaigns.map((campaign) => (
+                <option key={campaign.id} value={campaign.name}>
+                  {campaign.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="md:col-span-2">

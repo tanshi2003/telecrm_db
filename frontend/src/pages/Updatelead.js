@@ -1,4 +1,3 @@
-// ...existing imports...
 import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import {
@@ -14,14 +13,14 @@ import Sidebar from "../components/Sidebar";
 import { AuthContext } from "../context/AuthContext";
 
 const Updatelead = () => {
-  // ...existing state...
   const [leads, setLeads] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAllFields, setShowAllFields] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [isEditing, setIsEditing] = useState(false); // <-- NEW
-  const [editForm, setEditForm] = useState({}); // <-- NEW
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [users, setUsers] = useState([]); // <-- For Assigned To dropdown
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
@@ -45,7 +44,25 @@ const Updatelead = () => {
     fetchLeads();
   }, []);
 
-  // Delete lead handler (unchanged)
+  // Fetch users for Assigned To dropdown
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get("http://localhost:5000/api/users", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.data?.data) {
+          setUsers(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching users:", error.response?.data || error.message);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  // Delete lead handler
   const handleDeleteLead = async (leadId) => {
     if (!window.confirm("Are you sure you want to delete this lead?")) return;
     try {
@@ -103,7 +120,6 @@ const Updatelead = () => {
     }
   };
 
-  // ...existing render code...
   return (
     <div className="flex min-h-screen bg-white font-sans text-gray-800">
       <Sidebar role={user?.role || "admin"} />
@@ -194,14 +210,22 @@ const Updatelead = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={editForm.email || ""}
+                    <label className="block text-sm">Assigned To</label>
+                    <select
+                      name="assigned_to"
+                      value={editForm.assigned_to || ""}
                       onChange={handleEditFormChange}
                       className="w-full border rounded p-2"
-                    />
+                      required
+                    >
+                      <option value="">Select User</option>
+                      {Array.isArray(users) &&
+                        users.map((user) => (
+                          <option key={user.id} value={user.id}>
+                            {user.name}
+                          </option>
+                        ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm">Address</label>
@@ -251,13 +275,13 @@ const Updatelead = () => {
                               className="block w-full text-left px-4 py-2 hover:bg-gray-100"
                               onClick={() => handleEditLead(selectedLead.id)}
                             >
-                              Edit This Lead
+                              Edit 
                             </button>
                             <button
                               className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
                               onClick={() => handleDeleteLead(selectedLead.id)}
                             >
-                              Delete This Lead
+                              Delete 
                             </button>
                           </div>
                         )}
@@ -299,10 +323,11 @@ const Updatelead = () => {
                         <p><strong>Created At:</strong> {selectedLead.created_at ? new Date(selectedLead.created_at).toLocaleString() : "N/A"}</p>
                         <p><strong>Updated At:</strong> {selectedLead.updated_at ? new Date(selectedLead.updated_at).toLocaleString() : "N/A"}</p>
                         <p><strong>Category:</strong> {selectedLead.lead_category || "N/A"}</p>
-                        <p><strong>Assigned To:</strong> {selectedLead.assigned_to || "N/A"}</p>
-                        <p><strong>Email:</strong> {selectedLead.email || "N/A"}</p>
+                        <p><strong>Assigned To:</strong>{" "}
+                            {users.find((u) => u.id === selectedLead.assigned_to)?.name || "N/A"}
+                          </p>
                         <p><strong>Address:</strong> {selectedLead.address || "N/A"}</p>
-                      </div>
+                      </div>  
                     )}
                   </div>
                   {/* ...rest of your actions/history... */}
