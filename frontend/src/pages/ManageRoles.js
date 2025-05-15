@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import Select from "react-select";
+import axios from "axios";
 import toast from "react-hot-toast";
 import { FaCheck, FaEdit } from "react-icons/fa";
 import Sidebar from "../components/Sidebar"; // Sidebar included
 
 const roleOptions = [
-  { value: "admin", label: "Admin" },
   { value: "manager", label: "Manager" },
-  { value: "employee", label: "Employee" },
+  { value: "caller", label: "Caller" },
+  { value: "field_employee", label: "Field Employee" },
 ];
 
 const ManageRoles = () => {
@@ -25,11 +26,18 @@ const ManageRoles = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/users");
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:5000/api/users", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
       const data = await res.json();
-      if (data.success) {
-        setUsers(data.users);
-        setManagers(data.users.filter((u) => u.role === "manager"));
+      // Use data.data instead of data.users
+      if (data.success && Array.isArray(data.data)) {
+        setUsers(data.data);
+        setManagers(data.data.filter((u) => u.role === "manager"));
       } else {
         toast.error("Failed to fetch users.");
       }
@@ -39,25 +47,29 @@ const ManageRoles = () => {
     setLoading(false);
   };
 
-  const handleRoleChange = async (userId, newRole, managerId = null) => {
-    try {
-      const res = await fetch("http://localhost:5000/users/update-role", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, role: newRole, managerId }),
-      });
+ const handleRoleChange = async (userId, newRole) => {
+  try {
+    const token = localStorage.getItem("token");
 
-      const result = await res.json();
-      if (result.success) {
-        toast.success("✅ Role updated successfully!");
-        fetchUsers();
-      } else {
-        toast.error("❌ Failed to update role.");
+    await axios.put(
+      `http://localhost:5000/api/users/update-role/${userId}`,
+      { role: newRole },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
-    } catch {
-      toast.error("Server error while updating role.");
-    }
-  };
+    );
+
+    toast.success("✅ Role updated successfully!");
+    fetchUsers(); // refresh list
+
+  } catch (error) {
+    console.error("Error updating role:", error.response?.data || error.message);
+    toast.error("❌ Failed to update role.");
+  }
+};
 
   return (
     <div className="relative flex min-h-screen">
@@ -76,18 +88,30 @@ const ManageRoles = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-100">
                   <tr>
-                    <th className="text-left px-4 py-2 text-sm font-medium text-gray-700">User</th>
-                    <th className="text-left px-4 py-2 text-sm font-medium text-gray-700">Email</th>
-                    <th className="text-left px-4 py-2 text-sm font-medium text-gray-700">Current Role</th>
-                    <th className="text-left px-4 py-2 text-sm font-medium text-gray-700">New Role</th>
-                    <th className="text-left px-4 py-2 text-sm font-medium text-gray-700">Assign Manager</th>
-                    <th className="text-left px-4 py-2 text-sm font-medium text-gray-700">Action</th>
+                    <th className="text-left px-4 py-2 text-sm font-medium text-gray-700">
+                      User
+                    </th>
+                    <th className="text-left px-4 py-2 text-sm font-medium text-gray-700">
+                      Email
+                    </th>
+                    <th className="text-left px-4 py-2 text-sm font-medium text-gray-700">
+                      Current Role
+                    </th>
+                    <th className="text-left px-4 py-2 text-sm font-medium text-gray-700">
+                      New Role
+                    </th>
+                    <th className="text-left px-4 py-2 text-sm font-medium text-gray-700">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {users.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="text-center py-4 text-gray-500">
+                      <td
+                        colSpan="6"
+                        className="text-center py-4 text-gray-500"
+                      >
                         No users found.
                       </td>
                     </tr>
@@ -101,7 +125,8 @@ const ManageRoles = () => {
                         onUpdate={handleRoleChange}
                       />
                     ))
-                  )}
+                  )
+                  }
                 </tbody>
               </table>
             </div>
@@ -112,23 +137,20 @@ const ManageRoles = () => {
   );
 };
 
-const RoleRow = ({ user, roles, managers, onUpdate }) => {
+const RoleRow = ({ user, roles, onUpdate }) => {
   const [selectedRole, setSelectedRole] = useState(
     roles.find((r) => r.value === user.role)
   );
-  const [selectedManager, setSelectedManager] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  const showManagerSelect = selectedRole?.value === "employee";
-
   const handleSave = () => {
-    onUpdate(user._id, selectedRole.value, selectedManager?.value || null);
+    onUpdate(user._id, selectedRole.value || null);
     setIsEditing(false);
   };
 
   return (
     <tr className="hover:bg-gray-50 transition">
-      <td className="px-4 py-2 text-sm">{user.userName}</td>
+      <td className="px-4 py-2 text-sm">{user.name}</td>
       <td className="px-4 py-2 text-sm">{user.email}</td>
       <td className="px-4 py-2">
         <span className="inline-block px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700 capitalize">
@@ -142,22 +164,6 @@ const RoleRow = ({ user, roles, managers, onUpdate }) => {
           onChange={setSelectedRole}
           isDisabled={!isEditing}
         />
-      </td>
-      <td className="px-4 py-2 min-w-[200px]">
-        {showManagerSelect ? (
-          <Select
-            options={managers.map((m) => ({
-              value: m._id,
-              label: `${m.firstName || ""} ${m.lastName || ""} (${m.userName})`,
-            }))}
-            value={selectedManager}
-            onChange={setSelectedManager}
-            isDisabled={!isEditing}
-            placeholder="Select Manager"
-          />
-        ) : (
-          <span className="text-gray-400">—</span>
-        )}
       </td>
       <td className="px-4 py-2">
         {isEditing ? (

@@ -101,17 +101,23 @@ const Updatelead = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.put(
+      await axios.put(
         `http://localhost:5000/api/leads/${editForm.id}`,
         editForm,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      // Fetch the updated lead details
+      const updatedLeadRes = await axios.get(
+        `http://localhost:5000/api/leads/${editForm.id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const updatedLead = updatedLeadRes.data.data;
       // Update local state
       const updatedLeads = leads.map((lead) =>
-        lead.id === editForm.id ? response.data.data || editForm : lead
+        lead.id === editForm.id ? updatedLead : lead
       );
       setLeads(updatedLeads);
-      setSelectedLead(response.data.data || editForm);
+      setSelectedLead(updatedLead);
       setIsEditing(false);
       alert("Lead updated successfully!");
     } catch (error) {

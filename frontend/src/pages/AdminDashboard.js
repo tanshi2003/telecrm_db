@@ -87,30 +87,6 @@ const AdminDashboard = () => {
               View Reports
             </button>
           </div>
-
-          {/* Notifications */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">Notifications</h2>
-            <p>Send alerts, updates, and announcements to users. View history of broadcasts.</p>
-            <button
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-              onClick={() => handleNavigation("/admin/notifications")}
-            >
-              View Notifications
-            </button>
-          </div>
-
-          {/* Admin Profile */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">Profile</h2>
-            <p>View or update admin details, manage password, and system preferences.</p>
-            <button
-              className="mt-4 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-              onClick={() => handleNavigation("/admin/profile")}
-            >
-              Edit Profile
-            </button>
-          </div>
         </div>
       </div>
     </div>

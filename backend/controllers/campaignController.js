@@ -177,3 +177,52 @@ exports.getCampaignProgress = (req, res) => {
         res.json(responseFormatter(true, "Campaign progress", { totalLeads, converted, progress }));
     });
 };
+
+// 📄 Get Campaign By ID (with assigned users and total leads)
+exports.getCampaignById = (req, res) => {
+    const { id } = req.params;
+
+    // Get campaign details
+    db.query("SELECT * FROM campaigns WHERE id = ?", [id], (err, campaignRows) => {
+        if (err) {
+            console.error("Error fetching campaign:", err);
+            return res.status(500).json(responseFormatter(false, "Database error", err.message));
+        }
+        if (campaignRows.length === 0) {
+            return res.status(404).json(responseFormatter(false, "Campaign not found"));
+        }
+        const campaign = campaignRows[0];
+
+        // Get assigned users
+        db.query(
+            `SELECT u.id, u.name, u.email, u.role 
+             FROM campaign_users cu 
+             JOIN Users u ON cu.user_id = u.id 
+             WHERE cu.campaign_id = ?`,
+            [id],
+            (err, userRows) => {
+                if (err) {
+                    console.error("Error fetching assigned users:", err);
+                    return res.status(500).json(responseFormatter(false, "Database error", err.message));
+                }
+
+                // Get total leads
+                db.query(
+                    "SELECT COUNT(*) AS total_leads FROM leads WHERE campaign_id = ?",
+                    [id],
+                    (err, leadRows) => {
+                        if (err) {
+                            console.error("Error fetching leads:", err);
+                            return res.status(500).json(responseFormatter(false, "Database error", err.message));
+                        }
+
+                        campaign.assigned_users = userRows;
+                        campaign.total_leads = leadRows[0].total_leads;
+
+                        res.json(responseFormatter(true, "Campaign fetched successfully", campaign));
+                    }
+                );
+            }
+        );
+    });
+};

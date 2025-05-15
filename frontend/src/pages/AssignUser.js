@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { AuthContext } from "../context/AuthContext";
 
 const AssignUser = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,9 +23,15 @@ const AssignUser = () => {
         const response = await axios.get("http://localhost:5000/api/campaigns", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (response.data?.data) {
+        if (response.data?.data && response.data.data.length > 0) {
           setCampaigns(response.data.data);
-          setSelectedCampaign(response.data.data[0]);
+          // Fetch first campaign's details
+          const firstCampaign = response.data.data[0];
+          const res = await axios.get(
+            `http://localhost:5000/api/campaigns/${firstCampaign.id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          setSelectedCampaign(res.data.data);
         }
       } catch (error) {
         console.error("Error fetching campaigns:", error.response?.data || error.message);
@@ -91,14 +97,34 @@ const AssignUser = () => {
       );
       alert("User(s) assigned successfully!");
       setIsAssigning(false);
-      // Optionally update selectedCampaign.assigned_users in state for immediate UI feedback
-      setSelectedCampaign((prev) => ({
-        ...prev,
-        assigned_users: assignForm.userIds
-      }));
+
+      // Fetch updated campaign details from backend
+      const updatedCampaignRes = await axios.get(
+        `http://localhost:5000/api/campaigns/${selectedCampaign.id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSelectedCampaign(updatedCampaignRes.data.data);
+
+      // Optionally, refresh campaigns list if needed
+      // fetchCampaigns();
+
     } catch (error) {
       alert("Failed to assign user(s).");
       console.error("Assign error:", error.response?.data || error.message);
+    }
+  };
+
+  const handleCampaignSelect = async (campaign) => {
+    setIsAssigning(false);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(
+        `http://localhost:5000/api/campaigns/${campaign.id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSelectedCampaign(res.data.data);
+    } catch (error) {
+      setSelectedCampaign(campaign); // fallback
     }
   };
 
@@ -120,10 +146,7 @@ const AssignUser = () => {
                 {campaigns.map((campaign) => (
                   <div
                     key={campaign.id}
-                    onClick={() => {
-                      setSelectedCampaign(campaign);
-                      setIsAssigning(false);
-                    }}
+                    onClick={() => handleCampaignSelect(campaign)}
                     className={`p-3 rounded shadow cursor-pointer ${
                       selectedCampaign?.id === campaign.id
                         ? "bg-blue-100 border-l-4 border-blue-500"
@@ -158,7 +181,9 @@ const AssignUser = () => {
                     <strong>User Assigned:</strong>{" "}
                     {selectedCampaign.assigned_users && selectedCampaign.assigned_users.length > 0
                       ? users
-                          .filter(u => selectedCampaign.assigned_users.includes(u.id))
+                          .filter(u =>
+                            selectedCampaign.assigned_users.some(au => au.id === u.id)
+                          )
                           .map(u => u.name)
                           .join(", ")
                       : "None"}
@@ -183,7 +208,11 @@ const AssignUser = () => {
                               <input
                                 type="checkbox"
                                 value={u.id}
-                                checked={assignForm.userIds.includes(u.id)}
+                                checked={
+                                  assignForm.userIds.includes(u.id) ||
+                                  (selectedCampaign.assigned_users &&
+                                    selectedCampaign.assigned_users.some(au => au.id === u.id))
+                                }
                                 onChange={handleAssignFormChange}
                                 className="accent-blue-600"
                               />
