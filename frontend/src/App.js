@@ -24,13 +24,13 @@ import ManageCampaigns from "./pages/ManageCampaigns";
 import Campaign from "./pages/Campaign";
 import ManageUsers from "./pages/ManageUser";
 import SearchPage from "./pages/Search";
+import FiltersPage from "./pages/Filters"; // Use the page version
 import RegisterUser from "./pages/RegisterUser";
 import AllUsers from "./pages/AllUsers";
 import AccessLogs from "./pages/AccessLogs";
 import ManageRoles from "./pages/ManageRoles";
 import ManageStatus from "./pages/ManageStatus";
 import EmployeeProfile from "./pages/EmployeeProfile";
-import Filters from "./components/Filters";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -217,7 +217,7 @@ function App() {
 
               {/* 🆕 Search Route */}
               <Route path="/search" element={<SearchPage />} />
-              <Route path="/filters" element={<Filters />} />
+              <Route path="/filters" element={<FiltersPage />} />
             </Routes>
           </AnimatePresence>
         </div>

@@ -12,7 +12,7 @@ const userStatuses = ["Active", "Inactive", "On Leave"];
 const campaignStatuses = ["Ongoing", "Completed", "Paused"];
 const campaignPriorities = ["High", "Medium", "Low"];
 
-const Filters = ({ type = "leads", onApply, onReset }) => {
+const Filters = ({ type = "users", onApply, onReset, removeWorkingHours }) => {
   // Common states
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
@@ -169,34 +169,9 @@ const Filters = ({ type = "leads", onApply, onReset }) => {
                 {userStatuses.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-semibold mb-1">Location</label>
-              <input className="w-full border rounded p-2" type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-1">Manager Assigned</label>
-              <select className="w-full border rounded p-2" value={manager} onChange={e => setManager(e.target.value)}>
-                <option value="">All</option>
-                {managers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-1">Performance Rating</label>
-              <select className="w-full border rounded p-2" value={performance} onChange={e => setPerformance(e.target.value)}>
-                <option value="">All</option>
-                {[1,2,3,4,5].map(r => <option key={r} value={r}>{r} Star{r>1?"s":""}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-1">Working Hours</label>
-              <div className="flex gap-2">
-                <input className="w-full border rounded p-2" type="number" min="0" placeholder="Min" value={workingHours.min} onChange={e => setWorkingHours({ ...workingHours, min: e.target.value })} />
-                <input className="w-full border rounded p-2" type="number" min="0" placeholder="Max" value={workingHours.max} onChange={e => setWorkingHours({ ...workingHours, max: e.target.value })} />
-              </div>
-            </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold mb-1">Search</label>
-              <input className="w-full border rounded p-2" type="text" placeholder="Search by name, email, phone..." value={search} onChange={e => setSearch(e.target.value)} />
+              <label className="block text-sm font-semibold mb-1">Search by Name, Email, Phone</label>
+              <input className="w-full border rounded p-2" type="text" placeholder="Search by Name, Email, Phone..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
           </>}
 
