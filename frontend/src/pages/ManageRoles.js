@@ -48,6 +48,7 @@ const ManageRoles = () => {
   };
 
  const handleRoleChange = async (userId, newRole) => {
+  console.log("Updating role for user:", userId, "to", newRole); // log this!
   try {
     const token = localStorage.getItem("token");
 
@@ -144,7 +145,7 @@ const RoleRow = ({ user, roles, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
 
   const handleSave = () => {
-    onUpdate(user._id, selectedRole.value || null);
+    onUpdate(user.id, selectedRole.value);
     setIsEditing(false);
   };
 
