@@ -17,6 +17,9 @@ import EditLead from "./pages/EditLead";
 import Updatelead from "./pages/Updatelead";
 import FieldDashboard from "./pages/FieldDashboard";
 import ManagerDashboard from "./pages/ManagerDashboard";
+import EditCampaign from "./pages/EditCampaign";
+import AssignUser from './pages/AssignUser';
+import UpdateCampaign from "./pages/UpdateCampaign";
 import ManageCampaigns from "./pages/ManageCampaigns";
 import Campaign from "./pages/Campaign";
 import ManageUsers from "./pages/ManageUser";
@@ -141,6 +144,32 @@ function App() {
                   <ProtectedRoute allowedRoles={["admin"]}>
                     <Campaign />
                   </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/assignuser"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AssignUser />
+                  </ProtectedRoute>
+                }
+              />
+             <Route 
+             path="/admin/UpdateCampaign/:id" 
+             element={
+               <ProtectedRoute allowedRoles={["admin"]}>
+             <UpdateCampaign /> 
+             
+</ProtectedRoute>
+                }
+              />
+              <Route 
+             path="/admin/EditCampaign/:id" 
+             element={
+               <ProtectedRoute allowedRoles={["admin"]}>
+             <EditCampaign /> 
+             
+</ProtectedRoute>
                 }
               />
               <Route

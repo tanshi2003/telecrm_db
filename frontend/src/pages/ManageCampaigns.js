@@ -1,11 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Sidebar from "../components/Sidebar";
 import BackButton from "../components/BackButton";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";  // Fix: Import useEffect
 
 const ManageCampaigns = () => {
   const [formData, setFormData] = useState({
@@ -15,13 +14,31 @@ const ManageCampaigns = () => {
     priority: "",
     start_date: "",
     end_date: "",
+    leads: [], // <-- selected lead IDs
   });
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  
+  const [leads, setLeads] = useState([]); // <-- all leads from DB
+
   const navigate = useNavigate();
+
+  // Fetch all leads on mount
+  useEffect(() => {
+    const fetchLeads = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get("http://localhost:5000/api/leads", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setLeads(response.data.data || []);
+      } catch (error) {
+        console.error("Error fetching leads:", error);
+      }
+    };
+    fetchLeads();
+  }, []);
 
   // Utility: Reset form
   const resetForm = () => {
@@ -32,6 +49,7 @@ const ManageCampaigns = () => {
       priority: "",
       start_date: "",
       end_date: "",
+      leads: [],
     });
     setIsEditing(false);
     setEditId(null);
@@ -42,12 +60,25 @@ const ManageCampaigns = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Handle lead checkbox change
+  const handleLeadCheckbox = (leadId) => {
+    setFormData((prev) => {
+      const leads = prev.leads.includes(leadId)
+        ? prev.leads.filter((id) => id !== leadId)
+        : [...prev.leads, leadId];
+      return { ...prev, leads };
+    });
+  };
+
   const validateForm = () => {
-    const { name, description, status, priority, start_date } = formData;
-    return name && description && status && priority && start_date;
+    const { name, description, status, priority, start_date, leads } = formData;
+    return name && description && status && priority && start_date && leads.length > 0;
   };
 
   const handleAddCampaign = async () => {
+    // Set lead_count automatically
+    const submitData = { ...formData, lead_count: formData.leads.length.toString() };
+
     if (!validateForm()) {
       alert("Please fill in all required fields.");
       return;
@@ -55,7 +86,7 @@ const ManageCampaigns = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.post("http://localhost:5000/api/campaigns", formData, {
+      await axios.post("http://localhost:5000/api/campaigns", submitData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -74,14 +105,14 @@ const ManageCampaigns = () => {
   };
 
   const handleEditCampaign = (id) => {
-    // Removed the reference to campaigns, as it's no longer in use
     setIsEditing(true);
     setEditId(id);
   };
 
   const handleUpdateCampaign = async () => {
+    const submitData = { ...formData, lead_count: formData.leads.length.toString() };
     try {
-      await axios.put(`/api/campaigns/${editId}`, formData);
+      await axios.put(`/api/campaigns/${editId}`, submitData);
       resetForm();
       setSuccessMessage("Campaign updated successfully!");
     } catch (error) {
@@ -143,10 +174,7 @@ const ManageCampaigns = () => {
           </div>
 
           <div className="mb-4">
-            <label
-              className="block text-sm font-medium mb-1"
-              htmlFor="description"
-            >
+            <label className="block text-sm font-medium mb-1" htmlFor="description">
               Campaign Description<span className="text-red-500">*</span>
             </label>
             <textarea
@@ -175,6 +203,28 @@ const ManageCampaigns = () => {
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
+          </div>
+
+          {/* Lead selection with checkboxes */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">
+              Select Leads<span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded p-2 bg-gray-50">
+              {leads.map(lead => (
+                <label key={lead.id} className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    value={lead.id}
+                    checked={formData.leads.includes(lead.id)}
+                    onChange={() => handleLeadCheckbox(lead.id)}
+                    className="accent-blue-600"
+                  />
+                  <span>{lead.name} ({lead.phone_no})</span>
+                </label>
+              ))}
+            </div>
+            <small className="text-gray-500">Select one or more leads for this campaign.</small>
           </div>
 
           <div className="mb-4">

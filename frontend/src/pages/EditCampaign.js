@@ -1,21 +1,23 @@
 import React, { useEffect, useState, useContext, useRef } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
+import { useNavigate, useParams } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import Navbar from "../components/Navbar";
 import { AuthContext } from "../context/AuthContext";
 
-const UpdateCampaign = () => {
+const EditCampaign = () => {
+  const { id } = useParams(); // Get the campaign ID from the URL
   const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
+  const [loading, setLoading] = useState(true);
   const { user } = useContext(AuthContext);
+  const [isEditing, setIsEditing] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
+  // Fetch campaigns when the component is mounted
   useEffect(() => {
     const fetchCampaigns = async () => {
       try {
@@ -25,7 +27,15 @@ const UpdateCampaign = () => {
         });
         if (response.data?.data) {
           setCampaigns(response.data.data);
-          setSelectedCampaign(response.data.data[0]);
+          const campaignToEdit = response.data.data.find(
+            (campaign) => campaign.id === parseInt(id)
+          );
+          if (campaignToEdit) {
+            setSelectedCampaign(campaignToEdit);
+            setEditForm(campaignToEdit);
+          } else {
+            navigate("/admin/campaigns");
+          }
         }
       } catch (error) {
         console.error("Error fetching campaigns:", error.response?.data || error.message);
@@ -34,37 +44,26 @@ const UpdateCampaign = () => {
       }
     };
     fetchCampaigns();
+  }, [id, navigate]);
+
+  // Handle dropdown closing when clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleDeleteCampaign = async (campaignId) => {
-    if (!window.confirm("Are you sure you want to delete this campaign?")) return;
-    try {
-      const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/api/campaigns/${campaignId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const updatedCampaigns = campaigns.filter((campaign) => campaign.id !== campaignId);
-      setCampaigns(updatedCampaigns);
-      setSelectedCampaign(updatedCampaigns.length > 0 ? updatedCampaigns[0] : null);
-      setIsEditing(false);
-      alert("Campaign deleted successfully!");
-    } catch (error) {
-      alert("Failed to delete campaign.");
-      console.error("Delete error:", error.response?.data || error.message);
-    }
-  };
-
-  const handleEditCampaign = () => {
-    setEditForm(selectedCampaign);
-    setIsEditing(true);
-    setDropdownOpen(false);
-  };
-
+  // Handle form change when editing
   const handleEditFormChange = (e) => {
     const { name, value } = e.target;
     setEditForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Handle form submission for updating the campaign
   const handleEditFormSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -87,16 +86,36 @@ const UpdateCampaign = () => {
     }
   };
 
-  // Handle outside click to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  // Handle edit button click
+  const handleEditCampaign = () => {
+    setIsEditing(true);
+    setDropdownOpen(false);
+  };
+
+  // Handle campaign selection from list
+  const handleSelectCampaign = (campaign) => {
+    setSelectedCampaign(campaign);
+    setIsEditing(false);
+  };
+
+  // Handle deleting a campaign
+  const handleDeleteCampaign = async (campaignId) => {
+    if (!window.confirm("Are you sure you want to delete this campaign?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:5000/api/campaigns/${campaignId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const updatedCampaigns = campaigns.filter((campaign) => campaign.id !== campaignId);
+      setCampaigns(updatedCampaigns);
+      setSelectedCampaign(updatedCampaigns.length > 0 ? updatedCampaigns[0] : null);
+      setIsEditing(false);
+      alert("Campaign deleted successfully!");
+    } catch (error) {
+      alert("Failed to delete campaign.");
+      console.error("Delete error:", error.response?.data || error.message);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-white font-sans text-gray-800">
@@ -116,10 +135,7 @@ const UpdateCampaign = () => {
                 {campaigns.map((campaign) => (
                   <div
                     key={campaign.id}
-                    onClick={() => {
-                      setSelectedCampaign(campaign);
-                      setIsEditing(false);
-                    }}
+                    onClick={() => handleSelectCampaign(campaign)}
                     className={`p-3 rounded shadow cursor-pointer ${
                       selectedCampaign?.id === campaign.id
                         ? "bg-blue-100 border-l-4 border-blue-500"
@@ -141,44 +157,43 @@ const UpdateCampaign = () => {
           <div className="w-2/3 p-6 bg-white overflow-y-auto relative">
             {selectedCampaign ? (
               isEditing ? (
-                <form onSubmit={handleEditFormSubmit} className="border p-4 rounded shadow mb-4 space-y-3">
-                  <h3 className="text-lg font-semibold text-purple-600 mb-2">Edit Campaign</h3>
+                <form onSubmit={handleEditFormSubmit} className="border p-6 rounded shadow mb-4 space-y-4">
+                  <h3 className="text-lg font-semibold text-purple-600 mb-4">Edit Campaign</h3>
                   {["name", "description", "status", "priority", "start_date", "end_date"].map((field) => (
-                    <div key={field}>
+                    <div key={field} className="space-y-2">
                       <label className="block text-sm capitalize">{field.replace("_", " ")}</label>
                       <input
                         type="text"
                         name={field}
                         value={editForm[field] || ""}
                         onChange={handleEditFormChange}
-                        className="w-full border rounded p-2"
+                        className="w-full border rounded p-3 text-sm"
                       />
                     </div>
                   ))}
 
-                  <div className="flex gap-2 mt-4">
+                  <div className="flex gap-4 mt-4">
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                      className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 w-full sm:w-auto"
                     >
-                      Save
+                      Save Changes
                     </button>
                     <button
                       type="button"
                       onClick={() => setIsEditing(false)}
-                      className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+                      className="px-6 py-3 bg-gray-400 text-white rounded-md hover:bg-gray-500 w-full sm:w-auto"
                     >
                       Cancel
                     </button>
                   </div>
                 </form>
               ) : (
-               // ...existing code...
-                <div className="space-y-2 relative border rounded p-4 shadow">
+                // ...existing code...
+                <div className="space-y-2 relative border rounded p-6 shadow">
                   <div className="flex justify-between items-start">
                     <h3 className="text-xl font-semibold text-gray-700">{selectedCampaign.name}</h3>
-
-                    {/* Dropdown */}
+                    {/* Dropdown ... */}
                     <div className="relative" ref={dropdownRef}>
                       <button
                         onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -217,7 +232,7 @@ const UpdateCampaign = () => {
 // ...existing code...
               )
             ) : (
-              <p className="text-gray-500">Select a campaign to view details.</p>
+              <p className="text-gray-600">Select a campaign to edit.</p>
             )}
           </div>
         </div>
@@ -226,4 +241,4 @@ const UpdateCampaign = () => {
   );
 };
 
-export default UpdateCampaign;
+export default EditCampaign;

@@ -12,6 +12,7 @@ const Campaign = () => {
   });
   const [campaigns, setCampaigns] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
+  const [showAll, setShowAll] = useState(false); // <-- NEW STATE
 
   const navigate = useNavigate();
 
@@ -94,6 +95,9 @@ const Campaign = () => {
     return matchesStatus && matchesPriority && matchesDate;
   });
 
+  // Only show first 6 campaigns unless showAll is true
+  const campaignsToShow = showAll ? filteredCampaigns : filteredCampaigns.slice(0, 6);
+
   return (
     <div className="flex min-h-screen overflow-hidden">
       {/* Sidebar */}
@@ -135,7 +139,7 @@ const Campaign = () => {
             </p>
             <button
               className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              onClick={() => navigate("/admin/updatecampaign")}
+              onClick={() => navigate(`/admin/UpdateCampaign/${campaigns.id}`)}
             >
               + Update Campaign
             </button>
@@ -148,7 +152,7 @@ const Campaign = () => {
             </p>
             <button
               className="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-              onClick={() => navigate("/assign-users")}
+              onClick={() => navigate("/assignuser")}
             >
               + Assign Users
             </button>
@@ -224,50 +228,75 @@ const Campaign = () => {
           {filteredCampaigns.length === 0 ? (
             <p>No campaigns match the current filters.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredCampaigns.map((campaign) => (
-                <div key={campaign.id} className="bg-white p-4 rounded-lg shadow-md">
-                  <h3 className="text-lg font-semibold mb-2">{campaign.name}</h3>
-                  <p className="text-sm text-gray-600 mb-1">
-                    Description: <strong>{campaign.description || "N/A"}</strong>
-                  </p>
-                  <p className="text-sm text-gray-600 mb-1">
-                    Status: <strong>{campaign.status || "N/A"}</strong>
-                  </p>
-                  <p className="text-sm text-gray-600 mb-1">
-                    Priority: <strong>{campaign.priority || "N/A"}</strong>
-                  </p>
-                  <p className="text-sm text-gray-600 mb-1">
-                    Start Date:{" "}
-                    {campaign.start_date
-                      ? new Date(campaign.start_date).toLocaleDateString()
-                      : "N/A"}
-                  </p>
-                  <p className="text-sm text-gray-600 mb-1">
-                    End Date:{" "}
-                    {campaign.end_date
-                      ? new Date(campaign.end_date).toLocaleDateString()
-                      : "N/A"}
-                  </p>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {campaignsToShow.map((campaign) => (
+                  <div key={campaign.id} className="bg-white p-4 rounded-lg shadow-md">
+                    <h3 className="text-lg font-semibold mb-2">{campaign.name}</h3>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Description: <strong>{campaign.description || "N/A"}</strong>
+                    </p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Lead Count: <strong>{campaign.lead_count ?? campaign.leads?.length ?? "N/A"}</strong>
+                    </p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Status: <strong>{campaign.status || "N/A"}</strong>
+                    </p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Priority: <strong>{campaign.priority || "N/A"}</strong>
+                    </p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Start Date:{" "}
+                      {campaign.start_date
+                        ? new Date(campaign.start_date).toLocaleDateString()
+                        : "N/A"}
+                    </p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      End Date:{" "}
+                      {campaign.end_date
+                        ? new Date(campaign.end_date).toLocaleDateString()
+                        : "N/A"}
+                    </p>
 
-                  {/* Edit/Delete Buttons */}
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={() => navigate(`/`)}
-                      className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(campaign.id)}
-                      className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
+                    {/* Edit/Delete Buttons */}
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => navigate(`/admin/EditCampaign/${campaign.id}`)}
+                        className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(campaign.id)}
+                        className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
+                ))}
+              </div>
+              {!showAll && filteredCampaigns.length > 6 && (
+                <div className="flex justify-center mt-6">
+                  <button
+                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    onClick={() => setShowAll(true)}
+                  >
+                    Show All Campaigns
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+              {showAll && filteredCampaigns.length > 6 && (
+                <div className="flex justify-center mt-6">
+                  <button
+                    className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                    onClick={() => setShowAll(false)}
+                  >
+                    Show Less
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
