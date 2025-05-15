@@ -372,6 +372,12 @@ const Sidebar = ({ user }) => {
 >
   <UserPlus size={16} className="text-blue-500" />
   <span className="text-sm text-gray-800">Add Single Lead</span>
+  <button
+    onClick={() => navigate("/Lead1")}
+    className="ml-auto px-2 py-1 text-sm text-white bg-blue-500 rounded hover:bg-blue-600"
+  >
+    Go
+  </button>
 </div>
 
     {/* Add From Excel */}
