@@ -17,8 +17,6 @@ import {
   Users,
   ClipboardList, // Icon for My Leads
   PhoneIncoming, // Icon for My Calls
-  Sliders, // Icon for Active Filters
-  Save, // Icon for Saved Filters
 } from "lucide-react"; // Added new icons for filters dropdown
 import { useNavigate } from "react-router-dom";
 
@@ -31,7 +29,6 @@ const Sidebar = ({ user }) => {
   const [showCampaignOptions, setShowCampaignOptions] = useState(false); // Campaign dropdown
   const [showReportOptions, setShowReportOptions] = useState(false); // Reports dropdown
   const [showActivityOptions, setShowActivityOptions] = useState(false); // Activity dropdown
-  const [showFilterOptions, setShowFilterOptions] = useState(false); // Filters dropdown
   const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0 });
   const [campaigns, setCampaigns] = useState([]); // State to store campaigns
   const [errorMessage, setErrorMessage] = useState(""); // State for error messages
@@ -40,7 +37,6 @@ const Sidebar = ({ user }) => {
   const campaignBtnRef = useRef(null);
   const reportBtnRef = useRef(null);
   const activityBtnRef = useRef(null);
-  const filterBtnRef = useRef(null);
   const navigate = useNavigate();
   const localUser = JSON.parse(localStorage.getItem("user") || "{}");
   const role = localStorage.getItem("role");
@@ -125,18 +121,6 @@ const Sidebar = ({ user }) => {
     setShowActivityOptions((prev) => !prev);
   };
 
-  const handleFilterClick = () => {
-    if (filterBtnRef.current) {
-      const rect = filterBtnRef.current.getBoundingClientRect();
-      const sidebarWidth = isExpanded ? 64 : 20; // Adjust based on sidebar width
-      setDropdownCoords({
-        top: rect.top + window.scrollY + 10, // Add scroll offset for proper positioning
-        left: rect.left + sidebarWidth + 50, // Shifted to the right
-      });
-    }
-    setShowFilterOptions((prev) => !prev);
-  };
-
   const fetchCampaigns = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -190,12 +174,6 @@ const Sidebar = ({ user }) => {
       ) {
         setShowActivityOptions(false);
       }
-      if (
-        filterBtnRef.current &&
-        !filterBtnRef.current.contains(e.target)
-      ) {
-        setShowFilterOptions(false);
-      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -246,14 +224,14 @@ const Sidebar = ({ user }) => {
             {
               icon: Filter,
               label: "Filters",
-              isFilter: true,
+              path: "/filters", // Navigate to the new filter page
             },
             {
               icon: BarChart2,
               label: "Reports",
               isReport: true,
             },
-          ].map(({ icon: Icon, label, isAddLeads, isCampaign, isReport, isActivity, isFilter, path }) => (
+          ].map(({ icon: Icon, label, isAddLeads, isCampaign, isReport, isActivity, path }) => (
             <div
               key={label}
               ref={
@@ -265,8 +243,6 @@ const Sidebar = ({ user }) => {
                   ? reportBtnRef
                   : isActivity
                   ? activityBtnRef
-                  : isFilter
-                  ? filterBtnRef
                   : null
               }
               className={`group relative flex items-center ${
@@ -275,8 +251,7 @@ const Sidebar = ({ user }) => {
                 (isAddLeads && showAddLeadOptions) ||
                 (isCampaign && showCampaignOptions) ||
                 (isReport && showReportOptions) ||
-                (isActivity && showActivityOptions) ||
-                (isFilter && showFilterOptions)
+                (isActivity && showActivityOptions)
                   ? "bg-gray-200"
                   : ""
               }`}
@@ -289,8 +264,6 @@ const Sidebar = ({ user }) => {
                   ? handleReportClick
                   : isActivity
                   ? handleActivityClick
-                  : isFilter
-                  ? handleFilterClick
                   : path
                   ? () => navigate(path)
                   : undefined
@@ -501,39 +474,6 @@ const Sidebar = ({ user }) => {
           >
             <PhoneIncoming size={16} className="text-green-500" />
             <span className="text-sm text-gray-800">My Calls</span>
-          </div>
-        </div>
-      )}
-
-      {/* Filters Dropdown */}
-      {showFilterOptions && (
-        <div
-          className="fixed bg-white border rounded shadow-lg z-50 w-56 p-2"
-          style={{
-            top: `${dropdownCoords.top}px`,
-            left: `${dropdownCoords.left}px`,
-          }}
-        >
-          {/* Arrow on the left */}
-          <div
-            className="absolute -left-2 top-4 w-4 h-4 bg-white border-l border-t transform rotate-45 z-40"
-          ></div>
-          <div className="text-gray-800 text-sm font-semibold mb-2">
-            Filters
-          </div>
-          <div
-            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-            onClick={() => navigate("/active-filters")}
-          >
-            <Sliders size={16} className="text-blue-500" />
-            <span className="text-sm text-gray-800">Active Filters</span>
-          </div>
-          <div
-            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-            onClick={() => navigate("/saved-filters")}
-          >
-            <Save size={16} className="text-green-500" />
-            <span className="text-sm text-gray-800">Saved Filters</span>
           </div>
         </div>
       )}

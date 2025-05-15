@@ -30,6 +30,7 @@ import AccessLogs from "./pages/AccessLogs";
 import ManageRoles from "./pages/ManageRoles";
 import ManageStatus from "./pages/ManageStatus";
 import EmployeeProfile from "./pages/EmployeeProfile";
+import Filters from "./components/Filters";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -216,6 +217,7 @@ function App() {
 
               {/* 🆕 Search Route */}
               <Route path="/search" element={<SearchPage />} />
+              <Route path="/filters" element={<Filters />} />
             </Routes>
           </AnimatePresence>
         </div>
