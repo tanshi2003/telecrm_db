@@ -13,6 +13,9 @@ const AllUsers = () => {
     password: "",
     manager_id: "",
     location: "",
+    total_leads: "",
+    campaigns_handled: "",
+    total_working_hours: "",
   });
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -22,13 +25,16 @@ const AllUsers = () => {
   // Utility: Reset form
   const resetForm = () => {
     setFormData({
-    name: "",
-    email: "",
-    role: "",
-    phone_no: "",
-    password: "",
-    manager_id: "",
-    location: "",
+      name: "",
+      email: "",
+      role: "",
+      phone_no: "",
+      password: "",
+      manager_id: "",
+      location: "",
+      total_leads: "",
+      campaigns_handled: "",
+      total_working_hours: "",
     });
     setIsEditing(false);
     setEditId(null);
@@ -63,27 +69,40 @@ const AllUsers = () => {
   const handleEditUser = (id) => {
     const user = users.find((u) => u.id === id);
     if (!user) return;
-    setFormData({ ...user });
+    setFormData({
+      name: user.name || "",
+      email: user.email || "",
+      role: user.role || "",
+      phone_no: user.phone_no || "",
+      password: "", // Don't prefill password for security
+      manager_id: user.manager_id || "",
+      location: user.location || "",
+      total_leads: user.total_leads || "",
+      campaigns_handled: user.campaigns_handled || "",
+      total_working_hours: user.total_working_hours || "",
+    });
     setIsEditing(true);
     setEditId(id);
   };
 
-  // const handleUpdateUser = async () => {
-  //   try {
-  //     const token = localStorage.getItem("token");
-  //     await axios.put(`http://localhost:5000/api/users/${editId}`, formData, {
-  //       headers: {
-  //         Authorization: `Bearer ${token}`,
-  //       },
-  //     });
-  //     fetchUsers();
-  //     resetForm();
-  //     setSuccessMessage("User updated successfully!");
-  //   } catch (error) {
-  //     console.error("Error updating user:", error);
-  //     setErrorMessage("Failed to update user.");
-  //   }
-  // };
+  // Uncomment and use this function for updating users
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(`http://localhost:5000/api/users/${editId}`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      fetchUsers();
+      resetForm();
+      setSuccessMessage("User updated successfully!");
+    } catch (error) {
+      console.error("Error updating user:", error);
+      setErrorMessage("Failed to update user.");
+    }
+  };
 
   const handleDeleteUser = async (id) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
@@ -111,6 +130,12 @@ const AllUsers = () => {
     return () => clearTimeout(timer);
   }, [successMessage, errorMessage]);
 
+  // Manager name nikalne ka function
+  const getManagerName = (manager_id) => {
+    const manager = users.find((u) => u.id === manager_id);
+    return manager ? manager.name : "N/A";
+  };
+
   return (
     <div className="flex">
       <Sidebar user={{ name: "Admin", role: "admin" }} />
@@ -133,6 +158,106 @@ const AllUsers = () => {
           </div>
         )}
 
+        {/* Edit User Form */}
+        {isEditing && (
+          <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 className="text-xl font-semibold mb-4">Edit User</h2>
+            <form onSubmit={handleUpdateUser}>
+              <input
+                type="text"
+                className="form-control mb-2"
+                name="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Name"
+                required
+              />
+              <input
+                type="email"
+                className="form-control mb-2"
+                name="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="Email"
+                required
+              />
+              <input
+                type="text"
+                className="form-control mb-2"
+                name="phone_no"
+                value={formData.phone_no}
+                onChange={(e) => setFormData({ ...formData, phone_no: e.target.value })}
+                placeholder="Phone Number"
+              />
+              <select
+                className="form-control mb-2"
+                name="role"
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                required
+              >
+                <option value="">Select Role</option>
+                <option value="admin">Admin</option>
+                <option value="manager">Manager</option>
+                <option value="caller">Caller</option>
+                <option value="field_employee">Field Employee</option>
+              </select>
+              <input
+                type="text"
+                className="form-control mb-2"
+                name="location"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                placeholder="Location"
+              />
+              <input
+                type="number"
+                className="form-control mb-2"
+                name="manager_id"
+                value={formData.manager_id}
+                onChange={(e) => setFormData({ ...formData, manager_id: e.target.value })}
+                placeholder="Manager ID"
+              />
+              <input
+                type="number"
+                className="form-control mb-2"
+                name="total_leads"
+                value={formData.total_leads}
+                onChange={(e) => setFormData({ ...formData, total_leads: e.target.value })}
+                placeholder="Total Leads"
+              />
+              <input
+                type="number"
+                className="form-control mb-2"
+                name="campaigns_handled"
+                value={formData.campaigns_handled}
+                onChange={(e) => setFormData({ ...formData, campaigns_handled: e.target.value })}
+                placeholder="Campaigns Handled"
+              />
+              <input
+                type="text"
+                className="form-control mb-2"
+                name="total_working_hours"
+                value={formData.total_working_hours}
+                onChange={(e) => setFormData({ ...formData, total_working_hours: e.target.value })}
+                placeholder="Total Working Hours"
+              />
+              <div className="flex gap-2 mt-4">
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                  Update User
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+                  onClick={resetForm}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         {/* User List */}
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4">User List</h2>
@@ -145,8 +270,14 @@ const AllUsers = () => {
                   <h3 className="text-lg font-semibold mb-2">{user.name}</h3>
                   <p className="text-sm text-gray-600 mb-1">Email: <strong>{user.email}</strong></p>
                   <p className="text-sm text-gray-600 mb-1">Role: <strong>{user.role}</strong></p>
-                  <p className="text-sm text-gray-600 mb-1">Campaigns Handled: <strong>{user.campaigns_handled}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Phone: <strong>{user.phone_no}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Location: <strong>{user.location}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">
+                    Manager: <strong>{getManagerName(user.manager_id)}</strong>
+                  </p>
                   <p className="text-sm text-gray-600 mb-1">Total Leads: <strong>{user.total_leads}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Campaigns Handled: <strong>{user.campaigns_handled}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Total Working Hours: <strong>{user.total_working_hours}</strong></p>
 
                   <div className="mt-3 flex gap-2 justify-center">
                     <button

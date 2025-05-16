@@ -35,18 +35,12 @@ const handleEmployeeProfileclick = () => {
   const handleAccessLogsclick = () => {
     navigate("/admin/users/access-logs");
   };
-  // const handleViewAllUserclick = () => {
-  //   navigate("/admin/users/all-user");
-  // };
-  // const handleViewLogeclick = () => {
-  //   navigate("/admin/users/access-logs");
-  // };
-  // const handleViewProfileclick = () => {
-  //   navigate("/admin/users/employee-profile");
-  // };
-  // const handleViewAllUserclick = () => {
-  //   navigate("/admin/users/all-user");
-  // };
+  const handleUpdateUserClick = () => {
+    navigate("/admin/users/update-user");
+  };
+  const handleAssignManagerClick = () => {
+    navigate("/admin/users/assign-manager");
+  };
 
   return (
     <div className="relative flex min-h-screen">
@@ -93,16 +87,6 @@ const handleEmployeeProfileclick = () => {
       Register New User
     </button>
   </div>
-
-  {/* 4. Update & Edit User Info */}
-  <div className="bg-white p-6 rounded-lg shadow-md">
-    <h2 className="text-xl font-semibold mb-4">Edit User Info</h2>
-    <p>Edit name, phone, email, working hours, and field zones. Keep profiles fresh & functional.</p>
-    <button onClick={handleEmployeeProfileclick} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-      Edit User Profiles
-    </button>
-  </div>
-
   {/* 5. User Status Control */}
   <div className="bg-white p-6 rounded-lg shadow-md">
     <h2 className="text-xl font-semibold mb-4">User Status Control</h2>
@@ -116,7 +100,10 @@ const handleEmployeeProfileclick = () => {
   <div className="bg-white p-6 rounded-lg shadow-md">
     <h2 className="text-xl font-semibold mb-4">Manager Assignment</h2>
     <p>Callers & field staff need a boss. Assign or reassign with dropdowns or drag-and-drop (if implemented).</p>
-    <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+    <button
+      onClick={handleAssignManagerClick}
+      className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+    >
       Assign Manager
     </button>
   </div>
@@ -127,4 +114,4 @@ const handleEmployeeProfileclick = () => {
   );
 };
 
-export default ManageUser; 
+export default ManageUser;

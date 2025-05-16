@@ -34,4 +34,7 @@ router.get('/:id/leads', authMiddleware, roleMiddleware(['admin']), userControll
 // Get campaigns assigned to a user
 router.get('/:id/campaigns', authMiddleware, roleMiddleware(['admin']), userController.getCampaignsByUserId);
 
+// Assign or reassign manager to a user
+router.put("/users/:id/assign-manager", userController.assignManager);
+
 module.exports = router;

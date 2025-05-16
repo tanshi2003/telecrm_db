@@ -30,7 +30,8 @@ import AllUsers from "./pages/AllUsers";
 import AccessLogs from "./pages/AccessLogs";
 import ManageRoles from "./pages/ManageRoles";
 import ManageStatus from "./pages/ManageStatus";
-import UserProfile from "./pages/UserProfile";
+import AssignManager from "./pages/AssignManager"; // <-- Add this import
+
 import ProtectedRoute from "./components/ProtectedRoute";
 import Reports from "./pages/ReportsLeaderboard";
 import "./styles/global.css";
@@ -73,7 +74,7 @@ function App() {
               <Route path="/admin/users/access-logs" element={<AccessLogs />} />
               <Route path="/admin/users/manage-roles" element={<ManageRoles />} />
               <Route path="/admin/users/manage-status" element={<ManageStatus />} />
-              <Route path="/admin/users/user-profile" element={<UserProfile />} />
+              
               <Route
                 path="/admin/ManageUsers"
                 element={
@@ -226,6 +227,14 @@ function App() {
               {/* 🆕 Search Route */}
               <Route path="/search" element={<SearchPage />} />
               <Route path="/filters" element={<FiltersPage />} />
+              <Route
+                path="/admin/users/assign-manager"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AssignManager />
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
           </AnimatePresence>
         </div>

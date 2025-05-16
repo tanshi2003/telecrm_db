@@ -119,8 +119,11 @@ exports.loginUser = (req, res) => {
 // Get all users
 exports.getUsers = (req, res) => {
     const query = `
-        SELECT id, name, email, role, total_leads, campaigns_handled, total_working_hours
-        FROM user_stats_view
+        SELECT 
+            u.id, u.name, u.email, u.phone_no, u.role, u.status, u.manager_id, u.location,
+            v.total_leads, v.campaigns_handled, v.total_working_hours
+        FROM Users u
+        LEFT JOIN user_stats_view v ON u.id = v.id
     `;
 
     db.query(query, (err, results) => {
@@ -285,6 +288,30 @@ exports.deleteUser = (req, res) => {
         db.query("DELETE FROM Users WHERE id = ?", [id], (err) => {
             if (err) return res.status(500).json(responseFormatter(false, "Database error", err));
             res.json(responseFormatter(true, "User deleted successfully"));
+        });
+    });
+};
+
+// Assign or reassign manager to a user
+exports.assignManager = (req, res) => {
+    const { id } = req.params; // user id
+    const { manager_id } = req.body;
+
+    if (!manager_id) {
+        return res.status(400).json({ message: "Manager ID is required" });
+    }
+
+    // Check if manager exists and is a manager
+    db.query("SELECT * FROM Users WHERE id = ? AND role = 'manager'", [manager_id], (err, results) => {
+        if (err) return res.status(500).json({ message: "Database error", error: err });
+        if (results.length === 0) return res.status(404).json({ message: "Manager not found" });
+
+        // Assign manager to user
+        db.query("UPDATE Users SET manager_id = ? WHERE id = ?", [manager_id, id], (err, result) => {
+            if (err) return res.status(500).json({ message: "Error assigning manager", error: err });
+            if (result.affectedRows === 0) return res.status(404).json({ message: "User not found" });
+
+            res.status(200).json({ message: "Manager assigned successfully" });
         });
     });
 };
