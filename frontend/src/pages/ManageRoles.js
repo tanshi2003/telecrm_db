@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { FaCheck, FaEdit } from "react-icons/fa";
 import Sidebar from "../components/Sidebar"; // Sidebar included
 
+
 const roleOptions = [
   { value: "manager", label: "Manager" },
   { value: "caller", label: "Caller" },

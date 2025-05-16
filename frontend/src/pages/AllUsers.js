@@ -145,13 +145,7 @@ const AllUsers = () => {
                   <h3 className="text-lg font-semibold mb-2">{user.name}</h3>
                   <p className="text-sm text-gray-600 mb-1">Email: <strong>{user.email}</strong></p>
                   <p className="text-sm text-gray-600 mb-1">Role: <strong>{user.role}</strong></p>
-                  <p className="text-sm text-gray-600 mb-1">Status: <strong>{user.status}</strong></p>
-                  <p className="text-sm text-gray-600 mb-1">Phone Number: <strong>{user.phone_no}</strong></p>
-                  <p className="text-sm text-gray-600 mb-1">Working Hours: <strong>{user.working_hours}</strong></p>
                   <p className="text-sm text-gray-600 mb-1">Campaigns Handled: <strong>{user.campaigns_handled}</strong></p>
-                  <p className="text-sm text-gray-600 mb-1">Performance Rating: <strong>{user.performance_rating}</strong></p>
-                  <p className="text-sm text-gray-600 mb-1">Manager ID: <strong>{user.manager_id}</strong></p>
-                  <p className="text-sm text-gray-600 mb-1">Location: <strong>{user.location}</strong></p>
                   <p className="text-sm text-gray-600 mb-1">Total Leads: <strong>{user.total_leads}</strong></p>
 
                   <div className="mt-3 flex gap-2 justify-center">

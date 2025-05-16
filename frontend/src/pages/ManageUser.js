@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar"; // Sidebar remains the same
 import { useNavigate } from 'react-router-dom';
 
+
 const ManageUser = () => { // ✅ Capitalized component name
   const [admin, setAdmin] = useState(null);
 
@@ -25,7 +26,7 @@ const ManageUser = () => { // ✅ Capitalized component name
     navigate("/admin/users/manage-status");
   };
 const handleEmployeeProfileclick = () => {
-    navigate("/admin/users/employee-profile");
+    navigate("/admin/users/user-profile");
   } 
     
   const handleAllUsersclick = () => {

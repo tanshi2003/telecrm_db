@@ -24,7 +24,7 @@ const Navbar = () => {
   }, []);
 
   return (
-    <nav className="text-white px-3 py-2 flex justify-between items-center shadow-md fixed top-0 left-0 w-full z-50" style={{ backgroundColor: '#1e3a8a' }}>
+    <nav className="text-white px-3 py-3 flex justify-between items-center shadow-md fixed top-0 left-0 w-full z-50" style={{ backgroundColor: '#1e3a8a' }}>
       {/* Logo Section */}
       <div
         className="flex items-center space-x-3 cursor-pointer"

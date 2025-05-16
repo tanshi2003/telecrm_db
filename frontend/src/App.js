@@ -30,7 +30,7 @@ import AllUsers from "./pages/AllUsers";
 import AccessLogs from "./pages/AccessLogs";
 import ManageRoles from "./pages/ManageRoles";
 import ManageStatus from "./pages/ManageStatus";
-import EmployeeProfile from "./pages/EmployeeProfile";
+import UserProfile from "./pages/UserProfile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -72,7 +72,7 @@ function App() {
               <Route path="/admin/users/access-logs" element={<AccessLogs />} />
               <Route path="/admin/users/manage-roles" element={<ManageRoles />} />
               <Route path="/admin/users/manage-status" element={<ManageStatus />} />
-              <Route path="/admin/users/employee-profile" element={<EmployeeProfile />} />
+              <Route path="/admin/users/user-profile" element={<UserProfile />} />
               <Route
                 path="/admin/ManageUsers"
                 element={

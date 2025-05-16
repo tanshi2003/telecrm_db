@@ -6,9 +6,11 @@ import toast from "react-hot-toast";
 import ClipLoader from "react-spinners/ClipLoader";
 import Sidebar from "../components/Sidebar";
 
+// Only Manager role remains
 const roleOptions = [
   { label: "Manager", value: "manager" },
-  { label: "Employee", value: "employee" },
+  { label: "Caller", value: "caller" },
+  { label: "Field_employee", value: "field" },
 ];
 
 const statusOptions = [
@@ -17,14 +19,9 @@ const statusOptions = [
   { label: "Suspended", value: "suspended" },
 ];
 
-const fieldWorkOptions = [
-  { label: "Field Work", value: "field" },
-  { label: "Desk Job", value: "desk" },
-];
+const tabs = ["Profile", "Activity Logs"];
 
-const tabs = ["Profile", "Activity Logs", "Notes"];
-
-const EmployeeProfile = () => {
+const UserProfile = () => {
   const { userId } = useParams();
   const [admin, setAdmin] = useState(null);
   const [user, setUser] = useState(null);
@@ -39,41 +36,44 @@ const EmployeeProfile = () => {
   } = useForm();
 
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (storedUser) setAdmin(storedUser);
+  const storedUser = JSON.parse(localStorage.getItem("user"));
+  if (storedUser) setAdmin(storedUser);
 
-    const fetchUser = async () => {
-      try {
-        const res = await fetch(`http://localhost:5000/user/${userId}`);
-        const data = await res.json();
-        if (data.success) {
-          setUser(data.user);
-          reset({
-            userName: data.user.userName,
-            email: data.user.email,
-            phoneNumber: data.user.phoneNumber,
-            role: { label: capitalize(data.user.role), value: data.user.role },
-            status: { label: capitalize(data.user.status), value: data.user.status },
-            fieldWorkType: data.user.fieldWorkType
-              ? {
-                  label: capitalize(data.user.fieldWorkType),
-                  value: data.user.fieldWorkType,
-                }
-              : null,
-            location: data.user.location,
-            workingHours: data.user.workingHours,
-          });
-        } else {
-          toast.error("User not found.");
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error("Failed to fetch user.");
+  const fetchUser = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:5000/api/users/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.user) {
+        setUser(data.user);
+        reset({
+          userName: data.user.userName,
+          email: data.user.email,
+          phoneNumber: data.user.phoneNumber,
+          role: { label: capitalize(data.user.role), value: data.user.role },
+          status: { label: capitalize(data.user.status), value: data.user.status },
+          location: data.user.location,
+          workingHours: data.user.workingHours,
+        });
+      } else {
+        toast.error("User not found.");
       }
-    };
+    } catch (err) {
+      console.error("Error fetching user:", err);
+      toast.error("Failed to fetch user.");
+    }
+  };
 
-    fetchUser();
-  }, [userId, reset]);
+  fetchUser();
+}, [reset, userId]); // ✅ added both dependencies here
+
 
   const onSubmit = async (data) => {
     const updatedData = {
@@ -82,13 +82,12 @@ const EmployeeProfile = () => {
       phoneNumber: data.phoneNumber,
       role: data.role.value,
       status: data.status.value,
-      fieldWorkType: data.role.value === "employee" ? data.fieldWorkType?.value : "",
       location: data.location,
       workingHours: data.workingHours,
     };
 
     try {
-      const res = await fetch(`http://localhost:5000/updateUser/${userId}`, {
+      const res = await fetch(`http://localhost:5000/user/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedData),
@@ -114,7 +113,7 @@ const EmployeeProfile = () => {
       <main className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
         <div className="max-w-7xl mx-auto bg-white rounded-md shadow-md p-6">
           <h2 className="text-2xl font-bold mb-6">
-            🧑‍💼 Employee Profile: {user?.userName || "Loading..."}
+            👤 User Profile: {user?.userName || "Loading..."}
           </h2>
 
           {/* Tabs */}
@@ -189,23 +188,6 @@ const EmployeeProfile = () => {
                     />
                   </div>
 
-                  {user.role === "employee" && (
-                    <div>
-                      <label className="text-sm font-medium">Field Work Type</label>
-                      <Controller
-                        name="fieldWorkType"
-                        control={control}
-                        render={({ field }) => (
-                          <Select
-                            {...field}
-                            options={fieldWorkOptions}
-                            placeholder="Work Type"
-                          />
-                        )}
-                      />
-                    </div>
-                  )}
-
                   <div>
                     <label className="text-sm font-medium">Location</label>
                     <input {...register("location")} className="input input-bordered w-full mt-1" />
@@ -242,18 +224,6 @@ const EmployeeProfile = () => {
                   </ul>
                 </div>
               )}
-
-              {/* Notes Tab */}
-              {activeTab === "Notes" && (
-                <div className="p-2">
-                  <h3 className="text-lg font-semibold mb-2">Manager Notes</h3>
-                  <textarea
-                    className="textarea textarea-bordered w-full h-32"
-                    placeholder="Add notes here..."
-                  />
-                  <button className="btn btn-secondary mt-3">Save Note</button>
-                </div>
-              )}
             </>
           )}
         </div>
@@ -262,4 +232,4 @@ const EmployeeProfile = () => {
   );
 };
 
-export default EmployeeProfile;
+export default UserProfile;
