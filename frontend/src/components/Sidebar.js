@@ -78,8 +78,8 @@ const Sidebar = ({ user }) => {
       const rect = addLeadsBtnRef.current.getBoundingClientRect();
       const sidebarWidth = isExpanded ? 64 : 20; // Adjust based on sidebar width
       setDropdownCoords({
-        top: rect.top + window.scrollY + 10, // Add scroll offset for proper positioning
-        left: rect.left + sidebarWidth + 50, // Shifted to the right
+        top: rect.top + window.scrollY + 7, // Add scroll offset for proper positioning
+        left: rect.left + sidebarWidth + 90, // Shifted to the right
       });
     }
     setShowAddLeadOptions((prev) => !prev);
@@ -102,7 +102,7 @@ const Sidebar = ({ user }) => {
       const rect = reportBtnRef.current.getBoundingClientRect();
       const sidebarWidth = isExpanded ? 64 : 20; // Adjust based on sidebar width
       setDropdownCoords({
-        top: rect.top + window.scrollY + 10, // Add scroll offset for proper positioning
+        top: rect.top + window.scrollY , // Add scroll offset for proper positioning
         left: rect.left + sidebarWidth + 50, // Shifted to the right
       });
     }

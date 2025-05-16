@@ -32,6 +32,7 @@ import ManageRoles from "./pages/ManageRoles";
 import ManageStatus from "./pages/ManageStatus";
 import UserProfile from "./pages/UserProfile";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Reports from "./pages/ReportsLeaderboard";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -214,7 +215,14 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
+               <Route
+                path="/ReportsLeaderboard"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <Reports />
+                  </ProtectedRoute>
+                }
+              />
               {/* 🆕 Search Route */}
               <Route path="/search" element={<SearchPage />} />
               <Route path="/filters" element={<FiltersPage />} />
