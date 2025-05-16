@@ -1,162 +1,179 @@
-import React, { useEffect, useState } from "react";
-import { FaEdit, FaEye, FaToggleOn, FaToggleOff } from "react-icons/fa";
-import { toast } from "react-hot-toast";
-import Select from "react-select";
-import SearchBar from "../components/SearchBar";
-import TableLoader from "../components/TableLoader";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import Sidebar from "../components/Sidebar";
+import BackButton from "../components/BackButton";
 
 const AllUsers = () => {
   const [users, setUsers] = useState([]);
-  const [filter, setFilter] = useState({ role: "", status: "" });
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [admin, setAdmin] = useState(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    role: "",
+    phone_no: "",
+    password: "",
+    manager_id: "",
+    location: "",
+  });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
+  // Utility: Reset form
+  const resetForm = () => {
+    setFormData({
+    name: "",
+    email: "",
+    role: "",
+    phone_no: "",
+    password: "",
+    manager_id: "",
+    location: "",
+    });
+    setIsEditing(false);
+    setEditId(null);
+  };
+
+  // Fetch users on load
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (storedUser) setAdmin(storedUser);
     fetchUsers();
   }, []);
 
   const fetchUsers = async () => {
-    setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/users");
-      const data = await res.json();
-      setUsers(data);
-    } catch (err) {
-      toast.error("Failed to fetch users.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStatusToggle = async (id, currentStatus) => {
-    try {
-      const res = await fetch(`http://localhost:5000/updateStatus/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: currentStatus === "active" ? "inactive" : "active",
-        }),
+      const token = localStorage.getItem("token");
+      const response = await axios.get("http://localhost:5000/api/users", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-
-      if (res.ok) {
-        toast.success("✅ Status updated!");
-        fetchUsers();
+      setUsers(response.data.data || []);
+    } catch (error) {
+      if (error.response && error.response.status === 401) {
+        console.error("Token expired or invalid. Redirecting to login.");
+        localStorage.removeItem("token"); // Clear the token
+        window.location.href = "/login"; // Redirect to login page
       } else {
-        toast.error("❌ Update failed.");
+        console.error("Error fetching users:", error);
+        setErrorMessage("Failed to load users.");
       }
-    } catch (err) {
-      toast.error("❌ Error updating status.");
     }
   };
 
-  const filteredUsers = users.filter((user) =>
-    (!filter.role || user.role === filter.role) &&
-    (!filter.status || user.status === filter.status) &&
-    user.userName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleEditUser = (id) => {
+    const user = users.find((u) => u.id === id);
+    if (!user) return;
+    setFormData({ ...user });
+    setIsEditing(true);
+    setEditId(id);
+  };
+
+  // const handleUpdateUser = async () => {
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     await axios.put(`http://localhost:5000/api/users/${editId}`, formData, {
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //     });
+  //     fetchUsers();
+  //     resetForm();
+  //     setSuccessMessage("User updated successfully!");
+  //   } catch (error) {
+  //     console.error("Error updating user:", error);
+  //     setErrorMessage("Failed to update user.");
+  //   }
+  // };
+
+  const handleDeleteUser = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:5000/api/users/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      fetchUsers();
+      setSuccessMessage("User deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      setErrorMessage("Failed to delete user.");
+    }
+  };
+
+  // Success & Error notification timeout
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSuccessMessage("");
+      setErrorMessage("");
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [successMessage, errorMessage]);
 
   return (
-    <div className="relative flex min-h-screen">
-      <Sidebar user={admin} />
+    <div className="flex">
+      <Sidebar user={{ name: "Admin", role: "admin" }} />
 
-      <main className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
-        <div className="max-w-7xl mx-auto bg-white rounded-md shadow-md p-6">
-          <h2 className="text-2xl font-bold mb-6">👥 All Users</h2>
+      <div className="flex-1 ml-64 mt-16 p-6 bg-gray-100 min-h-screen">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Manage Users</h1>
+          <BackButton />
+        </div>
 
-          {/* Filter & Search Bar */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <SearchBar
-              value={searchTerm}
-              onChange={setSearchTerm}
-              placeholder="🔍 Search by username..."
-            />
-            <Select
-              options={[
-                { label: "All Roles", value: "" },
-                { label: "Manager", value: "manager" },
-                { label: "Employee", value: "employee" },
-              ]}
-              onChange={(e) => setFilter((prev) => ({ ...prev, role: e.value }))}
-              placeholder="Filter by Role"
-            />
-            <Select
-              options={[
-                { label: "All Status", value: "" },
-                { label: "Active", value: "active" },
-                { label: "Inactive", value: "inactive" },
-              ]}
-              onChange={(e) => setFilter((prev) => ({ ...prev, status: e.value }))}
-              placeholder="Filter by Status"
-            />
+        {/* Feedback messages */}
+        {successMessage && (
+          <div className="mb-4 p-4 bg-green-100 text-green-800 rounded">
+            {successMessage}
           </div>
+        )}
+        {errorMessage && (
+          <div className="mb-4 p-4 bg-red-100 text-red-800 rounded">
+            {errorMessage}
+          </div>
+        )}
 
-          {/* Table */}
-          {loading ? (
-            <TableLoader />
+        {/* User List */}
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-4">User List</h2>
+          {users.length === 0 ? (
+            <p>No users available. Add a new user to get started.</p>
           ) : (
-            <div className="overflow-x-auto rounded shadow border">
-              <table className="min-w-full text-sm table-auto">
-                <thead className="bg-gray-100 text-left">
-                  <tr>
-                    <th className="px-4 py-2">Name</th>
-                    <th className="px-4 py-2">Email</th>
-                    <th className="px-4 py-2">Phone</th>
-                    <th className="px-4 py-2">Role</th>
-                    <th className="px-4 py-2">Status</th>
-                    <th className="px-4 py-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.length ? (
-                    filteredUsers.map((user) => (
-                      <tr key={user._id} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-2">{user.userName}</td>
-                        <td className="px-4 py-2">{user.email}</td>
-                        <td className="px-4 py-2">{user.phoneNumber}</td>
-                        <td className="px-4 py-2 capitalize">{user.role}</td>
-                        <td className="px-4 py-2 capitalize">{user.status}</td>
-                        <td className="px-4 py-2 flex gap-3 items-center text-lg">
-                          <FaEye
-                            className="text-blue-600 cursor-pointer"
-                            title="View Profile"
-                          />
-                          <FaEdit
-                            className="text-green-600 cursor-pointer"
-                            title="Edit"
-                          />
-                          {user.status === "active" ? (
-                            <FaToggleOn
-                              className="text-red-500 cursor-pointer"
-                              title="Deactivate"
-                              onClick={() => handleStatusToggle(user._id, user.status)}
-                            />
-                          ) : (
-                            <FaToggleOff
-                              className="text-gray-500 cursor-pointer"
-                              title="Activate"
-                              onClick={() => handleStatusToggle(user._id, user.status)}
-                            />
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="6" className="text-center py-6 text-gray-500">
-                        No users found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {users.map((user) => (
+                <div key={user.id} className="bg-white p-4 rounded-lg shadow-md">
+                  <h3 className="text-lg font-semibold mb-2">{user.name}</h3>
+                  <p className="text-sm text-gray-600 mb-1">Email: <strong>{user.email}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Role: <strong>{user.role}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Status: <strong>{user.status}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Phone Number: <strong>{user.phone_no}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Working Hours: <strong>{user.working_hours}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Campaigns Handled: <strong>{user.campaigns_handled}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Performance Rating: <strong>{user.performance_rating}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Manager ID: <strong>{user.manager_id}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Location: <strong>{user.location}</strong></p>
+                  <p className="text-sm text-gray-600 mb-1">Total Leads: <strong>{user.total_leads}</strong></p>
+
+                  <div className="mt-3 flex gap-2 justify-center">
+                    <button
+                      onClick={() => handleEditUser(user.id)}
+                      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteUser(user.id)}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 };

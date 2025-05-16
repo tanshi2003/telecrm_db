@@ -13,52 +13,44 @@ function AddUser() {
   const [role, setRole] = useState("");
   const [fieldWorkType, setFieldWorkType] = useState(""); // Only for employees
   const navigate = useNavigate();
-
-  const handleAddUser = async (e) => {
-    e.preventDefault();
-    
-    if (!userName || !email || !role || !phoneNumber) {
-      toast.error("⚠️ Please enter all required fields.");
-      return;
-    }
-
-    if (role === "employee" && !fieldWorkType) {
-      toast.error("⚠️ Please select a Field Work Type for the employee.");
-      return;
-    }
-
-    const newUser = {
-      userName,
-      firstName,
-      lastName,
-      email,
-      phoneNumber,
-      role,
-      fieldWorkType: role === "employee" ? fieldWorkType : "", // Ensure it's empty if not an employee
-    };
-
-    try {
-      const response = await fetch("http://localhost:5000/addUser", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUser),
-      });
-
-      const result = await response.json();
-      console.log("Response from server:", result); 
-
-      if (result.success) {
-        toast.success("✅ User added successfully!");
-        setTimeout(() => navigate("/users"), 1500);
-      } else {
-        toast.error("❌ Failed to add user.");
-      }
-    } catch (err) {
-      console.error("Error adding user:", err);
-      toast.error("❌ Error adding user.");
-    }
+const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const validateForm = () => {
+    const { name, email, role } = formData;
+    return name && email && role;
+  };
+  const handleAddUser = async () => {
+    if (!validateForm()) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post("http://localhost:5000/api/users/register", formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log("Add User Response:", response.data); // Log the response
+
+      fetchUsers();
+      resetForm();
+      setSuccessMessage("User created successfully!");
+    } catch (error) {
+      if (error.response) {
+        console.error("Backend Error:", error.response.data);
+        setErrorMessage(error.response.data.message || "Failed to add user.");
+      } else {
+        console.error("Error adding user:", error.message);
+        setErrorMessage("Failed to add user.");
+      }
+    }
+  };
   return (
     <div className="container add-user-container">
       <h1>Add User</h1>
@@ -137,3 +129,83 @@ function AddUser() {
 }
 
 export default AddUser;
+{/* User Form */}
+        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+          <h2 className="text-xl font-semibold mb-4">{isEditing ? "Edit User" : "Add User"}</h2>
+
+          <input
+            type="text"
+            name="name"
+            placeholder="Name"
+            value={formData.name}
+            onChange={handleInputChange}
+            className="w-full p-2 mb-4 border rounded"
+          />
+          <input
+            type="email"
+            name="email"
+            placeholder="User Email"
+            value={formData.email}
+            onChange={handleInputChange}
+            className="w-full p-2 mb-4 border rounded"
+          />
+          <input
+            type="text"
+            name="phone_no"
+            placeholder="Phone Number"
+            value={formData.phone_no}
+            onChange={handleInputChange}
+            className="w-full p-2 mb-4 border rounded"
+          />
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={formData.password}
+            onChange={handleInputChange}
+            className="w-full p-2 mb-4 border rounded"
+          />
+          <select
+            name="role"
+            value={formData.role}
+            onChange={handleInputChange}
+            className="w-full p-2 mb-4 border rounded"
+          >
+            <option value="">Select Role</option>
+            <option value="manager">Manager</option>
+            <option value="caller">Caller</option>
+            <option value="field_employee">Field Employee</option>
+          </select>
+          <input
+            type="number"
+            name="manager_id"
+            placeholder="Manager ID"
+            value={formData.manager_id}
+            onChange={handleInputChange}
+            className="w-full p-2 mb-4 border rounded"
+          />
+          <input
+            type="text"
+            name="location"
+            placeholder="Location"
+            value={formData.location}
+            onChange={handleInputChange}
+            className="w-full p-2 mb-4 border rounded"
+          />
+
+          {isEditing ? (
+            <button
+              onClick={handleUpdateUser}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Update User
+            </button>
+          ) : (
+            <button
+              onClick={handleAddUser}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            >
+              Add User
+            </button>
+          )}
+        </div>

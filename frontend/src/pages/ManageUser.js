@@ -63,57 +63,64 @@ const handleEmployeeProfileclick = () => {
         </div>
 
         {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Assign Roles */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">Manage Roles</h2>
-            <p>Assign appropriate roles to users like Admin, Caller, or Manager.</p>
-            <button onClick={handleManageRolesclick}  className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-              Manage Roles
-            </button>
-          </div>
+        {/* Dashboard Grid - Updated with 6 Major Features */}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-          {/* Activate/Deactivate Users */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">User Status</h2>
-            <p>Activate or deactivate user accounts based on status.</p>
-            <button onClick={handleManageStatusclick}  className="mt-4 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700">
-              Manage Status
-            </button>
-          </div>
+  {/* 1. View All Users */}
+  <div className="bg-white p-6 rounded-lg shadow-md">
+    <h2 className="text-xl font-semibold mb-4">View All Users</h2>
+    <p>Full list with details like Name, Email, Role, Status, Joined Date, Performance, Location & Leads.</p>
+    <button onClick={handleAllUsersclick} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+      Open User List
+    </button>
+  </div>
 
-          {/* Manage Profiles */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">View Profiles</h2>
-            <p>View and edit employee profile information.</p>
-            <button onClick={handleEmployeeProfileclick}  className="mt-4 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
-              EmployeeProfile
-            </button>
-          </div>
+  {/* 2. Role Management */}
+  <div className="bg-white p-6 rounded-lg shadow-md">
+    <h2 className="text-xl font-semibold mb-4">Role Management</h2>
+    <p>Change roles across Caller, Manager, and Field Employee. No one touches Admin unless it’s judgment day.</p>
+    <button onClick={handleManageRolesclick} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+      Manage Roles
+    </button>
+  </div>
 
-          {/* Registered Users */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">Registered Users</h2>
-            <ul className="list-disc pl-6">
-              <li>John Doe - Admin</li>
-              <li>Jane Smith - Caller</li>
-            </ul>
-            <button onClick={handleAllUsersclick} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-             All Users
-            </button>
-          </div>
+  {/* 3. Create New Users */}
+  <div className="bg-white p-6 rounded-lg shadow-md">
+    <h2 className="text-xl font-semibold mb-4">Create New Users</h2>
+    <p>Add user with role, phone, email, and optional lead/campaign assignment. Fast onboarding, zero drama.</p>
+    <button onClick={handleRegisterclick} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+      Register New User
+    </button>
+  </div>
 
-          {/* Access Logs */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">View Logs</h2>
-            <p>Monitor login activity and suspicious access patterns.</p>
-            <button onClick={handleAccessLogsclick} className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
-              Access Logs
-            </button>
-          </div>
+  {/* 4. Update & Edit User Info */}
+  <div className="bg-white p-6 rounded-lg shadow-md">
+    <h2 className="text-xl font-semibold mb-4">Edit User Info</h2>
+    <p>Edit name, phone, email, working hours, and field zones. Keep profiles fresh & functional.</p>
+    <button onClick={handleEmployeeProfileclick} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+      Edit User Profiles
+    </button>
+  </div>
 
-          
-        </div>
+  {/* 5. User Status Control */}
+  <div className="bg-white p-6 rounded-lg shadow-md">
+    <h2 className="text-xl font-semibold mb-4">User Status Control</h2>
+    <p>Activate, suspend, or nuke users permanently. Confirmation required — we don’t do oopsies here.</p>
+    <button onClick={handleManageStatusclick} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+      Manage Status
+    </button>
+  </div>
+
+  {/* 6. Assign / Reassign Manager */}
+  <div className="bg-white p-6 rounded-lg shadow-md">
+    <h2 className="text-xl font-semibold mb-4">Manager Assignment</h2>
+    <p>Callers & field staff need a boss. Assign or reassign with dropdowns or drag-and-drop (if implemented).</p>
+    <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+      Assign Manager
+    </button>
+  </div>
+</div>
+
       </div>
     </div>
   );
