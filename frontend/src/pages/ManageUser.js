@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar"; // Sidebar remains the same
 import { useNavigate } from 'react-router-dom';
-
+import BackButton from "../components/BackButton";
 
 const ManageUser = () => { // ✅ Capitalized component name
   const [admin, setAdmin] = useState(null);
@@ -43,18 +43,12 @@ const handleEmployeeProfileclick = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen">
-      {/* Sidebar */}
-      <Sidebar user={admin} />
-
-      {/* Main Content */}
+    <div className="flex min-h-screen">
+      <Sidebar />
       <div className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <button onClick={handleRegisterclick} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            Register User
-          </button>
+          <h1 className="text-2xl font-bold">User Management</h1>
+          <BackButton />
         </div>
 
         {/* Dashboard Grid */}
@@ -73,7 +67,7 @@ const handleEmployeeProfileclick = () => {
   {/* 2. Role Management */}
   <div className="bg-white p-6 rounded-lg shadow-md">
     <h2 className="text-xl font-semibold mb-4">Role Management</h2>
-    <p>Change roles across Caller, Manager, and Field Employee. No one touches Admin unless it’s judgment day.</p>
+    <p>Change roles across Caller, Manager, and Field Employee. No one touches Admin unless it's judgment day.</p>
     <button onClick={handleManageRolesclick} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
       Manage Roles
     </button>
@@ -90,7 +84,7 @@ const handleEmployeeProfileclick = () => {
   {/* 5. User Status Control */}
   <div className="bg-white p-6 rounded-lg shadow-md">
     <h2 className="text-xl font-semibold mb-4">User Status Control</h2>
-    <p>Activate, suspend, or nuke users permanently. Confirmation required — we don’t do oopsies here.</p>
+    <p>Activate, suspend, or nuke users permanently. Confirmation required — we don't do oopsies here.</p>
     <button onClick={handleManageStatusclick} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
       Manage Status
     </button>
@@ -105,6 +99,18 @@ const handleEmployeeProfileclick = () => {
       className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
     >
       Assign Manager
+    </button>
+  </div>
+
+  {/* 7. View Teams */}
+  <div className="bg-white p-6 rounded-lg shadow-md">
+    <h2 className="text-xl font-semibold mb-4">Team Overview</h2>
+    <p>View all teams and their members organized by managers.</p>
+    <button
+      onClick={() => navigate("/admin/users/teams")}
+      className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+    >
+      View Teams
     </button>
   </div>
 </div>

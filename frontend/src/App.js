@@ -14,6 +14,7 @@ import Lead1 from "./pages/Lead1";
 import Excelupload from "./pages/Excelupload"; 
 import Viewlead from "./pages/Viewlead";
 import EditLead from "./pages/EditLead";
+import EditUser from "./pages/EditUser";
 import Updatelead from "./pages/Updatelead";
 import FieldDashboard from "./pages/FieldDashboard";
 import ManagerDashboard from "./pages/ManagerDashboard";
@@ -31,6 +32,7 @@ import AccessLogs from "./pages/AccessLogs";
 import ManageRoles from "./pages/ManageRoles";
 import ManageStatus from "./pages/ManageStatus";
 import AssignManager from "./pages/AssignManager"; // <-- Add this import
+import TeamsList from "./pages/TeamsList";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import Reports from "./pages/ReportsLeaderboard";
@@ -74,6 +76,14 @@ function App() {
               <Route path="/admin/users/access-logs" element={<AccessLogs />} />
               <Route path="/admin/users/manage-roles" element={<ManageRoles />} />
               <Route path="/admin/users/manage-status" element={<ManageStatus />} />
+              <Route
+                path="/admin/users/edit/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <EditUser />
+                  </ProtectedRoute>
+                }
+              />
               
               <Route
                 path="/admin/ManageUsers"
@@ -176,9 +186,9 @@ function App() {
                 }
               />
               <Route
-                path="/lead1"
+                path="/Lead1"
                 element={
-                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <ProtectedRoute allowedRoles={["admin", "manager", "caller", "field_employee"]}>
                     <Lead1 />
                   </ProtectedRoute>
                 }
@@ -232,6 +242,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["admin"]}>
                     <AssignManager />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/users/teams"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <TeamsList />
                   </ProtectedRoute>
                 }
               />

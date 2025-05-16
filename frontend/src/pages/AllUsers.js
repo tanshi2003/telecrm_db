@@ -5,6 +5,8 @@ import BackButton from "../components/BackButton";
 
 const AllUsers = () => {
   const [users, setUsers] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -16,6 +18,8 @@ const AllUsers = () => {
     total_leads: "",
     campaigns_handled: "",
     total_working_hours: "",
+    assigned_leads: [],
+    assigned_campaigns: []
   });
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -35,14 +39,17 @@ const AllUsers = () => {
       total_leads: "",
       campaigns_handled: "",
       total_working_hours: "",
+      assigned_leads: [],
+      assigned_campaigns: []
     });
     setIsEditing(false);
     setEditId(null);
   };
 
-  // Fetch users on load
+  // Fetch users, leads, and campaigns on load
   useEffect(() => {
     fetchUsers();
+    fetchLeadsAndCampaigns();
   }, []);
 
   const fetchUsers = async () => {
@@ -66,23 +73,63 @@ const AllUsers = () => {
     }
   };
 
-  const handleEditUser = (id) => {
-    const user = users.find((u) => u.id === id);
-    if (!user) return;
-    setFormData({
-      name: user.name || "",
-      email: user.email || "",
-      role: user.role || "",
-      phone_no: user.phone_no || "",
-      password: "", // Don't prefill password for security
-      manager_id: user.manager_id || "",
-      location: user.location || "",
-      total_leads: user.total_leads || "",
-      campaigns_handled: user.campaigns_handled || "",
-      total_working_hours: user.total_working_hours || "",
-    });
-    setIsEditing(true);
-    setEditId(id);
+  const fetchLeadsAndCampaigns = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      // Fetch all leads
+      const leadsResponse = await axios.get('http://localhost:5000/api/leads', { headers });
+      setLeads(leadsResponse.data.data || []);
+
+      // Fetch all campaigns
+      const campaignsResponse = await axios.get('http://localhost:5000/api/campaigns', { headers });
+      setCampaigns(campaignsResponse.data.data || []);
+    } catch (error) {
+      console.error("Error fetching leads and campaigns:", error);
+      setErrorMessage("Failed to load leads and campaigns.");
+    }
+  };
+
+  const handleEditUser = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const user = users.find((u) => u.id === id);
+      if (!user) return;
+
+      // Fetch user's assigned leads
+      const userLeadsResponse = await axios.get(`http://localhost:5000/api/users/${id}/leads`, { headers });
+      const assignedLeads = userLeadsResponse.data.data || [];
+
+      // Fetch user's assigned campaigns
+      const userCampaignsResponse = await axios.get(`http://localhost:5000/api/users/${id}/campaigns`, { headers });
+      const assignedCampaigns = userCampaignsResponse.data.data || [];
+
+      setFormData({
+        name: user.name || "",
+        email: user.email || "",
+        role: user.role || "",
+        phone_no: user.phone_no || "",
+        password: "",
+        manager_id: user.manager_id || "",
+        location: user.location || "",
+        total_leads: user.total_leads || "",
+        campaigns_handled: user.campaigns_handled || "",
+        total_working_hours: user.total_working_hours || "",
+        assigned_leads: assignedLeads.map(lead => lead.id),
+        assigned_campaigns: assignedCampaigns.map(campaign => campaign.id)
+      });
+      setIsEditing(true);
+      setEditId(id);
+
+      // Scroll to top of the page smoothly
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+      console.error("Error fetching user assignments:", error);
+      setErrorMessage("Failed to load user assignments.");
+    }
   };
 
   // Uncomment and use this function for updating users
@@ -90,11 +137,19 @@ const AllUsers = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem("token");
-      await axios.put(`http://localhost:5000/api/users/${editId}`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      await axios.put(
+        `http://localhost:5000/api/users/${editId}`,
+        {
+          ...formData,
+          assigned_leads: formData.assigned_leads,
+          assigned_campaigns: formData.assigned_campaigns
         },
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       fetchUsers();
       resetForm();
       setSuccessMessage("User updated successfully!");
@@ -163,85 +218,128 @@ const AllUsers = () => {
           <div className="bg-white p-6 rounded-lg shadow-md mb-6">
             <h2 className="text-xl font-semibold mb-4">Edit User</h2>
             <form onSubmit={handleUpdateUser}>
-              <input
-                type="text"
-                className="form-control mb-2"
-                name="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Name"
-                required
-              />
-              <input
-                type="email"
-                className="form-control mb-2"
-                name="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="Email"
-                required
-              />
-              <input
-                type="text"
-                className="form-control mb-2"
-                name="phone_no"
-                value={formData.phone_no}
-                onChange={(e) => setFormData({ ...formData, phone_no: e.target.value })}
-                placeholder="Phone Number"
-              />
-              <select
-                className="form-control mb-2"
-                name="role"
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                required
-              >
-                <option value="">Select Role</option>
-                <option value="admin">Admin</option>
-                <option value="manager">Manager</option>
-                <option value="caller">Caller</option>
-                <option value="field_employee">Field Employee</option>
-              </select>
-              <input
-                type="text"
-                className="form-control mb-2"
-                name="location"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="Location"
-              />
-              <input
-                type="number"
-                className="form-control mb-2"
-                name="manager_id"
-                value={formData.manager_id}
-                onChange={(e) => setFormData({ ...formData, manager_id: e.target.value })}
-                placeholder="Manager ID"
-              />
-              <input
-                type="number"
-                className="form-control mb-2"
-                name="total_leads"
-                value={formData.total_leads}
-                onChange={(e) => setFormData({ ...formData, total_leads: e.target.value })}
-                placeholder="Total Leads"
-              />
-              <input
-                type="number"
-                className="form-control mb-2"
-                name="campaigns_handled"
-                value={formData.campaigns_handled}
-                onChange={(e) => setFormData({ ...formData, campaigns_handled: e.target.value })}
-                placeholder="Campaigns Handled"
-              />
-              <input
-                type="text"
-                className="form-control mb-2"
-                name="total_working_hours"
-                value={formData.total_working_hours}
-                onChange={(e) => setFormData({ ...formData, total_working_hours: e.target.value })}
-                placeholder="Total Working Hours"
-              />
+              {/* Basic Information */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <input
+                  type="text"
+                  className="form-control"
+                  name="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Name"
+                  required
+                />
+                <input
+                  type="email"
+                  className="form-control"
+                  name="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="Email"
+                  required
+                />
+                <input
+                  type="text"
+                  className="form-control"
+                  name="phone_no"
+                  value={formData.phone_no}
+                  onChange={(e) => setFormData({ ...formData, phone_no: e.target.value })}
+                  placeholder="Phone Number"
+                />
+                <select
+                  className="form-control"
+                  name="role"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  required
+                >
+                  <option value="">Select Role</option>
+                  <option value="admin">Admin</option>
+                  <option value="manager">Manager</option>
+                  <option value="caller">Caller</option>
+                  <option value="field_employee">Field Employee</option>
+                </select>
+              </div>
+
+              {/* Leads Section */}
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold mb-2">Assigned Leads</h3>
+                <div className="grid grid-cols-2 gap-4 max-h-60 overflow-y-auto">
+                  {leads.map(lead => (
+                    <div key={lead.id} className="flex items-center space-x-2 p-2 border rounded">
+                      <input
+                        type="checkbox"
+                        checked={formData.assigned_leads.includes(lead.id)}
+                        onChange={(e) => {
+                          const newLeads = e.target.checked
+                            ? [...formData.assigned_leads, lead.id]
+                            : formData.assigned_leads.filter(id => id !== lead.id);
+                          setFormData({ ...formData, assigned_leads: newLeads });
+                        }}
+                        className="h-4 w-4"
+                      />
+                      <div>
+                        <p className="font-medium">{lead.name}</p>
+                        <p className="text-sm text-gray-600">{lead.title}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Campaigns Section */}
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold mb-2">Assigned Campaigns</h3>
+                <div className="grid grid-cols-2 gap-4 max-h-60 overflow-y-auto">
+                  {campaigns.map(campaign => (
+                    <div key={campaign.id} className="flex items-center space-x-2 p-2 border rounded">
+                      <input
+                        type="checkbox"
+                        checked={formData.assigned_campaigns.includes(campaign.id)}
+                        onChange={(e) => {
+                          const newCampaigns = e.target.checked
+                            ? [...formData.assigned_campaigns, campaign.id]
+                            : formData.assigned_campaigns.filter(id => id !== campaign.id);
+                          setFormData({ ...formData, assigned_campaigns: newCampaigns });
+                        }}
+                        className="h-4 w-4"
+                      />
+                      <div>
+                        <p className="font-medium">{campaign.name}</p>
+                        <p className="text-sm text-gray-600">{campaign.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Other Fields */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <input
+                  type="text"
+                  className="form-control"
+                  name="location"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  placeholder="Location"
+                />
+                <select
+                  className="form-control"
+                  name="manager_id"
+                  value={formData.manager_id}
+                  onChange={(e) => setFormData({ ...formData, manager_id: e.target.value })}
+                >
+                  <option value="">Select Manager</option>
+                  {users
+                    .filter(user => user.role === "manager" && user.id !== editId)
+                    .map(manager => (
+                      <option key={manager.id} value={manager.id}>
+                        {manager.name}
+                      </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex gap-2 mt-4">
                 <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                   Update User

@@ -340,18 +340,31 @@ const Sidebar = ({ user }) => {
 
     {/* Add Single Lead */}
     <div
-  className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-  onClick={() => navigate("/Lead1")} // Redirect to the Add Single Lead page
->
-  <UserPlus size={16} className="text-blue-500" />
-  <span className="text-sm text-gray-800">Add Single Lead</span>
-  <button
-    onClick={() => navigate("/Lead1")}
-    className="ml-auto px-2 py-1 text-sm text-white bg-blue-500 rounded hover:bg-blue-600"
-  >
-    Go
-  </button>
-</div>
+      className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
+      onClick={(e) => {
+        e.preventDefault();
+        console.log("Add Single Lead clicked");
+        console.log("Current user role:", role);
+        console.log("Current user:", localUser);
+        
+        // Close dropdown first
+        setShowAddLeadOptions(false);
+        
+        // Check if user has permission
+        const allowedRoles = ["admin", "manager", "caller", "field_employee"];
+        if (!allowedRoles.map(r => r.toLowerCase()).includes(role?.toLowerCase())) {
+          console.log("User does not have permission to access Lead1");
+          alert("You do not have permission to access this page");
+          return;
+        }
+        
+        // Navigate to Lead1
+        navigate("/Lead1");
+      }}
+    >
+      <UserPlus size={16} className="text-blue-500" />
+      <span className="text-sm text-gray-800">Add Single Lead</span>
+    </div>
 
     {/* Add From Excel */}
     <div

@@ -3,38 +3,35 @@ const router = express.Router();
 const userController = require("../controllers/userController");
 const authMiddleware = require("../middlewares/auth");
 const roleMiddleware = require("../middlewares/role");
+const User = require("../models/user");
 
-// Register a new user
-router.post("/register", userController.registerUser);
-
-// Login a user
+// Public routes
 router.post("/login", userController.loginUser);
 
-// Get all users
-router.get("/", authMiddleware, roleMiddleware(['admin']), userController.getUsers);
+// Protected routes (require authentication)
+router.use(authMiddleware);
 
-// Get a user by ID
-router.get('/:id', authMiddleware, roleMiddleware(['admin']), userController.getUserById);
+// Admin only routes
+router.post("/register", roleMiddleware(['admin']), userController.registerUser);
+router.get("/", roleMiddleware(['admin']), userController.getUsers);
+router.get("/:id", roleMiddleware(['admin']), userController.getUserById);
+router.put("/:id", roleMiddleware(['admin']), userController.updateUser);
+router.delete("/:id", roleMiddleware(['admin']), userController.deleteUser);
 
-// Update a user
-router.put("/:id", authMiddleware, roleMiddleware(['admin']), userController.updateUser);
+// User status management
+router.put("/bulk-status", roleMiddleware(['admin']), userController.updateBulkStatus);
+router.put("/:id/status", roleMiddleware(['admin']), userController.updateUserStatus);
 
-// Update a role
-router.put("/update-role/:id", userController.updateUserRole);
+// Role management
+router.put("/:id/role", roleMiddleware(['admin']), userController.updateUserRole);
 
-// Delete a user
-router.delete("/:id", authMiddleware, roleMiddleware(['admin']), userController.deleteUser);
+// Manager assignment
+router.put("/:id/assign-manager", roleMiddleware(['admin']), userController.assignManager);
+router.get("/managers", roleMiddleware(['admin']), userController.getManagers);
 
-// Get campaigns handled by a user
-router.get("/:id/campaigns",authMiddleware, roleMiddleware(['admin']), userController.getCampaignsHandledByUser);
-
-// Get leads assigned to a user
-router.get('/:id/leads', authMiddleware, roleMiddleware(['admin']), userController.getLeadsByUserId);
-
-// Get campaigns assigned to a user
-router.get('/:id/campaigns', authMiddleware, roleMiddleware(['admin']), userController.getCampaignsByUserId);
-
-// Assign or reassign manager to a user
-router.put("/users/:id/assign-manager", userController.assignManager);
+// User statistics
+router.get("/:id/stats", roleMiddleware(['admin']), userController.getUserStats);
+router.get("/:id/leads", roleMiddleware(['admin']), userController.getLeadsByUserId);
+router.get("/:id/campaigns", roleMiddleware(['admin']), userController.getCampaignsByUserId);
 
 module.exports = router;

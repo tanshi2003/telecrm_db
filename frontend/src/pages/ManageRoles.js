@@ -3,8 +3,8 @@ import Select from "react-select";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { FaCheck, FaEdit } from "react-icons/fa";
-import Sidebar from "../components/Sidebar"; // Sidebar included
-
+import Sidebar from "../components/Sidebar";
+import BackButton from "../components/BackButton";
 
 const roleOptions = [
   { value: "manager", label: "Manager" },
@@ -35,7 +35,6 @@ const ManageRoles = () => {
         },
       });
       const data = await res.json();
-      // Use data.data instead of data.users
       if (data.success && Array.isArray(data.data)) {
         setUsers(data.data);
         setManagers(data.data.filter((u) => u.role === "manager"));
@@ -48,30 +47,62 @@ const ManageRoles = () => {
     setLoading(false);
   };
 
- const handleRoleChange = async (userId, newRole) => {
-  console.log("Updating role for user:", userId, "to", newRole); // log this!
-  try {
-    const token = localStorage.getItem("token");
-
-    await axios.put(
-      `http://localhost:5000/api/users/update-role/${userId}`,
-      { role: newRole },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+  const handleRoleChange = async (userId, newRole) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      
+      // Get user details for better error messaging
+      const user = users.find(u => u.id === userId);
+      if (!user) {
+        toast.error("User not found");
+        return;
       }
-    );
 
-    toast.success("✅ Role updated successfully!");
-    fetchUsers(); // refresh list
+      const response = await axios.put(
+        `http://localhost:5000/api/users/${userId}/role`,
+        { role: newRole },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-  } catch (error) {
-    console.error("Error updating role:", error.response?.data || error.message);
-    toast.error("❌ Failed to update role.");
-  }
-};
+      if (response.data.success) {
+        // Update local state first for immediate feedback
+        setUsers(prevUsers => 
+          prevUsers.map(u => 
+            u.id === userId ? { ...u, role: newRole } : u
+          )
+        );
+        
+        // Update managers list if needed
+        if (newRole === "manager") {
+          setManagers(prev => [...prev, { ...user, role: newRole }]);
+        } else {
+          setManagers(prev => prev.filter(m => m.id !== userId));
+        }
+
+        toast.success(`✅ Role updated successfully! ${user.name} is now a ${newRole}`);
+      } else {
+        toast.error(response.data.message || "Failed to update role");
+      }
+
+      // Fetch fresh data after a short delay
+      setTimeout(() => {
+        fetchUsers();
+      }, 500);
+
+    } catch (error) {
+      console.error("Error updating role:", error);
+      const errorMessage = error.response?.data?.message || "Failed to update role";
+      toast.error(`❌ ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="relative flex min-h-screen">
@@ -79,12 +110,18 @@ const ManageRoles = () => {
 
       <main className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
         <div className="max-w-7xl mx-auto bg-white rounded-md shadow-md p-6">
-          <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-            🛠️ Manage User Roles
-          </h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold text-gray-800">
+              🛠️ Manage User Roles
+            </h2>
+            <BackButton />
+          </div>
 
           {loading ? (
-            <p className="text-gray-500">Loading users...</p>
+            <div className="text-center py-4">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+              <p className="mt-2 text-gray-600">Updating user roles...</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -103,32 +140,27 @@ const ManageRoles = () => {
                       New Role
                     </th>
                     <th className="text-left px-4 py-2 text-sm font-medium text-gray-700">
-                      Action
+                      Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {users.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan="6"
-                        className="text-center py-4 text-gray-500"
-                      >
+                      <td colSpan="6" className="text-center py-4 text-gray-500">
                         No users found.
                       </td>
                     </tr>
                   ) : (
                     users.map((user) => (
                       <RoleRow
-                        key={user._id}
+                        key={user.id}
                         user={user}
                         roles={roleOptions}
-                        managers={managers}
                         onUpdate={handleRoleChange}
                       />
                     ))
-                  )
-                  }
+                  )}
                 </tbody>
               </table>
             </div>
@@ -146,6 +178,10 @@ const RoleRow = ({ user, roles, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
 
   const handleSave = () => {
+    if (selectedRole.value === user.role) {
+      setIsEditing(false);
+      return;
+    }
     onUpdate(user.id, selectedRole.value);
     setIsEditing(false);
   };
@@ -168,21 +204,23 @@ const RoleRow = ({ user, roles, onUpdate }) => {
         />
       </td>
       <td className="px-4 py-2">
-        {isEditing ? (
-          <button
-            className="flex items-center px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-            onClick={handleSave}
-          >
-            <FaCheck className="mr-1" /> Save
-          </button>
-        ) : (
-          <button
-            className="flex items-center px-3 py-1 border text-gray-700 border-gray-400 rounded text-sm hover:bg-gray-100"
-            onClick={() => setIsEditing(true)}
-          >
-            <FaEdit className="mr-1" /> Edit
-          </button>
-        )}
+        <div className="flex gap-2">
+          {isEditing ? (
+            <button
+              className="flex items-center px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+              onClick={handleSave}
+            >
+              <FaCheck className="mr-1" /> Save
+            </button>
+          ) : (
+            <button
+              className="flex items-center px-3 py-1 border text-gray-700 border-gray-400 rounded text-sm hover:bg-gray-100"
+              onClick={() => setIsEditing(true)}
+            >
+              <FaEdit className="mr-1" /> Edit Role
+            </button>
+          )}
+        </div>
       </td>
     </tr>
   );

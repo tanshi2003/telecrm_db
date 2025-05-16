@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import BackButton from "../components/BackButton";
 import { FaPhone } from "react-icons/fa";
 import axios from "axios";
 
 const Lead1 = () => {
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [title, setTitle] = useState("");
@@ -20,6 +22,17 @@ const Lead1 = () => {
   const [campaigns, setCampaigns] = useState([]);
 
   useEffect(() => {
+    // Validate user access
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role")?.toLowerCase();
+    const allowedRoles = ["admin", "manager", "caller", "field_employee"];
+
+    if (!token || !allowedRoles.includes(role)) {
+      console.log("Unauthorized access to Lead1. Token:", !!token, "Role:", role);
+      navigate("/login");
+      return;
+    }
+
     // Fetch the user's name from localStorage
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (storedUser && storedUser.name) {
@@ -27,7 +40,7 @@ const Lead1 = () => {
     } else {
       setUserName("User");
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     // Fetch users for Assigned To dropdown
@@ -105,6 +118,7 @@ const Lead1 = () => {
       setAssignedTo("");
       setCampaignName("");
       setNotes("");
+      navigate("/leads");
     } catch (error) {
       console.error("❌ Error adding lead:", error.response?.data || error.message);
       alert("Failed to add lead 😔");

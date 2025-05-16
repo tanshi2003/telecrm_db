@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import Select from "react-select";
-import toast from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import { FaCheck, FaTimes } from "react-icons/fa";
 import Sidebar from "../components/Sidebar";
+import BackButton from "../components/BackButton";
+import axios from "axios";
 
 const statusOptions = [
   { value: "active", label: "Activate" },
@@ -11,7 +13,6 @@ const statusOptions = [
 ];
 
 const ManageStatus = () => {
-  const [admin, setAdmin] = useState(null);
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [bulkStatus, setBulkStatus] = useState(null);
@@ -19,23 +20,25 @@ const ManageStatus = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("user"));
-    if (stored) setAdmin(stored);
     fetchUsers();
   }, []);
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/users");
-      const data = await res.json();
-      if (data.success) {
-        setUsers(data.users);
+      const token = localStorage.getItem("token");
+      const response = await axios.get("http://localhost:5000/api/users", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        setUsers(response.data.data || []);
       } else {
         toast.error("Failed to load users");
       }
-    } catch {
-      toast.error("Server error while loading users");
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast.error(error.response?.data?.message || "Server error while loading users");
     }
     setLoading(false);
   };
@@ -47,7 +50,7 @@ const ManageStatus = () => {
   };
 
   const handleSelectAll = (e) => {
-    setSelectedUsers(e.target.checked ? users.map((u) => u._id) : []);
+    setSelectedUsers(e.target.checked ? users.map((u) => u.id) : []);
   };
 
   const handleApplyStatus = async () => {
@@ -57,36 +60,87 @@ const ManageStatus = () => {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/users/bulk-status", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userIds: selectedUsers, status: bulkStatus.value }),
-      });
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      
+      // If only one user is selected, use the single user endpoint
+      if (selectedUsers.length === 1) {
+        const userId = selectedUsers[0];
+        const response = await axios.put(
+          `http://localhost:5000/api/users/${userId}/status`,
+          {
+            status: bulkStatus.value
+          },
+          {
+            headers: { 
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
 
-      const result = await res.json();
-      if (result.success) {
-        toast.success(`✅ ${result.modifiedCount} user(s) updated to ${bulkStatus.label}`);
-        setSelectedUsers([]);
-        setBulkStatus(null);
-        setShowConfirm(false);
-        fetchUsers();
+        if (response.data.success) {
+          toast.success(`✅ Successfully updated user status to ${bulkStatus.label}`);
+          setSelectedUsers([]);
+          setBulkStatus(null);
+          setShowConfirm(false);
+          await fetchUsers();
+        } else {
+          toast.error(response.data.message || "Failed to update user status.");
+        }
       } else {
-        toast.error("Failed to update user statuses.");
+        // Use bulk update endpoint for multiple users
+        const response = await axios.put(
+          "http://localhost:5000/api/users/bulk-status",
+          {
+            userIds: selectedUsers,
+            status: bulkStatus.value
+          },
+          {
+            headers: { 
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (response.data.success) {
+          const data = response.data.data || {};
+          const modifiedCount = data.modifiedCount || 0;
+          
+          // Show success message
+          toast.success(`✅ Successfully updated ${modifiedCount} user(s) to ${bulkStatus.label}`);
+          
+          // Reset state
+          setSelectedUsers([]);
+          setBulkStatus(null);
+          setShowConfirm(false);
+          
+          // Refresh the users list
+          await fetchUsers();
+        } else {
+          toast.error(response.data.message || "Failed to update user statuses.");
+        }
       }
     } catch (error) {
-      toast.error("Server error updating statuses.");
+      console.error("Error updating status(es):", error);
+      toast.error(error.response?.data?.message || "Server error updating status(es).");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="relative flex min-h-screen">
-      <Sidebar user={admin} />
-
+      <Sidebar />
       <main className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
         <div className="max-w-7xl mx-auto bg-white rounded-md shadow-md p-6">
-          <h2 className="text-2xl font-semibold mb-6 text-gray-800">
-            🔒 Manage User Status
-          </h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold text-gray-800">
+              🔒 Manage User Status
+            </h2>
+            <BackButton />
+          </div>
 
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
             <Select
@@ -141,15 +195,15 @@ const ManageStatus = () => {
                   </tr>
                 ) : (
                   users.map((user) => (
-                    <tr key={user._id} className="hover:bg-gray-50 transition">
+                    <tr key={user.id} className="hover:bg-gray-50 transition">
                       <td className="px-4 py-2">
                         <input
                           type="checkbox"
-                          checked={selectedUsers.includes(user._id)}
-                          onChange={() => handleUserSelect(user._id)}
+                          checked={selectedUsers.includes(user.id)}
+                          onChange={() => handleUserSelect(user.id)}
                         />
                       </td>
-                      <td className="px-4 py-2 text-sm">{user.userName}</td>
+                      <td className="px-4 py-2 text-sm">{user.name}</td>
                       <td className="px-4 py-2 text-sm">{user.email}</td>
                       <td className="px-4 py-2 text-sm capitalize">{user.role}</td>
                       <td className="px-4 py-2">

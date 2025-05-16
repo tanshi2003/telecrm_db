@@ -2,6 +2,7 @@ const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const responseFormatter = require("../utils/responseFormatter");
+const User = require("../models/user");
 
 // Register a new user
 exports.registerUser = (req, res) => {
@@ -118,43 +119,55 @@ exports.loginUser = (req, res) => {
 
 // Get all users
 exports.getUsers = (req, res) => {
-    const query = `
+    const { role, unassigned } = req.query;
+    let query = `
         SELECT 
             u.id, u.name, u.email, u.phone_no, u.role, u.status, u.manager_id, u.location,
             v.total_leads, v.campaigns_handled, v.total_working_hours
         FROM Users u
         LEFT JOIN user_stats_view v ON u.id = v.id
+        WHERE 1=1
     `;
+    
+    const params = [];
 
-    db.query(query, (err, results) => {
-        if (err) return res.status(500).json(responseFormatter(false, "Database error", err));
-        res.json(responseFormatter(true, "Users fetched successfully", results));
+    if (role) {
+        query += ` AND u.role = ?`;
+        params.push(role);
+    }
+
+    if (unassigned === 'true') {
+        query += ` AND u.manager_id IS NULL`;
+    }
+
+    db.query(query, params, (err, results) => {
+        if (err) {
+            console.error("Error fetching users:", err);
+            return res.status(500).json({
+                success: false,
+                message: "Database error",
+                error: err.message
+            });
+        }
+        res.json({
+            success: true,
+            data: results,
+            message: "Users fetched successfully"
+        });
     });
 };
 
 // Get user by ID
 exports.getUserById = (req, res) => {
     const { id } = req.params;
-
-    const query = `
-        SELECT 
-            u.*, 
-            COUNT(DISTINCT cu.campaign_id) AS campaigns_handled
-        FROM 
-            Users u
-        LEFT JOIN 
-            campaign_users cu ON u.id = cu.user_id
-        WHERE 
-            u.id = ?
-        GROUP BY 
-            u.id
-    `;
-
-    db.query(query, [id], (err, results) => {
-        if (err) return res.status(500).json({ message: "Database error", error: err });
-        if (results.length === 0) return res.status(404).json({ message: "User not found" });
-
-        res.status(200).json({ user: results[0] });
+    
+    db.query("SELECT * FROM Users WHERE id = ?", [id], (err, results) => {
+        if (err) return res.status(500).json(responseFormatter(false, "Database error", err));
+        if (results.length === 0) return res.status(404).json(responseFormatter(false, "User not found"));
+        
+        const user = results[0];
+        delete user.password; // Remove sensitive data
+        res.json(responseFormatter(true, "User fetched successfully", user));
     });
 };
 
@@ -187,13 +200,12 @@ exports.getCampaignsHandledByUser = (req, res) => {
 
 // Get leads assigned to a user
 exports.getLeadsByUserId = (req, res) => {
-    console.log("Fetching leads for user ID:", req.params.id);
-
     const { id } = req.params;
 
     const query = `
         SELECT 
-            l.id, l.title, l.description, l.status, l.lead_category, l.name, l.phone_no, l.address, l.notes
+            l.id, l.title, l.name, l.description, l.status, l.lead_category,
+            l.phone_no, l.address, l.notes, l.created_at, l.updated_at
         FROM 
             leads l
         WHERE 
@@ -206,7 +218,7 @@ exports.getLeadsByUserId = (req, res) => {
             return res.status(500).json(responseFormatter(false, "Database error", err.message));
         }
 
-        res.status(200).json(responseFormatter(true, "Leads fetched successfully", results));
+        res.json(responseFormatter(true, "Leads fetched successfully", results));
     });
 };
 
@@ -216,7 +228,8 @@ exports.getCampaignsByUserId = (req, res) => {
 
     const query = `
         SELECT 
-            c.id, c.name, c.description, c.status, c.priority, c.start_date, c.end_date
+            c.id, c.name, c.description, c.status, c.priority,
+            c.start_date, c.end_date, c.created_at, c.updated_at
         FROM 
             campaigns c
         INNER JOIN 
@@ -231,26 +244,99 @@ exports.getCampaignsByUserId = (req, res) => {
             return res.status(500).json(responseFormatter(false, "Database error", err.message));
         }
 
-        res.status(200).json(responseFormatter(true, "Campaigns fetched successfully", results));
+        res.json(responseFormatter(true, "Campaigns fetched successfully", results));
     });
 };
 
-// Update a user
+// Update user
 exports.updateUser = (req, res) => {
     const { id } = req.params;
     const {
-        name, email, phone_no, role, status, manager_id, location
+        name, email, phone_no, role, status, manager_id, location,
+        assigned_leads = [], assigned_campaigns = []
     } = req.body;
 
     const updatedUser = {
         name, email, phone_no, role, status, manager_id, location
     };
 
+    // Update user details
     db.query("UPDATE Users SET ? WHERE id = ?", [updatedUser, id], (err, result) => {
-        if (err) return res.status(500).json({ message: "Error updating user", error: err });
-        if (result.affectedRows === 0) return res.status(404).json({ message: "User not found" });
+        if (err) {
+            console.error("Error updating user:", err);
+            return res.status(500).json(responseFormatter(false, "Error updating user", err));
+        }
 
-        res.status(200).json({ message: "User updated successfully" });
+        // Update lead assignments
+        db.query("UPDATE leads SET assigned_to = NULL WHERE assigned_to = ?", [id], err => {
+            if (err) {
+                console.error("Error clearing lead assignments:", err);
+                return res.status(500).json(responseFormatter(false, "Error updating leads", err));
+            }
+
+            if (assigned_leads.length > 0) {
+                db.query(
+                    "UPDATE leads SET assigned_to = ? WHERE id IN (?)",
+                    [id, assigned_leads],
+                    err => {
+                        if (err) {
+                            console.error("Error assigning leads:", err);
+                            return res.status(500).json(responseFormatter(false, "Error assigning leads", err));
+                        }
+
+                        // Update campaign assignments
+                        db.query("DELETE FROM campaign_users WHERE user_id = ?", [id], err => {
+                            if (err) {
+                                console.error("Error clearing campaign assignments:", err);
+                                return res.status(500).json(responseFormatter(false, "Error updating campaigns", err));
+                            }
+
+                            if (assigned_campaigns.length > 0) {
+                                const campaignValues = assigned_campaigns.map(campaignId => [campaignId, id]);
+                                db.query(
+                                    "INSERT INTO campaign_users (campaign_id, user_id) VALUES ?",
+                                    [campaignValues],
+                                    err => {
+                                        if (err) {
+                                            console.error("Error assigning campaigns:", err);
+                                            return res.status(500).json(responseFormatter(false, "Error assigning campaigns", err));
+                                        }
+                                        res.json(responseFormatter(true, "User updated successfully"));
+                                    }
+                                );
+                            } else {
+                                res.json(responseFormatter(true, "User updated successfully"));
+                            }
+                        });
+                    }
+                );
+            } else {
+                // Update campaign assignments even if no leads are assigned
+                db.query("DELETE FROM campaign_users WHERE user_id = ?", [id], err => {
+                    if (err) {
+                        console.error("Error clearing campaign assignments:", err);
+                        return res.status(500).json(responseFormatter(false, "Error updating campaigns", err));
+                    }
+
+                    if (assigned_campaigns.length > 0) {
+                        const campaignValues = assigned_campaigns.map(campaignId => [campaignId, id]);
+                        db.query(
+                            "INSERT INTO campaign_users (campaign_id, user_id) VALUES ?",
+                            [campaignValues],
+                            err => {
+                                if (err) {
+                                    console.error("Error assigning campaigns:", err);
+                                    return res.status(500).json(responseFormatter(false, "Error assigning campaigns", err));
+                                }
+                                res.json(responseFormatter(true, "User updated successfully"));
+                            }
+                        );
+                    } else {
+                        res.json(responseFormatter(true, "User updated successfully"));
+                    }
+                });
+            }
+        });
     });
 };
 
@@ -312,6 +398,188 @@ exports.assignManager = (req, res) => {
             if (result.affectedRows === 0) return res.status(404).json({ message: "User not found" });
 
             res.status(200).json({ message: "Manager assigned successfully" });
+        });
+    });
+};
+
+// Update user status in bulk
+exports.updateBulkStatus = async (req, res) => {
+    try {
+        const { userIds, status } = req.body;
+        
+        // Input validation
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json(responseFormatter(false, "Please provide valid user IDs"));
+        }
+
+        if (!status) {
+            return res.status(400).json(responseFormatter(false, "Status is required"));
+        }
+
+        // Validate status enum
+        const validStatuses = ["active", "inactive", "suspended"];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json(responseFormatter(false, "Invalid status. Must be 'active', 'inactive', or 'suspended'"));
+        }
+
+        // Convert array to string for SQL
+        const userIdsString = userIds.join(',');
+
+        // First check if users exist
+        const checkQuery = "SELECT id FROM Users WHERE id IN (?)";
+        db.query(checkQuery, [userIds], (checkErr, users) => {
+            if (checkErr) {
+                return res.status(500).json(responseFormatter(false, "Error checking users"));
+            }
+
+            if (!users || users.length === 0) {
+                return res.status(404).json(responseFormatter(false, "No users found with the provided IDs"));
+            }
+
+            // Perform the update
+            const updateQuery = "UPDATE Users SET status = ?, updated_at = NOW() WHERE id IN (?)";
+            db.query(updateQuery, [status, userIds], (updateErr, result) => {
+                if (updateErr) {
+                    return res.status(500).json(responseFormatter(false, "Error updating users"));
+                }
+
+                // Get updated users
+                const selectQuery = `
+                    SELECT id, name, email, status, role, updated_at 
+                    FROM Users 
+                    WHERE id IN (?)
+                `;
+                
+                db.query(selectQuery, [userIds], (selectErr, updatedUsers) => {
+                    if (selectErr) {
+                        return res.status(500).json(responseFormatter(false, "Error fetching updated users"));
+                    }
+
+                    const response = {
+                        modifiedCount: result.affectedRows,
+                        updatedUsers: updatedUsers
+                    };
+
+                    return res.json(responseFormatter(
+                        true, 
+                        `Successfully updated ${result.affectedRows} user(s) status to ${status}`,
+                        response
+                    ));
+                });
+            });
+        });
+    } catch (error) {
+        console.error("Bulk status update error:", error);
+        return res.status(500).json(responseFormatter(false, "Internal server error"));
+    }
+};
+
+// Update single user status
+exports.updateUserStatus = (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+        return res.status(400).json({
+            success: false,
+            message: "Status is required"
+        });
+    }
+
+    const validStatuses = ["active", "inactive", "suspended"];
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid status value"
+        });
+    }
+
+    const query = "UPDATE Users SET status = ? WHERE id = ?";
+    db.query(query, [status, id], (err, result) => {
+        if (err) {
+            console.error("Error updating user status:", err);
+            return res.status(500).json({
+                success: false,
+                message: "Database error",
+                error: err.message
+            });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "User status updated successfully"
+        });
+    });
+};
+
+// Get all managers
+exports.getManagers = (req, res) => {
+    const query = "SELECT id, name, email, phone_no FROM Users WHERE role = 'manager'";
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error("Error fetching managers:", err);
+            return res.status(500).json({
+                success: false,
+                message: "Database error",
+                error: err.message
+            });
+        }
+        res.json({
+            success: true,
+            data: results,
+            message: "Managers fetched successfully"
+        });
+    });
+};
+
+// Get user statistics
+exports.getUserStats = (req, res) => {
+    const { id } = req.params;
+    const query = `
+        SELECT 
+            u.*,
+            COUNT(DISTINCT l.id) as total_leads,
+            COUNT(DISTINCT cu.campaign_id) as campaigns_handled,
+            COALESCE(SUM(TIME_TO_SEC(TIMEDIFF(cl.end_time, cl.start_time))/3600), 0) as total_working_hours
+        FROM Users u
+        LEFT JOIN leads l ON u.id = l.assigned_to
+        LEFT JOIN campaign_users cu ON u.id = cu.user_id
+        LEFT JOIN call_logs cl ON u.id = cl.user_id
+        WHERE u.id = ?
+        GROUP BY u.id
+    `;
+
+    db.query(query, [id], (err, results) => {
+        if (err) {
+            console.error("Error fetching user stats:", err);
+            return res.status(500).json({
+                success: false,
+                message: "Database error",
+                error: err.message
+            });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        const userStats = results[0];
+        delete userStats.password; // Remove sensitive data
+
+        res.json({
+            success: true,
+            data: userStats,
+            message: "User statistics fetched successfully"
         });
     });
 };

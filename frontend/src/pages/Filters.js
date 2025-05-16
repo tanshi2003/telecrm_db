@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Filters from "../components/Filters";
 import Sidebar from "../components/Sidebar"; // Import Sidebar
+import BackButton from "../components/BackButton";
 import axios from "axios";
 
 const AdminFiltersPage = () => {
@@ -127,9 +128,12 @@ const AdminFiltersPage = () => {
   return (
     <div className="min-h-screen bg-gray-100 flex">
       <Sidebar />
-      <div className="flex-1 ml-64">
+      <div className="flex-1 ml-64 mt-16 p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Filters</h1>
+          <BackButton />
+        </div>
         <div className="max-w-4xl mx-auto">
-          <div className="h4" />
           <div className="flex gap-4 mb-4 justify-center">
             <button
               className={`px-4 py-2 rounded font-semibold ${type === "users" ? "bg-blue-600 text-white" : "bg-white border"}`}

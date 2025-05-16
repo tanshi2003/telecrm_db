@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -19,8 +19,31 @@ function AddUser() {
     location: "",
   });
 
+  const [managers, setManagers] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchManagers();
+  }, []);
+
+  const fetchManagers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("http://localhost:5000/api/users", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.data.success && Array.isArray(response.data.data)) {
+        const managersList = response.data.data.filter(user => user.role === "manager");
+        setManagers(managersList);
+      }
+    } catch (error) {
+      console.error("Error fetching managers:", error);
+      toast.error("Failed to load managers list");
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -32,7 +55,26 @@ function AddUser() {
 
   const validateForm = () => {
     const { name, email, role, password } = formData;
-    return name && email && role && password;
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address");
+      return false;
+    }
+
+    // Password validation (at least 6 characters)
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return false;
+    }
+
+    if (!name || !email || !role || !password) {
+      toast.error("Name, Email, Role, and Password are required fields");
+      return false;
+    }
+
+    return true;
   };
 
   const resetForm = () => {
@@ -56,23 +98,44 @@ function AddUser() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.post("http://localhost:5000/api/users/register", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      
+      // Convert manager_id to number if it exists, null if empty
+      const dataToSend = {
+        ...formData,
+        manager_id: formData.manager_id ? Number(formData.manager_id) : null
+      };
 
-      toast.success("🎉 User created successfully!");
-      console.log("Add User Response:", response.data);
-      resetForm();
-    } catch (error) {
-      if (error.response) {
-        console.error("Backend Error:", error.response.data);
-        toast.error(error.response.data.message || "Failed to add user.");
+      console.log("Sending data to server:", dataToSend);
+
+      const response = await axios.post(
+        "http://localhost:5000/api/users/register", 
+        dataToSend,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+        }
+      );
+
+      if (response.data.user) {
+        toast.success(`🎉 User ${response.data.user.name} created successfully!`);
+        console.log("Add User Response:", response.data);
+        resetForm();
       } else {
-        console.error("Error adding user:", error.message);
-        toast.error("🚫 Error creating user. Try again.");
+        toast.error("Failed to create user: Invalid response format");
       }
+    } catch (error) {
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        data: formData
+      });
+      
+      const errorMessage = error.response?.data?.message || 
+                          "Failed to create user. Please check the data and try again.";
+      toast.error(`🚫 ${errorMessage}`);
     }
   };
 
@@ -82,8 +145,22 @@ function AddUser() {
     flex: 1,
     padding: "2rem",
     marginLeft: "250px", // sidebar space
-    backgroundColor: "#fff", // White bg fix here
-    minHeight: "100vh",      // full viewport height so bg is consistent
+    marginTop: "64px",   // Adjusted margin-top to match navbar height
+    backgroundColor: "#f3f4f6", // Light gray background
+    minHeight: "calc(100vh - 64px)", // Subtract navbar height
+    position: "relative",
+    zIndex: 1,
+    overflow: "auto"     // Add scroll if content is too long
+  };
+
+  const headerStyle = {
+    position: "relative",
+    zIndex: 2,
+    marginBottom: "1.5rem",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%"
   };
 
   const formCardStyle = {
@@ -92,7 +169,7 @@ function AddUser() {
     boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
     padding: "2rem",
     maxWidth: "800px",
-    margin: "3rem auto 0 auto",
+    margin: "0 auto",
   };
 
   const formTitleStyle = {
@@ -132,6 +209,10 @@ function AddUser() {
       <Sidebar />
       
       <div style={containerStyle}>
+        <div className="flex justify-between items-center mb-6" style={headerStyle}>
+          <h1 className="text-2xl font-bold">Register User</h1>
+          <BackButton />
+        </div>
         <div style={formCardStyle}>
           <h2 style={formTitleStyle}>{isEditing ? "Edit User" : "Add User"}</h2>
           
@@ -180,14 +261,19 @@ function AddUser() {
               <option value="field_employee">Field Employee</option>
             </select>
             
-            <input
+            <select
               style={inputStyle}
-              type="text"
               name="manager_id"
-              placeholder="Manager Name (Optional)"
               value={formData.manager_id}
               onChange={handleInputChange}
-            />
+            >
+              <option value="">Select Manager (Optional)</option>
+              {managers.map(manager => (
+                <option key={manager.id} value={manager.id}>
+                  {manager.name}
+                </option>
+              ))}
+            </select>
             <input
               style={inputStyle}
               type="text"
@@ -202,7 +288,19 @@ function AddUser() {
             Add User
           </button>
         </div>
-        <ToastContainer position="top-right" autoClose={3000} hideProgressBar newestOnTop />
+        <ToastContainer 
+          position="top-center"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+          style={{ marginTop: "70px" }} // Add margin to push below navbar
+        />
       </div>
     </div>
   );
