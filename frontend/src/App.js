@@ -25,7 +25,7 @@ import Campaign from "./pages/Campaign";
 import ManageUsers from "./pages/ManageUser";
 import SearchPage from "./pages/Search";
 import FiltersPage from "./pages/Filters"; // Use the page version
-import RegisterUser from "./pages/RegisterUser";
+import AddUser from "./pages/Register";
 import AllUsers from "./pages/AllUsers";
 import AccessLogs from "./pages/AccessLogs";
 import ManageRoles from "./pages/ManageRoles";
@@ -68,7 +68,7 @@ function App() {
 
               {/* Admin/User Management Routes */}
               <Route path="/admin/users" element={<ManageUsers />} />
-              <Route path="/admin/users/register" element={<RegisterUser />} />
+              <Route path="/admin/users/register" element={<AddUser />} />
               <Route path="/admin/users/all-user" element={<AllUsers />} />
               <Route path="/admin/users/access-logs" element={<AccessLogs />} />
               <Route path="/admin/users/manage-roles" element={<ManageRoles />} />
