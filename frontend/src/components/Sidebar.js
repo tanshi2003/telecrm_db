@@ -204,7 +204,11 @@ const Sidebar = ({ user }) => {
         {/* Sidebar Menu Items */}
         <div className="flex-1 mt-2">
           {[
-            { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
+            { 
+              icon: LayoutDashboard, 
+              label: "Dashboard", 
+              path: role?.toLowerCase() === "caller" ? "/caller-dashboard" : "/admin"
+            },
             { icon: Search, label: "Search", path: "/search" },
             {
               icon: PlusCircle,
@@ -224,7 +228,7 @@ const Sidebar = ({ user }) => {
             {
               icon: Filter,
               label: "Filters",
-              path: "/filters", // Navigate to the new filter page
+              path: "/filters",
             },
             {
               icon: BarChart2,
