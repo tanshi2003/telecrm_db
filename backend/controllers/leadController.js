@@ -69,10 +69,22 @@ exports.createLead = (req, res) => {
 
 // 📌 Get all leads
 exports.getLeads = (req, res) => {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    // Base query
+    let query = `SELECT Leads.*, Users.name AS assigned_to_name 
+                 FROM Leads 
+                 LEFT JOIN Users ON Leads.assigned_to = Users.id`;
+    
+    // If user is a caller, show both unassigned leads and their assigned leads
+    if (userRole.toLowerCase() === 'caller') {
+        query += ` WHERE (Leads.assigned_to = ? OR Leads.assigned_to IS NULL)`;
+    }
+
     db.query(
-        `SELECT Leads.*, Users.name AS assigned_to_name 
-         FROM Leads 
-         LEFT JOIN Users ON Leads.assigned_to = Users.id`,
+        query,
+        userRole.toLowerCase() === 'caller' ? [userId] : [],
         (err, leads) => {
             if (err) {
                 console.error("Fetch leads error:", err);
@@ -169,4 +181,120 @@ exports.deleteLead = (req, res) => {
             res.json(responseFormatter(true, "Lead deleted successfully"));
         });
     });
+};
+
+// 📌 Bulk create leads
+exports.bulkCreateLeads = (req, res) => {
+    try {
+        const { leads } = req.body;
+        
+        if (!Array.isArray(leads) || leads.length === 0) {
+            return res.status(400).json(responseFormatter(false, "Invalid leads data. Expected non-empty array."));
+        }
+
+        const values = leads.map(lead => [
+            lead.name,
+            lead.email,
+            lead.phone,
+            lead.status || 'new',
+            lead.source,
+            lead.notes,
+            new Date(),  // created_at
+            new Date()   // updated_at
+        ]);
+
+        db.query(
+            'INSERT INTO leads (name, email, phone, status, source, notes, created_at, updated_at) VALUES ?',
+            [values],
+            (err, result) => {
+                if (err) {
+                    console.error('Error bulk creating leads:', err);
+                    return res.status(500).json(responseFormatter(false, err.message));
+                }
+
+                res.json(responseFormatter(true, "Leads created successfully", {
+                    count: result.affectedRows,
+                    firstId: result.insertId
+                }));
+            }
+        );
+    } catch (error) {
+        console.error('Error bulk creating leads:', error);
+        res.status(500).json(responseFormatter(false, error.message));
+    }
+};
+
+// 📌 Bulk update leads
+exports.bulkUpdateLeads = (req, res) => {
+    try {
+        const { updates } = req.body;
+        
+        if (!Array.isArray(updates) || updates.length === 0) {
+            return res.status(400).json(responseFormatter(false, "Invalid updates data. Expected non-empty array."));
+        }
+
+        let completedUpdates = 0;
+        let errors = [];
+
+        updates.forEach(update => {
+            const updateData = { ...update, id: undefined, updated_at: new Date() };
+            db.query(
+                'UPDATE leads SET ? WHERE id = ?',
+                [updateData, update.id],
+                (err, result) => {
+                    if (err) {
+                        errors.push({ id: update.id, error: err.message });
+                    } else {
+                        completedUpdates += result.affectedRows;
+                    }
+
+                    // Check if all updates are processed
+                    if (completedUpdates + errors.length === updates.length) {
+                        if (errors.length > 0) {
+                            res.status(500).json(responseFormatter(false, "Some updates failed", {
+                                updatedCount: completedUpdates,
+                                errors
+                            }));
+                        } else {
+                            res.json(responseFormatter(true, "Leads updated successfully", {
+                                updatedCount: completedUpdates
+                            }));
+                        }
+                    }
+                }
+            );
+        });
+    } catch (error) {
+        console.error('Error bulk updating leads:', error);
+        res.status(500).json(responseFormatter(false, error.message));
+    }
+};
+
+// 📌 Bulk delete leads
+exports.bulkDeleteLeads = (req, res) => {
+    try {
+        const { ids } = req.body;
+        
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json(responseFormatter(false, "Invalid ids. Expected non-empty array."));
+        }
+
+        db.query(
+            'DELETE FROM leads WHERE id IN (?)',
+            [ids],
+            (err, result) => {
+                if (err) {
+                    console.error('Error bulk deleting leads:', err);
+                    return res.status(500).json(responseFormatter(false, err.message));
+                }
+
+                res.json(responseFormatter(true, "Leads deleted successfully", {
+                    deletedCount: result.affectedRows
+                }));
+            }
+        );
+    } catch (error) {
+        console.error('Error bulk deleting leads:', error);
+        res.status(500).json(responseFormatter(false, error.message));
+    }
 };

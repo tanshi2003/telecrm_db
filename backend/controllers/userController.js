@@ -583,3 +583,87 @@ exports.getUserStats = (req, res) => {
         });
     });
 };
+
+// Forgot password request
+exports.forgotPassword = async (req, res) => {
+    const { email, role } = req.body;
+
+    if (!email || !role) {
+        return res.status(400).json(responseFormatter(false, "Email and role are required"));
+    }
+
+    try {
+        // Check if user exists with the given email and role
+        const [users] = await db.query(
+            "SELECT * FROM Users WHERE email = ? AND role = ?",
+            [email, role]
+        );
+
+        if (users.length === 0) {
+            return res.status(404).json(responseFormatter(false, "No user found with the provided email and role"));
+        }
+
+        const user = users[0];
+
+        // Generate a password reset token
+        const resetToken = jwt.sign(
+            { id: user.id, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: "1h" }
+        );
+
+        // Store the reset token and its expiry in the database
+        const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+        await db.query(
+            "UPDATE Users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?",
+            [resetToken, resetTokenExpiry, user.id]
+        );
+
+        // In a real application, you would send an email to the user with the reset link
+        // For now, we'll just return a success message
+        res.status(200).json(responseFormatter(true, "Password reset request sent to admin. Please contact your administrator for further instructions."));
+
+    } catch (error) {
+        console.error("Forgot password error:", error);
+        res.status(500).json(responseFormatter(false, "Server error", error.message));
+    }
+};
+
+// Get users without managers (unassigned users)
+exports.getUnassignedUsers = (req, res) => {
+    const query = `
+        SELECT 
+            u.id, u.name, u.email, u.phone_no, u.role, u.status, u.location, u.created_at,
+            COALESCE((SELECT COUNT(*) FROM leads WHERE assigned_to = u.id), 0) as total_leads,
+            COALESCE((SELECT COUNT(*) FROM campaign_users WHERE user_id = u.id), 0) as campaigns_handled
+        FROM 
+            users u 
+        WHERE 
+            u.manager_id IS NULL 
+            AND u.role != 'manager'
+            AND u.role != 'admin'
+        ORDER BY 
+            u.created_at DESC
+    `;
+
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error("Error fetching unassigned users:", err);
+            return res.status(500).json(responseFormatter(false, "Database error", err.message));
+        }
+
+        if (!results || results.length === 0) {
+            return res.json(responseFormatter(true, "No unassigned users found", []));
+        }
+
+        // Remove sensitive information
+        const users = results.map(user => {
+            const { password, token, reset_token, reset_token_expiry, ...safeUser } = user;
+            return safeUser;
+        });
+
+        res.json(responseFormatter(true, "Unassigned users fetched successfully", users));
+    });
+};
+
+module.exports = exports;

@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const responseFormatter = require("../utils/responseFormatter");
 
-module.exports = (req, res, next) => {
+const authenticateToken = (req, res, next) => {
     const authHeader = req.header("Authorization");
     if (!authHeader) {
         return res.status(401).json(responseFormatter(false, "Access denied. No token provided."));
@@ -22,7 +22,9 @@ module.exports = (req, res, next) => {
         req.user = decoded;
         next();
     } catch (ex) {
-        console.error("JWT Verification Error:", ex.message); // Log the error for debugging
-        res.status(400).json(responseFormatter(false, "Token is not valid"));
+        console.error("JWT Verification Error:", ex.message);
+        res.status(400).json(responseFormatter(false, "Invalid token"));
     }
 };
+
+module.exports = { authenticateToken };

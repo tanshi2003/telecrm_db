@@ -1,22 +1,30 @@
 const express = require("express");
 const router = express.Router();
 const leadController = require("../controllers/leadController");
-const authMiddleware = require("../middlewares/auth");
+const { authenticateToken } = require("../middlewares/auth");
 const roleMiddleware = require("../middlewares/role");
 
+// Protected routes - require authentication
+router.use(authenticateToken);
+
 // 🆕 Create a new lead
-router.post("/", authMiddleware, roleMiddleware(['admin', 'user']), leadController.createLead);
+router.post("/", roleMiddleware(['admin', 'user', 'caller']), leadController.createLead);
 
 // 📋 Get all leads
-router.get("/", authMiddleware, roleMiddleware(['admin', 'user']), leadController.getLeads);
+router.get("/", roleMiddleware(['admin', 'user', 'caller']), leadController.getLeads);
 
 // 🔍 Get lead by ID
-router.get("/:id", authMiddleware, roleMiddleware(['admin', 'user']), leadController.getLeadById);
+router.get("/:id", roleMiddleware(['admin', 'user', 'caller']), leadController.getLeadById);
 
 // ✏️ Update a lead
-router.put("/:id", authMiddleware, roleMiddleware(['admin', 'user']), leadController.updateLead);
+router.put("/:id", roleMiddleware(['admin', 'user', 'caller']), leadController.updateLead);
 
 // ❌ Delete a lead (Admins only)
-router.delete("/:id", authMiddleware, roleMiddleware(['admin']), leadController.deleteLead);
+router.delete("/:id", roleMiddleware(['admin']), leadController.deleteLead);
+
+// Bulk operations
+router.post("/bulk-create", roleMiddleware(['admin']), leadController.bulkCreateLeads);
+router.put("/bulk-update", roleMiddleware(['admin']), leadController.bulkUpdateLeads);
+router.delete("/bulk-delete", roleMiddleware(['admin']), leadController.bulkDeleteLeads);
 
 module.exports = router;
