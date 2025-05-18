@@ -1,6 +1,6 @@
 import React, { useEffect, useContext } from "react";
 import { AuthContext } from "./context/AuthContext";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
@@ -33,7 +33,8 @@ import ManageRoles from "./pages/ManageRoles";
 import ManageStatus from "./pages/ManageStatus";
 import AssignManager from "./pages/AssignManager"; // <-- Add this import
 import TeamsList from "./pages/TeamsList";
-
+import TeamManagement from "./pages/team-management";
+import Meetings from "./pages/Meetings";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Reports from "./pages/ReportsLeaderboard";
 import "./styles/global.css";
@@ -49,206 +50,260 @@ function ScrollToTop() {
   return null;
 }
 
-function App() {
+// Wrap the main app content in this component to handle route changes
+function AppContent() {
   const { user } = useContext(AuthContext);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Add route change logging and handling
+  useEffect(() => {
+    console.log("App - Current location:", location.pathname);
+    console.log("App - User state:", user);
+    console.log("App - localStorage state:", {
+      token: !!localStorage.getItem("token"),
+      role: localStorage.getItem("role"),
+      user: localStorage.getItem("user")
+    });
+
+    // If someone tries to navigate to /admin-dashboard, redirect to /admin
+    if (location.pathname === "/admin-dashboard") {
+      console.log("Redirecting from /admin-dashboard to /admin");
+      navigate("/admin");
+    }
+  }, [location, user, navigate]);
 
   return (
-    <Router>
-      <ScrollToTop />
-      <div className="flex min-h-screen">
-        {/* Sidebar is conditionally rendered based on user login status */}
-        {user?.isLoggedIn && <Sidebar role={user.role} />}
-        <div className={user?.isLoggedIn ? "ml-64 flex-grow" : "w-full"}>
-          <Navbar />
-          <AnimatePresence mode="wait">
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/landingpage" element={<LandingPage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/Updatelead" element={<Updatelead />} />
+    <div className="flex min-h-screen">
+      {/* Sidebar is conditionally rendered based on user login status */}
+      {user?.isLoggedIn && <Sidebar role={user.role} />}
+      <div className={user?.isLoggedIn ? "ml-64 flex-grow" : "w-full"}>
+        <Navbar />
+        <AnimatePresence mode="wait">
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/landingpage" element={<LandingPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/Updatelead" element={<Updatelead />} />
 
-              {/* Admin/User Management Routes */}
-              <Route path="/admin/users" element={<ManageUsers />} />
-              <Route path="/admin/users/register" element={<AddUser />} />
-              <Route path="/admin/users/all-user" element={<AllUsers />} />
-              <Route path="/admin/users/access-logs" element={<AccessLogs />} />
-              <Route path="/admin/users/manage-roles" element={<ManageRoles />} />
-              <Route path="/admin/users/manage-status" element={<ManageStatus />} />
-              <Route
-                path="/admin/users/edit/:id"
+            {/* Admin/User Management Routes */}
+            <Route path="/admin/users" element={<ManageUsers />} />
+            <Route path="/admin/users/register" element={<AddUser />} />
+            <Route path="/admin/users/all-user" element={<AllUsers />} />
+            <Route path="/admin/users/access-logs" element={<AccessLogs />} />
+            <Route path="/admin/users/manage-roles" element={<ManageRoles />} />
+            <Route path="/admin/users/manage-status" element={<ManageStatus />} />
+            <Route
+              path="/admin/users/edit/:id"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <EditUser />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/admin/ManageUsers"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <ManageUsers />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Protected Routes */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/caller-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["caller"]}>
+                  <CallerDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/field_employee-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["field_employee"]}>
+                  <FieldDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manager-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <ManagerDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/leads"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <Leads />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/campaigns"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <ManageCampaigns />
+                </ProtectedRoute>
+              }
+            />
+             <Route
+              path="/admin/campaigns1"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <Campaign />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/assignuser"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AssignUser />
+                </ProtectedRoute>
+              }
+            />
+           <Route 
+           path="/admin/UpdateCampaign/:id" 
+           element={
+             <ProtectedRoute allowedRoles={["admin"]}>
+           <UpdateCampaign /> 
+           
+</ProtectedRoute>
+              }
+            />
+            <Route 
+           path="/admin/EditCampaign/:id" 
+           element={
+             <ProtectedRoute allowedRoles={["admin"]}>
+           <EditCampaign /> 
+           
+</ProtectedRoute>
+              }
+            />
+            <Route
+              path="/Lead1"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager", "caller", "field_employee"]}>
+                  <Lead1 />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/viewlead/:id"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <Viewlead />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/editlead/:id"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <EditLead />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/Updatelead/:id"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <Updatelead />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+                path="/team-management"
                 element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <EditUser />
+                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                    <TeamManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/meetings"
+                element={
+                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                    <Meetings />
                   </ProtectedRoute>
                 }
               />
               
-              <Route
-                path="/admin/ManageUsers"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <ManageUsers />
-                  </ProtectedRoute>
-                }
-              />
+            {/* 🆕 Excel Upload Route */}
+            <Route
+              path="/excelupload"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <Excelupload />
+                </ProtectedRoute>
+              }
+            />
+             <Route
+              path="/ReportsLeaderboard"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <Reports />
+                </ProtectedRoute>
+              }
+            />
+            {/* 🆕 Search Route */}
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/filters" element={<FiltersPage />} />
+            <Route
+              path="/admin/users/assign-manager"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AssignManager />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users/teams"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <TeamsList />
+                </ProtectedRoute>
+              }
+            />
 
-              {/* Protected Routes */}
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/caller-dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={["caller"]}>
-                    <CallerDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/field_employee-dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={["field_employee"]}>
-                    <FieldDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/manager-dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={["manager"]}>
-                    <ManagerDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/leads"
-                element={
-                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
-                    <Leads />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/campaigns"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <ManageCampaigns />
-                  </ProtectedRoute>
-                }
-              />
-               <Route
-                path="/admin/campaigns1"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <Campaign />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/assignuser"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <AssignUser />
-                  </ProtectedRoute>
-                }
-              />
-             <Route 
-             path="/admin/UpdateCampaign/:id" 
-             element={
-               <ProtectedRoute allowedRoles={["admin"]}>
-             <UpdateCampaign /> 
-             
-</ProtectedRoute>
-                }
-              />
-              <Route 
-             path="/admin/EditCampaign/:id" 
-             element={
-               <ProtectedRoute allowedRoles={["admin"]}>
-             <EditCampaign /> 
-             
-</ProtectedRoute>
-                }
-              />
-              <Route
-                path="/Lead1"
-                element={
-                  <ProtectedRoute allowedRoles={["admin", "manager", "caller", "field_employee"]}>
-                    <Lead1 />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/viewlead/:id"
-                element={
-                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
-                    <Viewlead />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/editlead/:id"
-                element={
-                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
-                    <EditLead />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/Updatelead/:id"
-                element={
-                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
-                    <Updatelead />
-                  </ProtectedRoute>
-                }
-              />
-              {/* 🆕 Excel Upload Route */}
-              <Route
-                path="/excelupload"
-                element={
-                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
-                    <Excelupload />
-                  </ProtectedRoute>
-                }
-              />
-               <Route
-                path="/ReportsLeaderboard"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <Reports />
-                  </ProtectedRoute>
-                }
-              />
-              {/* 🆕 Search Route */}
-              <Route path="/search" element={<SearchPage />} />
-              <Route path="/filters" element={<FiltersPage />} />
-              <Route
-                path="/admin/users/assign-manager"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <AssignManager />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/users/teams"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <TeamsList />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </AnimatePresence>
-        </div>
+            {/* Add catch-all routes for old paths */}
+            <Route
+              path="/admin-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <Navigate to="/admin" replace />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </AnimatePresence>
       </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <ScrollToTop />
+      <AppContent />
     </Router>
   );
 }

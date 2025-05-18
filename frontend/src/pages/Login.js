@@ -40,23 +40,42 @@ function Login() {
         throw new Error("Invalid response from server.");
       }
 
+      console.log("Login successful:", {
+        token: !!token,
+        userRole,
+        user
+      });
+
       // Store user data in localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("role", userRole);
       localStorage.setItem("user", JSON.stringify(user));
 
+      console.log("Data stored in localStorage:", {
+        storedToken: !!localStorage.getItem("token"),
+        storedRole: localStorage.getItem("role"),
+        storedUser: localStorage.getItem("user")
+      });
+
       // Update AuthContext
       login({ token, role: userRole, user });
 
+      console.log("Navigating based on role:", userRole);
+
       if (userRole === "admin") {
-        navigate("/admin-dashboard");
+        console.log("Admin role detected, navigating to /admin");
+        navigate("/admin");
       } else if (userRole === "manager") {
+        console.log("Manager role detected, navigating to /manager-dashboard");
         navigate("/manager-dashboard");
       } else if (userRole === "caller") {
+        console.log("Caller role detected, navigating to /caller-dashboard");
         navigate("/caller-dashboard");
       } else if (userRole === "field_employee") {
+        console.log("Field employee role detected, navigating to /field_employee-dashboard");
         navigate("/field_employee-dashboard");
       } else {
+        console.log("Invalid role detected:", userRole);
         throw new Error("Invalid role. Please contact support.");
       }
     } catch (err) {

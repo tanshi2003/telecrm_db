@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar"; // Import Sidebar component
+import Sidebar from "../components/Sidebar";
+import { useNavigate } from "react-router-dom";
 
 const ManagerDashboard = () => {
   const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Fetch user details from localStorage
@@ -25,7 +27,10 @@ const ManagerDashboard = () => {
         {/* Header Section */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Manager Dashboard</h1>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          <button
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            onClick={() => navigate("/add-report")}
+          >
             Add Report
           </button>
         </div>
@@ -39,7 +44,10 @@ const ManagerDashboard = () => {
               <li>Weekly performance report</li>
               <li>Monthly sales report</li>
             </ul>
-            <button className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+            <button
+              className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              onClick={() => navigate("/reports")}
+            >
               View All Reports
             </button>
           </div>
@@ -51,7 +59,10 @@ const ManagerDashboard = () => {
               <li>New report request</li>
               <li>Meeting scheduled with Admin</li>
             </ul>
-            <button className="mt-4 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700">
+            <button
+              className="mt-4 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+              onClick={() => navigate("/notifications")}
+            >
               View All Notifications
             </button>
           </div>
@@ -60,7 +71,10 @@ const ManagerDashboard = () => {
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-4">Team Management</h2>
             <p>Manage your team members and assign tasks.</p>
-            <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            <button
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={() => navigate("/team-management")}
+            >
               Manage Team
             </button>
           </div>
@@ -69,7 +83,10 @@ const ManagerDashboard = () => {
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-4">Task Assignment</h2>
             <p>Assign tasks to team members and track progress.</p>
-            <button className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+            <button
+              className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              onClick={() => navigate("/assign-tasks")}
+            >
               Assign Tasks
             </button>
           </div>
@@ -78,7 +95,10 @@ const ManagerDashboard = () => {
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-4">Performance Analytics</h2>
             <p>Analyze team performance and productivity metrics.</p>
-            <button className="mt-4 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+            <button
+              className="mt-4 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              onClick={() => navigate("/performance-analytics")}
+            >
               View Analytics
             </button>
           </div>
@@ -87,7 +107,10 @@ const ManagerDashboard = () => {
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-4">Meetings</h2>
             <p>Schedule and manage meetings with team members.</p>
-            <button className="mt-4 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700">
+            <button
+              className="mt-4 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+              onClick={() => navigate("/meetings")}
+            >
               Schedule Meeting
             </button>
           </div>

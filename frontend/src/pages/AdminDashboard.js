@@ -7,19 +7,37 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log("AdminDashboard mounted");
     const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (storedUser && storedUser.role === "admin") {
+    const role = localStorage.getItem("role");
+    
+    console.log("AdminDashboard - Stored data:", {
+      storedUser,
+      role,
+      hasToken: !!localStorage.getItem("token")
+    });
+    
+    if (storedUser && role?.toLowerCase() === "admin") {
+      console.log("AdminDashboard - Setting user data");
       setUser(storedUser);
     } else {
       console.error("Unauthorized access. Redirecting to login...");
-
+      navigate("/login");
     }
   }, [navigate]);
 
   const handleNavigation = (path) => {
+    console.log("AdminDashboard - Navigating to:", path);
     navigate(path);
   };
 
+  // If user is not set, show loading or redirect
+  if (!user) {
+    console.log("AdminDashboard - No user data, returning null");
+    return null;
+  }
+
+  console.log("AdminDashboard - Rendering dashboard");
   return (
     <div className="flex min-h-screen overflow-hidden">
       {/* Sidebar */}
@@ -70,7 +88,7 @@ const AdminDashboard = () => {
             <p>Assign leads to users, filter by status, category, and campaign. Add or import leads.</p>
             <button
               className="mt-4 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
-              onClick={() => handleNavigation("/leads")} // Updated path
+              onClick={() => handleNavigation("/leads")}
             >
               View Leads
             </button>
