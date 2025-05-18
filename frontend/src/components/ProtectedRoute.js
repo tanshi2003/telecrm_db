@@ -1,32 +1,24 @@
-import React from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import React, { useContext, useEffect } from "react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role")?.toLowerCase();
+const ProtectedRoute = ({ allowedRoles, children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    const currentRole = role?.toLowerCase();
+    
+    const hasAccess = token && currentRole && allowedRoles.includes(currentRole);
+    
+    if (!hasAccess) {
+      navigate('/login', { state: { from: location } });
+    }
+  }, [allowedRoles, location, navigate]);
 
-  console.log("ProtectedRoute - Checking access for path:", location.pathname);
-  console.log("ProtectedRoute - Current role:", role);
-  console.log("ProtectedRoute - Allowed roles:", allowedRoles);
-  console.log("ProtectedRoute - Has token:", !!token);
-  console.log("ProtectedRoute - Local storage state:", {
-    token: !!token,
-    role,
-    user: localStorage.getItem("user")
-  });
-
-  if (!token) {
-    console.log("ProtectedRoute - No token, redirecting to login");
-    return <Navigate to="/login" state={{ from: location }} />;
-  }
-
-  if (!allowedRoles.map(r => r.toLowerCase()).includes(role)) {
-    console.log("ProtectedRoute - Role not allowed, redirecting to login");
-    return <Navigate to="/login" state={{ from: location }} />;
-  }
-
-  console.log("ProtectedRoute - Access granted");
   return children;
 };
 

@@ -10,6 +10,7 @@ const AssignUser = () => {
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignForm, setAssignForm] = useState({ userIds: [] });
   const { user } = useContext(AuthContext);
@@ -23,6 +24,7 @@ const AssignUser = () => {
         const response = await axios.get("http://localhost:5000/api/campaigns", {
           headers: { Authorization: `Bearer ${token}` },
         });
+        console.log("Initial campaigns response:", response.data);
         if (response.data?.data && response.data.data.length > 0) {
           setCampaigns(response.data.data);
           // Fetch first campaign's details
@@ -31,6 +33,7 @@ const AssignUser = () => {
             `http://localhost:5000/api/campaigns/${firstCampaign.id}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
+          console.log("First campaign details:", res.data);
           setSelectedCampaign(res.data.data);
         }
       } catch (error) {
@@ -50,6 +53,7 @@ const AssignUser = () => {
         const response = await axios.get("http://localhost:5000/api/users", {
           headers: { Authorization: `Bearer ${token}` },
         });
+        console.log("Fetched users:", response.data.data);
         setUsers(response.data.data || []);
       } catch (error) {
         console.error("Error fetching users:", error.response?.data || error.message);
@@ -115,16 +119,45 @@ const AssignUser = () => {
   };
 
   const handleCampaignSelect = async (campaign) => {
+    console.log("Clicked campaign data:", campaign);
     setIsAssigning(false);
+    setDetailsLoading(true);
+    
     try {
       const token = localStorage.getItem("token");
       const res = await axios.get(
         `http://localhost:5000/api/campaigns/${campaign.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setSelectedCampaign(res.data.data);
+      console.log("Selected campaign details full response:", res.data);
+      
+      if (res.data?.data) {
+        console.log("Using API response data");
+        const campaignData = {
+          ...res.data.data,
+          assigned_users: Array.isArray(res.data.data.assigned_users) ? res.data.data.assigned_users : []
+        };
+        console.log("Processed campaign data with assigned users:", campaignData.assigned_users);
+        setSelectedCampaign(campaignData);
+      } else {
+        console.log("Using existing campaign data");
+        const campaignData = {
+          ...campaign,
+          assigned_users: Array.isArray(campaign.assigned_users) ? campaign.assigned_users : []
+        };
+        console.log("Processed existing campaign data with assigned users:", campaignData.assigned_users);
+        setSelectedCampaign(campaignData);
+      }
     } catch (error) {
-      setSelectedCampaign(campaign); // fallback
+      console.error("Error fetching campaign details:", error);
+      // In case of error, use the clicked campaign data
+      const campaignData = {
+        ...campaign,
+        assigned_users: Array.isArray(campaign.assigned_users) ? campaign.assigned_users : []
+      };
+      setSelectedCampaign(campaignData);
+    } finally {
+      setDetailsLoading(false);
     }
   };
 
@@ -138,7 +171,7 @@ const AssignUser = () => {
           <div className="w-1/3 bg-gray-50 p-4 overflow-y-auto border-r">
             <h2 className="text-xl font-bold mb-4">Campaigns</h2>
             {loading ? (
-              <p>Loading...</p>
+              <p>Loading campaigns...</p>
             ) : campaigns.length === 0 ? (
               <p>No campaigns found.</p>
             ) : (
@@ -150,11 +183,11 @@ const AssignUser = () => {
                     className={`p-3 rounded shadow cursor-pointer ${
                       selectedCampaign?.id === campaign.id
                         ? "bg-blue-100 border-l-4 border-blue-500"
-                        : "bg-white"
+                        : "bg-white hover:bg-gray-50"
                     }`}
                   >
                     <p className="font-semibold text-blue-600">{campaign.name}</p>
-                    <p className="text-xs">{campaign.phone_no}</p>
+                    <p className="text-xs">{campaign.description}</p>
                     <p className="text-xs mt-1 inline-block px-2 py-0.5 bg-gray-200 rounded">
                       {campaign.status || "Fresh"}
                     </p>
@@ -166,27 +199,31 @@ const AssignUser = () => {
 
           {/* Campaign Detail Panel */}
           <div className="w-2/3 p-6 bg-white overflow-y-auto relative">
-            {selectedCampaign ? (
+            {detailsLoading ? (
+              <div className="flex justify-center items-center h-full">
+                <p>Loading campaign details...</p>
+              </div>
+            ) : selectedCampaign ? (
               <>
                 <div className="space-y-2 relative border rounded p-4 shadow mb-4">
                   <h3 className="text-xl font-semibold text-gray-700">{selectedCampaign.name}</h3>
-                  <p><strong>Description:</strong> {selectedCampaign.description}</p>
-                  <p><strong>Status:</strong> {selectedCampaign.status}</p>
-                  <p><strong>Priority:</strong> {selectedCampaign.priority}</p>
-                  <p><strong>Lead Count:</strong> {selectedCampaign.lead_count ?? selectedCampaign.leads?.length ?? "N/A"}</p>
-                  <p><strong>Start Date:</strong> {selectedCampaign.start_date}</p>
-                  <p><strong>End Date:</strong> {selectedCampaign.end_date}</p>
-                  {/* Show assigned users */}
+                  <p><strong>Description:</strong> {selectedCampaign.description || 'No description'}</p>
+                  <p><strong>Status:</strong> {selectedCampaign.status || 'Not set'}</p>
+                  <p><strong>Priority:</strong> {selectedCampaign.priority || 'Not set'}</p>
+                  <p><strong>Lead Count:</strong> {selectedCampaign.lead_count || selectedCampaign.leads?.length || 0}</p>
+                  <p><strong>Start Date:</strong> {selectedCampaign.start_date || 'Not set'}</p>
+                  <p><strong>End Date:</strong> {selectedCampaign.end_date || 'Not set'}</p>
                   <p>
-                    <strong>User Assigned:</strong>{" "}
-                    {selectedCampaign.assigned_users && selectedCampaign.assigned_users.length > 0
-                      ? users
-                          .filter(u =>
-                            selectedCampaign.assigned_users.some(au => au.id === u.id)
-                          )
-                          .map(u => u.name)
-                          .join(", ")
-                      : "None"}
+                    <strong>Users Assigned:</strong>{" "}
+                    {Array.isArray(selectedCampaign.assigned_users) ? (
+                      selectedCampaign.assigned_users.length > 0 ? (
+                        selectedCampaign.assigned_users.map(user => user.name).join(", ")
+                      ) : (
+                        "No users assigned"
+                      )
+                    ) : (
+                      "Unable to load assigned users"
+                    )}
                   </p>
                 </div>
 
@@ -201,8 +238,8 @@ const AssignUser = () => {
                   ) : (
                     <form onSubmit={handleAssignSubmit} className="border p-4 rounded shadow space-y-3 mt-4 bg-gray-50">
                       <div>
-                        <label className="block text-sm mb-1">User Assigned</label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded p-2 bg-gray-50">
+                        <label className="block text-sm mb-1">Select Users to Assign</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded p-2 bg-white">
                           {users.map((u) => (
                             <label key={u.id} className="flex items-center space-x-2 cursor-pointer">
                               <input
@@ -210,7 +247,7 @@ const AssignUser = () => {
                                 value={u.id}
                                 checked={
                                   assignForm.userIds.includes(u.id) ||
-                                  (selectedCampaign.assigned_users &&
+                                  (Array.isArray(selectedCampaign.assigned_users) &&
                                     selectedCampaign.assigned_users.some(au => au.id === u.id))
                                 }
                                 onChange={handleAssignFormChange}

@@ -182,6 +182,7 @@ const campaignController = {
     // 📄 Get Campaign By ID (with assigned users and total leads)
     getCampaignById: (req, res) => {
         const { id } = req.params;
+        console.log("Fetching campaign with ID:", id);
 
         // Get campaign details
         db.query("SELECT * FROM campaigns WHERE id = ?", [id], (err, campaignRows) => {
@@ -189,42 +190,48 @@ const campaignController = {
                 console.error("Error fetching campaign:", err);
                 return res.status(500).json(responseFormatter(false, "Database error", err.message));
             }
+            console.log("Campaign query results:", campaignRows);
+            
             if (campaignRows.length === 0) {
+                console.log("No campaign found with ID:", id);
                 return res.status(404).json(responseFormatter(false, "Campaign not found"));
             }
             const campaign = campaignRows[0];
+            console.log("Found campaign:", campaign);
 
             // Get assigned users
-            db.query(
-                `SELECT u.id, u.name, u.email, u.role 
-                 FROM campaign_users cu 
-                 JOIN Users u ON cu.user_id = u.id 
-                 WHERE cu.campaign_id = ?`,
-                [id],
-                (err, userRows) => {
+            const userQuery = `SELECT u.id, u.name, u.email, u.role 
+                             FROM campaign_users cu 
+                             JOIN users u ON cu.user_id = u.id 
+                             WHERE cu.campaign_id = ?`;
+            console.log("Executing user query:", userQuery, "with ID:", id);
+            
+            db.query(userQuery, [id], (err, userRows) => {
+                if (err) {
+                    console.error("Error fetching assigned users:", err);
+                    return res.status(500).json(responseFormatter(false, "Database error", err.message));
+                }
+
+                console.log("Found assigned users:", userRows);
+
+                // Get total leads
+                const leadQuery = "SELECT COUNT(*) AS total_leads FROM leads WHERE campaign_id = ?";
+                console.log("Executing lead query:", leadQuery, "with ID:", id);
+                
+                db.query(leadQuery, [id], (err, leadRows) => {
                     if (err) {
-                        console.error("Error fetching assigned users:", err);
+                        console.error("Error fetching leads:", err);
                         return res.status(500).json(responseFormatter(false, "Database error", err.message));
                     }
 
-                    // Get total leads
-                    db.query(
-                        "SELECT COUNT(*) AS total_leads FROM leads WHERE campaign_id = ?",
-                        [id],
-                        (err, leadRows) => {
-                            if (err) {
-                                console.error("Error fetching leads:", err);
-                                return res.status(500).json(responseFormatter(false, "Database error", err.message));
-                            }
+                    console.log("Found lead count:", leadRows[0]);
+                    campaign.assigned_users = userRows;
+                    campaign.total_leads = leadRows[0].total_leads;
 
-                            campaign.assigned_users = userRows;
-                            campaign.total_leads = leadRows[0].total_leads;
-
-                            res.json(responseFormatter(true, "Campaign fetched successfully", campaign));
-                        }
-                    );
-                }
-            );
+                    console.log("Final campaign object being sent:", campaign);
+                    res.json(responseFormatter(true, "Campaign fetched successfully", campaign));
+                });
+            });
         });
     },
 

@@ -27,6 +27,8 @@ const leadRoutes = require("./routes/leadRoutes");
 const campaignRoutes = require("./routes/campaignRoutes");
 const searchRoutes = require("./routes/searchRoutes");
 const callRoutes = require("./routes/callRoutes");
+const authRoutes = require('./routes/authRoutes');
+const managerRoutes = require('./routes/managerRoutes');
 
 // Use Routes
 app.use("/api/admins", adminRoutes);
@@ -35,6 +37,8 @@ app.use("/api/leads", leadRoutes);
 app.use("/api/campaigns", campaignRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/calls", callRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/managers', managerRoutes);
 
 // Root Endpoint
 app.get("/", (req, res) => {

@@ -37,6 +37,10 @@ import TeamManagement from "./pages/team-management";
 import Meetings from "./pages/Meetings";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Reports from "./pages/ReportsLeaderboard";
+import ManagerUserManagement from "./pages/ManagerUserManagement";
+import TeamView from "./pages/TeamView";
+import ViewTeam from "./pages/ViewTeam";
+import LeadAssignment from "./pages/LeadAssignment";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -58,17 +62,8 @@ function AppContent() {
 
   // Add route change logging and handling
   useEffect(() => {
-    console.log("App - Current location:", location.pathname);
-    console.log("App - User state:", user);
-    console.log("App - localStorage state:", {
-      token: !!localStorage.getItem("token"),
-      role: localStorage.getItem("role"),
-      user: localStorage.getItem("user")
-    });
-
     // If someone tries to navigate to /admin-dashboard, redirect to /admin
     if (location.pathname === "/admin-dashboard") {
-      console.log("Redirecting from /admin-dashboard to /admin");
       navigate("/admin");
     }
   }, [location, user, navigate]);
@@ -143,6 +138,22 @@ function AppContent() {
               element={
                 <ProtectedRoute allowedRoles={["manager"]}>
                   <ManagerDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manager/users"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <ManagerUserManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manager/team-view"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <TeamView />
                 </ProtectedRoute>
               }
             />
@@ -278,6 +289,40 @@ function AppContent() {
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <TeamsList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users/teams/:id"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <ViewTeam />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Manager team routes */}
+            <Route
+              path="/manager/teams"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <TeamsList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manager/teams/:id"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <ViewTeam />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/lead-assignment"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <LeadAssignment />
                 </ProtectedRoute>
               }
             />

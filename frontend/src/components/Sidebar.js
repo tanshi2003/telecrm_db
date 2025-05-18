@@ -179,6 +179,19 @@ const Sidebar = ({ user }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const getDashboardPath = (role) => {
+    switch (role) {
+      case 'admin':
+        return '/admin';
+      case 'manager':
+        return '/manager';
+      case 'caller':
+        return '/caller';
+      default:
+        return '/';
+    }
+  };
+
   return (
     <>
       <div
@@ -207,27 +220,7 @@ const Sidebar = ({ user }) => {
             { 
               icon: LayoutDashboard, 
               label: "Dashboard", 
-              path: (() => {
-                const userRole = role?.toLowerCase();
-                console.log("Sidebar - Determining dashboard path for role:", userRole);
-                const path = (() => {
-                  switch(userRole) {
-                    case "caller":
-                      return "/caller-dashboard";
-                    case "manager":
-                      return "/manager-dashboard";
-                    case "field_employee":
-                      return "/field_employee-dashboard";
-                    case "admin":
-                      return "/admin";
-                    default:
-                      console.log("Invalid role, defaulting to /login");
-                      return "/login";
-                  }
-                })();
-                console.log("Sidebar - Selected dashboard path:", path);
-                return path;
-              })()
+              path: getDashboardPath(role)
             },
             { icon: Search, label: "Search", path: "/search" },
             {
