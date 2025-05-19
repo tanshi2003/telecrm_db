@@ -10,7 +10,8 @@ const ManagerDashboard = () => {
     totalCalls: 0,
     totalLeads: 0,
     activeCallers: 0,
-    conversionRate: 0
+    conversionRate: 0,
+    totalCallDuration: 0 // <-- Added for total call time
   });
   const [teamPerformance, setTeamPerformance] = useState([]);
   const [campaignStats, setCampaignStats] = useState([]);
@@ -18,12 +19,27 @@ const ManagerDashboard = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  // Helper to format seconds as HH:MM:SS
+  const formatDuration = (seconds) => {
+    if (!seconds || isNaN(seconds)) return "00:00:00";
+    const h = Math.floor(seconds / 3600)
+      .toString()
+      .padStart(2, "0");
+    const m = Math.floor((seconds % 3600) / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = Math.floor(seconds % 60)
+      .toString()
+      .padStart(2, "0");
+    return `${h}:${m}:${s}`;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const storedUser = JSON.parse(localStorage.getItem("user"));
         const token = localStorage.getItem("token");
-        
+
         if (!storedUser || !token) {
           throw new Error("Authentication required");
         }
@@ -85,7 +101,7 @@ const ManagerDashboard = () => {
               </button>
             </div>
           </div>
-          
+
           {/* Quick Stats Bar */}
           <div className="grid grid-cols-4 gap-4 mt-6">
             <div className="bg-white rounded-lg p-4 border-l-4 border-blue-500">
@@ -125,9 +141,9 @@ const ManagerDashboard = () => {
                         <span className="font-medium">{member.completed_calls}/{member.total_calls} calls</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                        <div 
-                          className="bg-blue-600 h-1.5 rounded-full" 
-                          style={{ width: `${(member.completed_calls/member.total_calls * 100) || 0}%` }}
+                        <div
+                          className="bg-blue-600 h-1.5 rounded-full"
+                          style={{ width: `${(member.completed_calls / member.total_calls * 100) || 0}%` }}
                         ></div>
                       </div>
                     </div>
@@ -153,8 +169,8 @@ const ManagerDashboard = () => {
                         <span className="font-medium">{campaign.conversion_rate}% conversion</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                        <div 
-                          className="bg-green-600 h-1.5 rounded-full" 
+                        <div
+                          className="bg-green-600 h-1.5 rounded-full"
                           style={{ width: `${campaign.conversion_rate}%` }}
                         ></div>
                       </div>
@@ -177,6 +193,10 @@ const ManagerDashboard = () => {
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Total Calls:</span>
                     <span className="font-medium">{stats.totalCalls}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Total Call Time:</span>
+                    <span className="font-medium">{formatDuration(stats.totalCallDuration)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Active Callers:</span>
