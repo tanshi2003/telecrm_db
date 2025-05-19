@@ -43,7 +43,7 @@ const Lead1 = () => {
   }, [navigate]);
 
   useEffect(() => {
-    // Fetch users for Assigned To dropdown
+    // Fetch users for Assigned To dropdown - only callers
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -51,7 +51,9 @@ const Lead1 = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data) {
-          setUsers(response.data.data);
+          // Filter only callers from the users list
+          const callers = response.data.data.filter(user => user.role === 'caller');
+          setUsers(callers);
         }
       } catch (error) {
         console.error("Error fetching users:", error.response?.data || error.message);
@@ -86,6 +88,13 @@ const Lead1 = () => {
         return;
       }
 
+      // Get the logged-in user data
+      const user = JSON.parse(localStorage.getItem("user"));
+      if (!user || !user.id) {
+        alert("⚠️ User data missing!");
+        return;
+      }
+
       await axios.post(
         "http://localhost:5000/api/leads",
         {
@@ -97,6 +106,7 @@ const Lead1 = () => {
           lead_category: leadCategory,
           address,
           assigned_to: assignedTo,
+          admin_id: user.id,
           campaign_name: campaignName,
           notes,
         },

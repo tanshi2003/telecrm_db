@@ -121,33 +121,71 @@ exports.loginAdmin = (req, res) => {
                 }
 
                 // Generate a new JWT token
-                const token = generateToken(admin.id, admin.role);
+                const token = jwt.sign(
+                    { id: admin.id, role: admin.role },
+                    process.env.JWT_SECRET || 'secret',
+                    { expiresIn: '24h' }
+                );
 
-                // Update token and last login time
-                const lastLogin = new Date();
-                db.query("UPDATE Admins SET token = ?, last_login = ? WHERE id = ?", 
-                    [token, lastLogin, admin.id], (err) => {
+                // Update token and last login time using a transaction
+                db.getConnection((err, connection) => {
+                    if (err) {
+                        console.error('Error getting connection:', err);
+                        return res.status(500).json(responseFormatter(false, "Database connection error"));
+                    }
+
+                    connection.beginTransaction(err => {
                         if (err) {
-                            console.error('Error updating the database:', err);
-                            return res.status(500).json(responseFormatter(false, "Database error", err));
+                            connection.release();
+                            console.error('Error starting transaction:', err);
+                            return res.status(500).json(responseFormatter(false, "Transaction error"));
                         }
 
-                        // Return response with sanitized admin data and token
-                        const adminData = {
-                            id: admin.id,
-                            name: admin.name,
-                            email: admin.email,
-                            phone_no: admin.phone_no,
-                            role: admin.role,
-                            status: admin.status,
-                            last_login: lastLogin,
-                            token
-                        };
+                        const lastLogin = new Date();
+                        connection.query(
+                            "UPDATE Admins SET token = ?, last_login = ? WHERE id = ?",
+                            [token, lastLogin, admin.id],
+                            (err) => {
+                                if (err) {
+                                    return connection.rollback(() => {
+                                        connection.release();
+                                        console.error('Error updating admin:', err);
+                                        res.status(500).json(responseFormatter(false, "Error updating admin data"));
+                                    });
+                                }
 
-                        res.json(responseFormatter(true, "Login successful", adminData));
+                                connection.commit(err => {
+                                    if (err) {
+                                        return connection.rollback(() => {
+                                            connection.release();
+                                            console.error('Error committing transaction:', err);
+                                            res.status(500).json(responseFormatter(false, "Error committing changes"));
+                                        });
+                                    }
+
+                                    connection.release();
+                                    
+                                    // Return response with sanitized admin data and token
+                                    const adminData = {
+                                        id: admin.id,
+                                        name: admin.name,
+                                        email: admin.email,
+                                        phone_no: admin.phone_no,
+                                        role: admin.role,
+                                        status: admin.status,
+                                        last_login: lastLogin,
+                                        token
+                                    };
+
+                                    res.json(responseFormatter(true, "Login successful", adminData));
+                                });
+                            }
+                        );
                     });
+                });
             });
-        });
+        }
+    );
 };
 
 // Get all admins
