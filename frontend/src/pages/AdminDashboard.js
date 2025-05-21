@@ -63,7 +63,7 @@ const AdminDashboard = () => {
             <h2 className="text-xl font-semibold mb-4">Users</h2>
             <p>Register, assign roles, deactivate/activate users, and manage employee profiles.</p>
             <button
-              className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               onClick={() => handleNavigation("/admin/ManageUsers")}
             >
               Manage Users
@@ -87,7 +87,7 @@ const AdminDashboard = () => {
             <h2 className="text-xl font-semibold mb-4">Leads</h2>
             <p>Assign leads to users, filter by status, category, and campaign. Add or import leads.</p>
             <button
-              className="mt-4 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               onClick={() => handleNavigation("/leads")}
             >
               View Leads
@@ -99,7 +99,7 @@ const AdminDashboard = () => {
             <h2 className="text-xl font-semibold mb-4">Reports</h2>
             <p>Performance summaries by user, team, or campaign. Export data and download PDFs.</p>
             <button
-              className="mt-4 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               onClick={() => handleNavigation("/ReportsLeaderboard")}
             >
               View Reports

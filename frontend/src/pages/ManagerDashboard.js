@@ -217,7 +217,7 @@ const ManagerDashboard = () => {
             </div>
             <p className="text-gray-600 mb-4">Assign and reassign leads to team members.</p>
             <button
-              className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               onClick={() => navigate("/lead-assignment")}
             >
               Manage Leads
@@ -232,7 +232,7 @@ const ManagerDashboard = () => {
             </div>
             <p className="text-gray-600 mb-4">Create and manage marketing campaigns.</p>
             <button
-              className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               onClick={() => navigate("/campaign-management")}
             >
               Manage Campaigns

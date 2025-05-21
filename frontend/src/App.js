@@ -43,6 +43,7 @@ import ViewTeam from "./pages/ViewTeam";
 import LeadAssignment from "./pages/LeadAssignment";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { Toaster } from 'react-hot-toast';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -346,10 +347,26 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
-      <ScrollToTop />
-      <AppContent />
-    </Router>
+    <>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            border: '1px solid #4ade80',
+            padding: '12px',
+            color: '#16a34a',
+          },
+          iconTheme: {
+            primary: '#16a34a',
+            secondary: '#f0fdf4',
+          },
+        }}
+      />
+      <Router>
+        <ScrollToTop />
+        <AppContent />
+      </Router>
+    </>
   );
 }
 
