@@ -33,7 +33,7 @@ import ManageRoles from "./pages/ManageRoles";
 import ManageStatus from "./pages/ManageStatus";
 import AssignManager from "./pages/AssignManager"; // <-- Add this import
 import TeamsList from "./pages/TeamsList";
-import TeamManagement from "./pages/team-management";
+// import TeamManagement from "./pages/team-management";
 import Meetings from "./pages/Meetings";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Reports from "./pages/ReportsLeaderboard";
@@ -41,6 +41,7 @@ import ManagerUserManagement from "./pages/ManagerUserManagement";
 import TeamView from "./pages/TeamView";
 import ViewTeam from "./pages/ViewTeam";
 import LeadAssignment from "./pages/LeadAssignment";
+import CampaignManagement from "./pages/CampaignManagement";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Toaster } from 'react-hot-toast';
@@ -240,14 +241,14 @@ function AppContent() {
                 </ProtectedRoute>
               }
             />
-            <Route
+            {/* <Route
                 path="/team-management"
                 element={
                   <ProtectedRoute allowedRoles={["admin", "manager"]}>
                     <TeamManagement />
                   </ProtectedRoute>
                 }
-              />
+              /> */}
               <Route
                 path="/meetings"
                 element={
@@ -337,6 +338,17 @@ function AppContent() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Manager campaigns route */}
+            <Route
+              path="/manager/campaigns"
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <CampaignManagement />
+                </ProtectedRoute>
+              }
+            />
+
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </AnimatePresence>

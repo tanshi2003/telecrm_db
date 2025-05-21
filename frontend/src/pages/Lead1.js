@@ -43,7 +43,7 @@ const Lead1 = () => {
   }, [navigate]);
 
   useEffect(() => {
-    // Fetch users for Assigned To dropdown
+    // Fetch users for Assigned To dropdown - only callers
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -51,7 +51,9 @@ const Lead1 = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data) {
-          setUsers(response.data.data);
+          // Filter only callers from the users list
+          const callers = response.data.data.filter(user => user.role === 'caller');
+          setUsers(callers);
         }
       } catch (error) {
         console.error("Error fetching users:", error.response?.data || error.message);
@@ -78,36 +80,53 @@ const Lead1 = () => {
     fetchCampaigns();
   }, []);
 
-  const handleAddLead = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("⚠️ Authentication token missing!");
-        return;
-      }
+const handleAddLead = async () => {
+  // Validate required fields
+  if (!title || !status || !name || !phone) {
+    alert("Please fill all required fields: Title, Status, Name, and Phone.");
+    return;
+  }
 
-      await axios.post(
-        "http://localhost:5000/api/leads",
-        {
-          name,
-          phone_no: `+91${phone}`,
-          title,
-          description,
-          status,
-          lead_category: leadCategory,
-          address,
-          assigned_to: assignedTo,
-          campaign_name: campaignName,
-          notes,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+  try {
+    const token = localStorage.getItem("token");
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    
+    if (!token || !storedUser) {
+      alert("⚠️ Authentication error! Please log in again.");
+      navigate("/login");
+      return;
+    }
+
+    const leadData = {
+      title,
+      description,
+      status,
+      lead_category: leadCategory,
+      name,
+      phone_no: phone.startsWith('+91') ? phone : `+91${phone}`,
+      address,
+      assigned_to: assignedTo || null,
+      admin_id: storedUser.id,
+      campaign_id: campaignName ? campaigns.find(c => c.name === campaignName)?.id : null,
+      notes,
+    };
+
+    console.log('Sending lead data:', leadData);
+
+    const response = await axios.post(
+      "http://localhost:5000/api/leads",
+      leadData,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      );
+      }
+    );
 
+    if (response.data.success) {
       alert("✅ Lead added successfully!");
+      // Clear form
       setName("");
       setPhone("");
       setTitle("");
@@ -119,11 +138,19 @@ const Lead1 = () => {
       setCampaignName("");
       setNotes("");
       navigate("/leads");
-    } catch (error) {
-      console.error("❌ Error adding lead:", error.response?.data || error.message);
-      alert("Failed to add lead 😔");
+    } else {
+      alert(response.data.message || "Failed to add lead");
     }
-  };
+  } catch (error) {
+    console.error("❌ Error adding lead:", error.response?.data || error);
+    if (error.response?.status === 401) {
+      alert("Session expired. Please log in again.");
+      navigate("/login");
+    } else {
+      alert(error.response?.data?.message || "Failed to add lead 😔");
+    }
+  }
+};
 
   return (
     <div className="flex min-h-screen overflow-hidden">
@@ -244,7 +271,7 @@ const Lead1 = () => {
               onChange={(e) => setAssignedTo(e.target.value)}
               className="w-full p-2 rounded border shadow bg-white"
             >
-              <option value="">Select User</option>
+              <option value="">No User</option>
               {users.map((user) => (
                 <option key={user.id} value={user.id}>
                   {user.name}

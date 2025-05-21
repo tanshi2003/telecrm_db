@@ -251,51 +251,64 @@ router.post('/assign-users', authenticateToken, checkManagerAccess, (req, res) =
 // Get dashboard statistics
 router.get('/dashboard-stats', authenticateToken, checkManagerAccess, (req, res) => {
     const queries = {
-        totalCalls: 'SELECT COUNT(*) as total FROM calls WHERE DATE(created_at) = CURDATE()',
-        totalLeads: 'SELECT COUNT(*) as total FROM leads WHERE DATE(created_at) = CURDATE()',
-        activeCallers: 'SELECT COUNT(DISTINCT caller_id) as total FROM calls WHERE DATE(created_at) = CURDATE()',
-        conversionRate: `
-            SELECT 
-                ROUND((COUNT(CASE WHEN status = 'Converted' THEN 1 END) / COUNT(*)) * 100, 2) as rate
-            FROM leads 
-            WHERE DATE(created_at) = CURDATE()
+        totalTeamMembers: `
+            SELECT COUNT(*) as total 
+            FROM users 
+            WHERE manager_id = ? AND role IN ('caller', 'field_employee')
+        `,
+        activeTeamMembers: `
+            SELECT COUNT(*) as total 
+            FROM users 
+            WHERE manager_id = ? 
+            AND role IN ('caller', 'field_employee')
+            AND status = 'active'
+        `,
+        totalCampaigns: `
+            SELECT COUNT(*) as total 
+            FROM campaigns 
+            WHERE status != 'archived'
+        `,
+        activeCampaigns: `
+            SELECT COUNT(*) as total 
+            FROM campaigns 
+            WHERE status = 'active'
         `
     };
 
     Promise.all([
         new Promise((resolve, reject) => {
-            db.query(queries.totalCalls, (err, results) => {
+            db.query(queries.totalTeamMembers, [req.user.id], (err, results) => {
                 if (err) reject(err);
                 resolve(results[0].total);
             });
         }),
         new Promise((resolve, reject) => {
-            db.query(queries.totalLeads, (err, results) => {
+            db.query(queries.activeTeamMembers, [req.user.id], (err, results) => {
                 if (err) reject(err);
                 resolve(results[0].total);
             });
         }),
         new Promise((resolve, reject) => {
-            db.query(queries.activeCallers, (err, results) => {
+            db.query(queries.totalCampaigns, (err, results) => {
                 if (err) reject(err);
                 resolve(results[0].total);
             });
         }),
         new Promise((resolve, reject) => {
-            db.query(queries.conversionRate, (err, results) => {
+            db.query(queries.activeCampaigns, (err, results) => {
                 if (err) reject(err);
-                resolve(results[0].rate || 0);
+                resolve(results[0].total);
             });
         })
     ])
-    .then(([totalCalls, totalLeads, activeCallers, conversionRate]) => {
+    .then(([totalTeamMembers, activeTeamMembers, totalCampaigns, activeCampaigns]) => {
         res.json({
             success: true,
             data: {
-                totalCalls,
-                totalLeads,
-                activeCallers,
-                conversionRate
+                totalTeamMembers,
+                activeTeamMembers,
+                totalCampaigns,
+                activeCampaigns
             }
         });
     })

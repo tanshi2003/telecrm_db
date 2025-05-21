@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
+import BackButton from "../components/BackButton";
 import axios from "axios";
 
 const EditLead = () => {
@@ -31,7 +32,9 @@ const EditLead = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data) {
-          setUsers(response.data.data);
+          // Filter only callers from the users list
+          const callers = response.data.data.filter(user => user.role === 'caller');
+          setUsers(callers);
         }
       } catch (error) {
         console.error("Error fetching users:", error.response?.data || error.message);
@@ -99,7 +102,10 @@ const EditLead = () => {
 
         {/* Edit Lead Form */}
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <h1 className="text-2xl font-bold mb-4">Edit Lead</h1>
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold">Edit Lead</h1>
+            <BackButton />
+          </div>
           {lead ? (
             <form
               onSubmit={(e) => {
