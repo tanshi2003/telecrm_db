@@ -27,4 +27,7 @@ router.post("/bulk-create", roleMiddleware(['admin']), leadController.bulkCreate
 router.put("/bulk-update", roleMiddleware(['admin']), leadController.bulkUpdateLeads);
 router.delete("/bulk-delete", roleMiddleware(['admin']), leadController.bulkDeleteLeads);
 
+// New route for getting user lead counts
+router.get("/user/:userId/lead-counts", leadController.getUserLeadCounts);
+
 module.exports = router;

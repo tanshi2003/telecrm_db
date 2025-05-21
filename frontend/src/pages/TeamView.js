@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Sidebar from "../components/Sidebar";
 import BackButton from "../components/BackButton";
 import { Users, Phone, Mail, MapPin, Calendar, Activity, Briefcase, Clock } from "lucide-react";
 import { getTeams } from "../services/managerService";
 import toast from "react-hot-toast";
+import axios from "axios";
 
 const TeamView = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [teamData, setTeamData] = useState(null);
+  const [teamData, setTeamData] = useState([]);
   const [currentManager, setCurrentManager] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -23,28 +24,24 @@ const TeamView = () => {
     }
   }, []);
 
-  useEffect(() => {
-    if (currentManager) {
-      fetchTeamData();
-    }
-  }, [currentManager]);
-
-  const fetchTeamData = async () => {
+  const fetchTeamData = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getTeams();
-      // Filter to only show current manager's team
-      const managerTeam = response.data.find(team => 
-        team.manager_id === currentManager.id
-      );
-      setTeamData(managerTeam ? [managerTeam] : []);
+      setTeamData(response.data || []);
     } catch (err) {
       setError(err.message || "Failed to fetch team data");
       toast.error("Failed to load team data");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (currentManager) {
+      fetchTeamData();
+    }
+  }, [currentManager, fetchTeamData]);
 
   const calculateTeamStats = (team) => {
     const totalMembers = team.team_members.length;
@@ -57,9 +54,27 @@ const TeamView = () => {
     return { totalMembers, activeMembers, roles };
   };
 
-  const handleUserClick = (member) => {
-    setSelectedUser(member);
-    setShowModal(true);
+  const handleUserClick = async (member) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`http://localhost:5000/api/leads/user/${member.id}/lead-counts`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (response.data.success) {
+        setSelectedUser({
+          ...member,
+          ...response.data.data
+        });
+      }
+      setShowModal(true);
+    } catch (error) {
+      toast.error("Failed to fetch lead counts");
+      setSelectedUser(member);
+      setShowModal(true);
+    }
   };
 
   const UserDetailsModal = ({ user, onClose }) => {
@@ -139,6 +154,13 @@ const TeamView = () => {
                     </span>
                   </div>
                 </div>
+                <div className="flex items-center text-gray-600">
+                  <Briefcase className="w-5 h-5 mr-3" />
+                  <div>
+                    <p className="text-sm font-medium">Total Leads Assigned</p>
+                    <p className="font-medium text-blue-600">{user.total_leads || 0}</p>
+                  </div>
+                </div>
                 {user.last_login && (
                   <div className="flex items-center text-gray-600">
                     <Clock className="w-5 h-5 mr-3" />
@@ -160,32 +182,24 @@ const TeamView = () => {
               </div>
             </div>
 
-            {/* Performance Metrics (if available) */}
-            {(user.total_leads || user.performance_rating || user.campaigns_handled) && (
-              <div className="col-span-2 space-y-4">
-                <h3 className="font-semibold text-gray-800 border-b pb-2">Performance Metrics</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {user.total_leads !== undefined && (
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <p className="text-sm font-medium text-blue-600">Total Leads</p>
-                      <p className="text-2xl font-bold text-blue-700">{user.total_leads}</p>
-                    </div>
-                  )}
-                  {user.performance_rating !== undefined && (
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <p className="text-sm font-medium text-green-600">Performance Rating</p>
-                      <p className="text-2xl font-bold text-green-700">{user.performance_rating}/5</p>
-                    </div>
-                  )}
-                  {user.campaigns_handled !== undefined && (
-                    <div className="bg-purple-50 p-4 rounded-lg">
-                      <p className="text-sm font-medium text-purple-600">Campaigns Handled</p>
-                      <p className="text-2xl font-bold text-purple-700">{user.campaigns_handled}</p>
-                    </div>
-                  )}
+            {/* Performance Metrics */}
+            <div className="col-span-2 space-y-4">
+              <h3 className="font-semibold text-gray-800 border-b pb-2">Performance Metrics</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-blue-600">Total Leads</p>
+                  <p className="text-2xl font-bold text-blue-700">{user.total_leads || 0}</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-green-600">Active Leads</p>
+                  <p className="text-2xl font-bold text-green-700">{user.active_leads || 0}</p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-purple-600">Converted Leads</p>
+                  <p className="text-2xl font-bold text-purple-700">{user.converted_leads || 0}</p>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -232,7 +246,7 @@ const TeamView = () => {
       <Sidebar />
       <div className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Your Team Structure</h1>
+          <h1 className="text-2xl font-bold">Team Structure</h1>
           <BackButton />
         </div>
 
@@ -272,7 +286,7 @@ const TeamView = () => {
               <div className="p-6">
                 <div className="mb-4">
                   <h3 className="text-lg font-semibold">Team Members</h3>
-                  <div className="flex space-x-4 mt-2">
+                  <div className="flex flex-wrap gap-2 mt-2">
                     {Object.entries(roles).map(([role, count]) => (
                       <span 
                         key={role}

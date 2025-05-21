@@ -15,11 +15,11 @@ const VALID_STATUSES = [
 exports.createLead = (req, res) => {
     const {
         title, description, status, lead_category,
-        name, phone_no, address = "", assigned_to,
-        admin_id, campaign_id = null, notes = ""
+        name, phone_no, address = "", assigned_to = null,
+        admin_id, campaign_id = null, notes = "", manager_id = null
     } = req.body;
 
-    if (!title || !status || !name || !phone_no || !assigned_to || !admin_id) {
+    if (!title || !status || !name || !phone_no || !admin_id) {
         return res.status(400).json(responseFormatter(false, "Missing required fields"));
     }
 
@@ -31,24 +31,73 @@ exports.createLead = (req, res) => {
         return res.status(400).json(responseFormatter(false, `Invalid lead category: ${lead_category}`));
     }
 
-    db.query("SELECT id FROM Users WHERE id = ?", [assigned_to], (err, result) => {
-        if (err) {
-            console.error("User check error:", err);
-            return res.status(500).json(responseFormatter(false, "Database error", err.message));
-        }
+    // Check if manager exists if manager_id is provided
+    if (manager_id) {
+        db.query("SELECT id, role FROM Users WHERE id = ?", [manager_id], (err, result) => {
+            if (err) {
+                console.error("Manager check error:", err);
+                return res.status(500).json(responseFormatter(false, "Database error", err.message));
+            }
 
-        if (result.length === 0) {
-            return res.status(400).json(responseFormatter(false, "Assigned user does not exist"));
-        }
+            if (result.length === 0) {
+                return res.status(400).json(responseFormatter(false, "Manager does not exist"));
+            }
 
+            if (result[0].role !== 'manager') {
+                return res.status(400).json(responseFormatter(false, "User is not a manager"));
+            }
+
+            // If assigned_to is provided, check if user exists and belongs to this manager
+            if (assigned_to) {
+                db.query(
+                    "SELECT id FROM Users WHERE id = ? AND manager_id = ?",
+                    [assigned_to, manager_id],
+                    (err, userResult) => {
+                        if (err) {
+                            console.error("User check error:", err);
+                            return res.status(500).json(responseFormatter(false, "Database error", err.message));
+                        }
+
+                        if (userResult.length === 0) {
+                            return res.status(400).json(responseFormatter(false, "Assigned user does not exist or does not belong to this manager"));
+                        }
+
+                        insertLead();
+                    }
+                );
+            } else {
+                insertLead();
+            }
+        });
+    } else {
+        // If no manager_id, just check assigned_to if provided
+        if (assigned_to) {
+            db.query("SELECT id FROM Users WHERE id = ?", [assigned_to], (err, result) => {
+                if (err) {
+                    console.error("User check error:", err);
+                    return res.status(500).json(responseFormatter(false, "Database error", err.message));
+                }
+
+                if (result.length === 0) {
+                    return res.status(400).json(responseFormatter(false, "Assigned user does not exist"));
+                }
+
+                insertLead();
+            });
+        } else {
+            insertLead();
+        }
+    }
+
+    function insertLead() {
         const created_at = new Date();
         const updated_at = new Date();
 
         db.query(
             `INSERT INTO Leads 
-            (title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, created_at, updated_at],
+            (title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, manager_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, manager_id, created_at, updated_at],
             (err, insertResult) => {
                 if (err) {
                     console.error("Insert lead error:", err);
@@ -64,7 +113,7 @@ exports.createLead = (req, res) => {
                 });
             }
         );
-    });
+    }
 };
 
 // 📌 Get all leads
@@ -124,11 +173,11 @@ exports.updateLead = (req, res) => {
     const { id } = req.params;
     const {
         title, description, status, lead_category,
-        name, phone_no, address, assigned_to,
-        admin_id, campaign_id = null, notes = ""
+        name, phone_no, address, assigned_to = null,
+        admin_id, campaign_id = null, notes = "", manager_id = null
     } = req.body;
 
-    if (!title || !status || !name || !phone_no || !assigned_to || !admin_id) {
+    if (!title || !status || !name || !phone_no || !admin_id) {
         return res.status(400).json(responseFormatter(false, "Missing required fields"));
     }
 
@@ -140,24 +189,84 @@ exports.updateLead = (req, res) => {
         return res.status(400).json(responseFormatter(false, `Invalid lead category: ${lead_category}`));
     }
 
-    const updated_at = new Date();
-
-    db.query(
-        `UPDATE Leads SET 
-            title = ?, description = ?, status = ?, lead_category = ?, 
-            name = ?, phone_no = ?, address = ?, assigned_to = ?, 
-            admin_id = ?, campaign_id = ?, notes = ?, updated_at = ?
-         WHERE id = ?`,
-        [title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, updated_at, id],
-        (err, result) => {
+    // Check if manager exists if manager_id is provided
+    if (manager_id) {
+        db.query("SELECT id, role FROM Users WHERE id = ?", [manager_id], (err, result) => {
             if (err) {
-                console.error("Update lead error:", err);
-                return res.status(500).json(responseFormatter(false, "Server error", err.message));
+                console.error("Manager check error:", err);
+                return res.status(500).json(responseFormatter(false, "Database error", err.message));
             }
 
-            res.json(responseFormatter(true, "Lead updated successfully"));
+            if (result.length === 0) {
+                return res.status(400).json(responseFormatter(false, "Manager does not exist"));
+            }
+
+            if (result[0].role !== 'manager') {
+                return res.status(400).json(responseFormatter(false, "User is not a manager"));
+            }
+
+            // If assigned_to is provided, check if user exists and belongs to this manager
+            if (assigned_to) {
+                db.query(
+                    "SELECT id FROM Users WHERE id = ? AND manager_id = ?",
+                    [assigned_to, manager_id],
+                    (err, userResult) => {
+                        if (err) {
+                            console.error("User check error:", err);
+                            return res.status(500).json(responseFormatter(false, "Database error", err.message));
+                        }
+
+                        if (userResult.length === 0) {
+                            return res.status(400).json(responseFormatter(false, "Assigned user does not exist or does not belong to this manager"));
+                        }
+
+                        updateLead();
+                    }
+                );
+            } else {
+                updateLead();
+            }
+        });
+    } else {
+        // If no manager_id, just check assigned_to if provided
+        if (assigned_to) {
+            db.query("SELECT id FROM Users WHERE id = ?", [assigned_to], (err, result) => {
+                if (err) {
+                    console.error("User check error:", err);
+                    return res.status(500).json(responseFormatter(false, "Database error", err.message));
+                }
+
+                if (result.length === 0) {
+                    return res.status(400).json(responseFormatter(false, "Assigned user does not exist"));
+                }
+
+                updateLead();
+            });
+        } else {
+            updateLead();
         }
-    );
+    }
+
+    function updateLead() {
+        const updated_at = new Date();
+
+        db.query(
+            `UPDATE Leads SET 
+                title = ?, description = ?, status = ?, lead_category = ?, 
+                name = ?, phone_no = ?, address = ?, assigned_to = ?, 
+                admin_id = ?, campaign_id = ?, notes = ?, manager_id = ?, updated_at = ?
+             WHERE id = ?`,
+            [title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, manager_id, updated_at, id],
+            (err, result) => {
+                if (err) {
+                    console.error("Update lead error:", err);
+                    return res.status(500).json(responseFormatter(false, "Server error", err.message));
+                }
+
+                res.json(responseFormatter(true, "Lead updated successfully"));
+            }
+        );
+    }
 };
 
 // 📌 Delete a lead
@@ -192,19 +301,41 @@ exports.bulkCreateLeads = (req, res) => {
             return res.status(400).json(responseFormatter(false, "Invalid leads data. Expected non-empty array."));
         }
 
+        // Validate each lead
+        for (const lead of leads) {
+            if (!lead.title || !lead.status || !lead.name || !lead.phone_no || !lead.admin_id) {
+                return res.status(400).json(responseFormatter(false, "Missing required fields in one or more leads"));
+            }
+
+            if (!VALID_STATUSES.includes(lead.status)) {
+                return res.status(400).json(responseFormatter(false, `Invalid status: ${lead.status}`));
+            }
+
+            if (lead.lead_category && !VALID_LEAD_CATEGORIES.includes(lead.lead_category)) {
+                return res.status(400).json(responseFormatter(false, `Invalid lead category: ${lead.lead_category}`));
+            }
+        }
+
         const values = leads.map(lead => [
+            lead.title,
+            lead.description || null,
+            lead.status,
+            lead.lead_category || null,
             lead.name,
-            lead.email,
-            lead.phone,
-            lead.status || 'new',
-            lead.source,
-            lead.notes,
+            lead.phone_no,
+            lead.address || null,
+            lead.assigned_to || null,
+            lead.admin_id,
+            lead.campaign_id || null,
+            lead.notes || null,
             new Date(),  // created_at
             new Date()   // updated_at
         ]);
 
         db.query(
-            'INSERT INTO leads (name, email, phone, status, source, notes, created_at, updated_at) VALUES ?',
+            `INSERT INTO Leads 
+            (title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, created_at, updated_at) 
+            VALUES ?`,
             [values],
             (err, result) => {
                 if (err) {
@@ -297,4 +428,34 @@ exports.bulkDeleteLeads = (req, res) => {
         console.error('Error bulk deleting leads:', error);
         res.status(500).json(responseFormatter(false, error.message));
     }
+};
+
+// 📌 Get lead counts for users
+exports.getUserLeadCounts = (req, res) => {
+    const userId = req.params.userId;
+
+    const query = `
+        SELECT 
+            COUNT(*) as total_leads,
+            SUM(CASE WHEN status IN ('New', 'Contacted', 'Follow-Up Scheduled', 'Interested', 'Under Review', 'On Hold') THEN 1 ELSE 0 END) as active_leads,
+            SUM(CASE WHEN status = 'Converted' THEN 1 ELSE 0 END) as converted_leads
+        FROM Leads 
+        WHERE assigned_to = ?
+    `;
+
+    db.query(query, [userId], (err, result) => {
+        if (err) {
+            console.error("Error fetching lead counts:", err);
+            return res.status(500).json({
+                success: false,
+                message: "Error fetching lead counts",
+                error: err.message
+            });
+        }
+
+        res.json({
+            success: true,
+            data: result[0] || { total_leads: 0, active_leads: 0, converted_leads: 0 }
+        });
+    });
 };
