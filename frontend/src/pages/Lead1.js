@@ -80,60 +80,67 @@ const Lead1 = () => {
     fetchCampaigns();
   }, []);
 
-  const handleAddLead = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("⚠️ Authentication token missing!");
-        return;
-      }
+const handleAddLead = async () => {
+  // Validate required fields
+  if (!title || !status || !name || !phone) {
+    alert("Please fill all required fields: Title, Status, Name, and Phone.");
+    return;
+  }
 
-      // Get the logged-in user data
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (!user || !user.id) {
-        alert("⚠️ User data missing!");
-        return;
-      }
-
-      await axios.post(
-        "http://localhost:5000/api/leads",
-        {
-          name,
-          phone_no: `+91${phone}`,
-          title,
-          description,
-          status,
-          lead_category: leadCategory,
-          address,
-          assigned_to: assignedTo,
-          admin_id: user.id,
-          campaign_name: campaignName,
-          notes,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      alert("✅ Lead added successfully!");
-      setName("");
-      setPhone("");
-      setTitle("");
-      setDescription("");
-      setStatus("");
-      setLeadCategory("");
-      setAddress("");
-      setAssignedTo("");
-      setCampaignName("");
-      setNotes("");
-      navigate("/leads");
-    } catch (error) {
-      console.error("❌ Error adding lead:", error.response?.data || error.message);
-      alert("Failed to add lead 😔");
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("⚠️ Authentication token missing!");
+      return;
     }
-  };
+
+    // Get the logged-in user data
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user || !user.id) {
+      alert("⚠️ User data missing!");
+      return;
+    }
+
+    await axios.post(
+      "http://localhost:5000/api/leads",
+      {
+        title,
+        description,
+        status,
+        lead_category: leadCategory,
+        name,
+        phone_no: `+91${phone}`,
+        address,
+        assigned_to: assignedTo === "" ? null : assignedTo,
+        admin_id: user.id,
+        // If you want to save campaign by id, send campaign_id instead of campaign_name
+        // campaign_id: campaignId,
+        notes,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    alert("✅ Lead added successfully!");
+    setName("");
+    setPhone("");
+    setTitle("");
+    setDescription("");
+    setStatus("");
+    setLeadCategory("");
+    setAddress("");
+    setAssignedTo("");
+    setCampaignName("");
+    setNotes("");
+    navigate("/leads");
+  } catch (error) {
+    console.error("❌ Error adding lead:", error.response?.data || error.message);
+    alert("Failed to add lead 😔");
+  }
+};
 
   return (
     <div className="flex min-h-screen overflow-hidden">
@@ -254,7 +261,7 @@ const Lead1 = () => {
               onChange={(e) => setAssignedTo(e.target.value)}
               className="w-full p-2 rounded border shadow bg-white"
             >
-              <option value="">Select User</option>
+              <option value="">No User</option>
               {users.map((user) => (
                 <option key={user.id} value={user.id}>
                   {user.name}

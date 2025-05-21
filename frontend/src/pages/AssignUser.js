@@ -24,7 +24,6 @@ const AssignUser = () => {
         const response = await axios.get("http://localhost:5000/api/campaigns", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        console.log("Initial campaigns response:", response.data);
         if (response.data?.data && response.data.data.length > 0) {
           setCampaigns(response.data.data);
           // Fetch first campaign's details
@@ -33,7 +32,6 @@ const AssignUser = () => {
             `http://localhost:5000/api/campaigns/${firstCampaign.id}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          console.log("First campaign details:", res.data);
           setSelectedCampaign(res.data.data);
         }
       } catch (error) {
@@ -53,7 +51,6 @@ const AssignUser = () => {
         const response = await axios.get("http://localhost:5000/api/users", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        console.log("Fetched users:", response.data.data);
         setUsers(response.data.data || []);
       } catch (error) {
         console.error("Error fetching users:", error.response?.data || error.message);
@@ -66,6 +63,11 @@ const AssignUser = () => {
   useEffect(() => {
     setAssignForm({ userIds: [] });
   }, [selectedCampaign]);
+
+  // Only show users with role 'caller' or 'field_employee'
+  const assignableUsers = users.filter(
+    (u) => u.role === "caller" || u.role === "field_employee"
+  );
 
   // Handle checkbox change for multiple users
   const handleAssignFormChange = (e) => {
@@ -109,9 +111,6 @@ const AssignUser = () => {
       );
       setSelectedCampaign(updatedCampaignRes.data.data);
 
-      // Optionally, refresh campaigns list if needed
-      // fetchCampaigns();
-
     } catch (error) {
       alert("Failed to assign user(s).");
       console.error("Assign error:", error.response?.data || error.message);
@@ -119,38 +118,30 @@ const AssignUser = () => {
   };
 
   const handleCampaignSelect = async (campaign) => {
-    console.log("Clicked campaign data:", campaign);
     setIsAssigning(false);
     setDetailsLoading(true);
-    
+
     try {
       const token = localStorage.getItem("token");
       const res = await axios.get(
         `http://localhost:5000/api/campaigns/${campaign.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      console.log("Selected campaign details full response:", res.data);
-      
+
       if (res.data?.data) {
-        console.log("Using API response data");
         const campaignData = {
           ...res.data.data,
           assigned_users: Array.isArray(res.data.data.assigned_users) ? res.data.data.assigned_users : []
         };
-        console.log("Processed campaign data with assigned users:", campaignData.assigned_users);
         setSelectedCampaign(campaignData);
       } else {
-        console.log("Using existing campaign data");
         const campaignData = {
           ...campaign,
           assigned_users: Array.isArray(campaign.assigned_users) ? campaign.assigned_users : []
         };
-        console.log("Processed existing campaign data with assigned users:", campaignData.assigned_users);
         setSelectedCampaign(campaignData);
       }
     } catch (error) {
-      console.error("Error fetching campaign details:", error);
-      // In case of error, use the clicked campaign data
       const campaignData = {
         ...campaign,
         assigned_users: Array.isArray(campaign.assigned_users) ? campaign.assigned_users : []
@@ -240,7 +231,7 @@ const AssignUser = () => {
                       <div>
                         <label className="block text-sm mb-1">Select Users to Assign</label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded p-2 bg-white">
-                          {users.map((u) => (
+                          {assignableUsers.map((u) => (
                             <label key={u.id} className="flex items-center space-x-2 cursor-pointer">
                               <input
                                 type="checkbox"
