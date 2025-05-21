@@ -357,26 +357,28 @@ const campaignController = {
         const query = `
             SELECT 
                 c.id, c.name, c.description, c.status, c.priority,
-                c.start_date, c.end_date
+                c.start_date, c.end_date, c.lead_count,
+                COUNT(DISTINCT l.id) as total_leads,
+                ROUND((COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) / COUNT(l.id)) * 100, 2) as conversion_rate
             FROM 
                 campaigns c
             INNER JOIN 
                 campaign_users cu ON c.id = cu.campaign_id
+            LEFT JOIN
+                leads l ON c.id = l.campaign_id
             WHERE 
                 cu.user_id = ?
-            AND 
-                c.status = 'Active'
-            LIMIT 1
+            GROUP BY
+                c.id, c.name, c.description, c.status, c.priority, c.start_date, c.end_date, c.lead_count
         `;
 
         db.query(query, [id], (err, results) => {
             if (err) {
-                console.error("Error fetching campaign for user:", err);
+                console.error("Error fetching campaigns for user:", err);
                 return res.status(500).json(responseFormatter(false, "Database error", err.message));
             }
 
-            const campaign = results[0] || {};
-            res.json(responseFormatter(true, "Campaign fetched successfully", campaign));
+            res.json(responseFormatter(true, "Campaigns fetched successfully", results));
         });
     }
 };

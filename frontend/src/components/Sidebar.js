@@ -88,13 +88,22 @@ const Sidebar = ({ user }) => {
   const handleCampaignClick = () => {
     if (campaignBtnRef.current) {
       const rect = campaignBtnRef.current.getBoundingClientRect();
-      const sidebarWidth = isExpanded ? 64 : 20; // Adjust based on sidebar width
+      const sidebarWidth = isExpanded ? 64 : 20;
       setDropdownCoords({
-        top: rect.top + window.scrollY + 10, // Add scroll offset for proper positioning
-        left: rect.left + sidebarWidth + 50, // Shifted to the right
+        top: rect.top + window.scrollY + 10,
+        left: rect.left + sidebarWidth + 50,
       });
     }
     setShowCampaignOptions((prev) => !prev);
+  };
+
+  const handleCampaignNavigation = (campaignId = null) => {
+    setShowCampaignOptions(false);
+    if (campaignId) {
+      navigate(`/campaign/${campaignId}`);
+    } else {
+      navigate('/manage-campaigns');
+    }
   };
 
   const handleReportClick = () => {
@@ -180,16 +189,21 @@ const Sidebar = ({ user }) => {
   }, []);
 
   const getDashboardPath = (role) => {
-    switch (role) {
+    switch (role?.toLowerCase()) {
       case 'admin':
         return '/admin';
       case 'manager':
-        return '/manager';
+        return '/manager-dashboard';
       case 'caller':
         return '/caller';
       default:
         return '/';
     }
+  };
+
+  const handleDashboardClick = () => {
+    const path = getDashboardPath(role);
+    navigate(path);
   };
 
   return (
@@ -215,12 +229,12 @@ const Sidebar = ({ user }) => {
         </div>
 
         {/* Sidebar Menu Items */}
-        <div className="flex-1 mt-2">
+        <div className="flex-1 py-4">
           {[
             { 
               icon: LayoutDashboard, 
               label: "Dashboard", 
-              path: getDashboardPath(role)
+              onClick: handleDashboardClick
             },
             { icon: Search, label: "Search", path: "/search" },
             {
@@ -248,7 +262,7 @@ const Sidebar = ({ user }) => {
               label: "Reports",
               isReport: true,
             },
-          ].map(({ icon: Icon, label, isAddLeads, isCampaign, isReport, isActivity, path }) => (
+          ].map(({ icon: Icon, label, path, onClick, isAddLeads, isCampaign, isReport, isActivity }) => (
             <div
               key={label}
               ref={
@@ -281,6 +295,8 @@ const Sidebar = ({ user }) => {
                   ? handleReportClick
                   : isActivity
                   ? handleActivityClick
+                  : onClick
+                  ? onClick
                   : path
                   ? () => navigate(path)
                   : undefined
@@ -414,7 +430,7 @@ const Sidebar = ({ user }) => {
             </span>
             <button
               className="text-blue-500 text-xs hover:underline"
-              onClick={() => navigate("/manage-campaigns")}
+              onClick={() => handleCampaignNavigation()}
             >
               See All
             </button>
@@ -423,7 +439,7 @@ const Sidebar = ({ user }) => {
             <div
               key={index}
               className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-              onClick={() => navigate(`/campaign/${campaign.id}`)}
+              onClick={() => handleCampaignNavigation(campaign.id)}
             >
               <FileText size={16} className="text-gray-500" />
               <span className="text-sm text-gray-800">{campaign.name}</span>

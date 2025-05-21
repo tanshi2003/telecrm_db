@@ -75,8 +75,9 @@ const CallerDashboard = () => {
       setLeads(leads); // Store leads in state
 
       // Get caller's assigned campaign
-      const campaignResponse = await axios.get(`/campaigns//${userId}`, axiosConfig);
-      const campaign = campaignResponse.data.data || {};
+      const campaignResponse = await axios.get(`/campaigns/user/${userId}/campaigns`, axiosConfig);
+      console.log('Campaign Response:', campaignResponse.data); // Debug log
+      const campaign = campaignResponse.data.data || null;
       
       // Calculate KPIs from leads
       const today = new Date().toISOString().split('T')[0];
@@ -99,7 +100,7 @@ const CallerDashboard = () => {
         missedLeads: leads.filter(lead => 
           lead.status === "Not Reachable"
         ).length,
-        currentCampaign: campaign.name || "No Campaign Assigned"
+        currentCampaign: campaign?.name || "No Campaign Assigned"
       });
 
     } catch (error) {
