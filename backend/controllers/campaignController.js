@@ -353,19 +353,26 @@ const campaignController = {
     // Get campaigns for a user
     getCampaignsByUserId: (req, res) => {
         const { id } = req.params;
+        console.log("Fetching campaigns for user ID:", id);
 
         const query = `
             SELECT 
                 c.id, c.name, c.description, c.status, c.priority,
                 c.start_date, c.end_date, c.lead_count,
                 COUNT(DISTINCT l.id) as total_leads,
-                ROUND((COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) / COUNT(l.id)) * 100, 2) as conversion_rate
+                ROUND((COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) / NULLIF(COUNT(l.id), 0)) * 100, 2) as conversion_rate,
+                GROUP_CONCAT(DISTINCT u.id) as assigned_user_ids,
+                GROUP_CONCAT(DISTINCT u.name) as assigned_user_names
             FROM 
                 campaigns c
             INNER JOIN 
                 campaign_users cu ON c.id = cu.campaign_id
             LEFT JOIN
                 leads l ON c.id = l.campaign_id
+            LEFT JOIN
+                campaign_users cu2 ON c.id = cu2.campaign_id
+            LEFT JOIN
+                users u ON cu2.user_id = u.id
             WHERE 
                 cu.user_id = ?
             GROUP BY
@@ -378,7 +385,18 @@ const campaignController = {
                 return res.status(500).json(responseFormatter(false, "Database error", err.message));
             }
 
-            res.json(responseFormatter(true, "Campaigns fetched successfully", results));
+            // Process the results to format assigned users
+            const processedResults = results.map(campaign => ({
+                ...campaign,
+                assigned_users: campaign.assigned_user_ids ? 
+                    campaign.assigned_user_ids.split(',').map((id, index) => ({
+                        id: parseInt(id),
+                        name: campaign.assigned_user_names.split(',')[index]
+                    })) : []
+            }));
+
+            console.log("Processed campaign results:", processedResults);
+            res.json(responseFormatter(true, "Campaigns fetched successfully", processedResults));
         });
     }
 };

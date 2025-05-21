@@ -18,54 +18,40 @@ const Leads = () => {
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (storedUser && storedUser.role === "admin") {
-      setUser(storedUser);
-    } else {
-      console.error("Unauthorized access.");
+    const token = localStorage.getItem("token");
+    
+    if (!storedUser || !token) {
+      console.error("No user data or token found");
+      navigate("/login");
+      return;
     }
-  }, []);
 
-  useEffect(() => {
-    const fetchLeadsAndUsers = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          console.error("Authentication token is missing.");
-          return;
-        }
-
-        // Fetch leads
-        const leadsResponse = await axios.get("http://localhost:5000/api/leads", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (leadsResponse.data && leadsResponse.data.data) {
-          setLeads(leadsResponse.data.data);
-        } else {
-          console.error("Unexpected API response format for leads:", leadsResponse.data);
-        }
-
-        // Fetch users
-        const usersResponse = await axios.get("http://localhost:5000/api/users", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (usersResponse.data && usersResponse.data.data) {
-          setUsers(usersResponse.data.data);
-        } else {
-          console.error("Unexpected API response format for users:", usersResponse.data);
-        }
-      } catch (error) {
-        console.error("Error fetching leads or users:", error.response?.data || error.message);
-      }
-    };
-
+    setUser(storedUser);
     fetchLeadsAndUsers();
-  }, []);
+  }, [navigate]);
+
+  const fetchLeadsAndUsers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("http://localhost:5000/api/leads", {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data.success) {
+        setLeads(response.data.data);
+      } else {
+        console.error("Failed to fetch leads:", response.data.message);
+      }
+    } catch (error) {
+      console.error("Error fetching leads:", error);
+      if (error.response?.status === 401) {
+        navigate("/login");
+      }
+    }
+  };
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
