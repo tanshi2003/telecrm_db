@@ -55,7 +55,7 @@ const CallerDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCallbook, setShowCallbook] = useState(false);
   const [isManualDialing, setIsManualDialing] = useState(true);
-  const [companyNumber] = useState('+1234567890'); // Replace with your company's number
+  const [companyNumber] = useState('07948518141'); // Exotel number
   const [isCallMaskingEnabled, setIsCallMaskingEnabled] = useState(true);
   // Add new state for call feedback
   const [callFeedback, setCallFeedback] = useState({
@@ -765,22 +765,42 @@ const CallerDashboard = () => {
       // Set the cleaned number
       setDialedNumber(cleanNumber);
       
-      // Make API call to your backend to initiate Twilio call
+      // Get token from localStorage
       const token = localStorage.getItem("token");
-      const response = await axios.post(
-        'http://localhost:5000/api/calls/initiate',
-        {
+      console.log('Token:', token); // Debug log
+      
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // Set call status to dialing
+      setCallStatus('dialing');
+      
+      // Make API call to your backend to initiate Exotel call
+      const response = await axios({
+        method: 'post',
+        url: 'http://localhost:5000/api/calls/initiate',
+        data: {
           to: cleanNumber,
-          from: companyNumber, // Your Twilio phone number
-          leadId: recipientId // If calling a lead from your database
+          from: companyNumber,
+          leadId: recipientId,
+          callerId: user?.id // Add callerId from user object
         },
-        {
-          headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        validateStatus: function (status) {
+          return status < 500; // Resolve only if the status code is less than 500
         }
-      );
+      });
+
+      console.log('Call API Response:', response.data); // Debug log
+
+      if (response.status === 401) {
+        throw new Error('Authentication failed. Please log in again.');
+      }
 
       if (response.data.success) {
         setCallStatus('connected');
@@ -794,11 +814,18 @@ const CallerDashboard = () => {
       }
       
     } catch (error) {
-      console.error('Error starting call:', error);
+      console.error('Error starting call:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        headers: error.response?.headers,
+        config: error.config // Log the request configuration
+      });
+      
       setCallStatus('idle');
       setCallFeedback(prev => ({
         ...prev,
-        error: error.message || 'Failed to start call'
+        error: error.response?.data?.message || error.message || 'Failed to start call'
       }));
     }
   };
