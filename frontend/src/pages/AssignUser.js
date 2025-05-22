@@ -32,15 +32,22 @@ const AssignUser = () => {
             `http://localhost:5000/api/campaigns/${firstCampaign.id}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          setSelectedCampaign(res.data.data);
-        }
-      } catch (error) {
-        console.error("Error fetching campaigns:", error.response?.data || error.message);
-      } finally {
-        setLoading(false);
+           const campaignData = res.data.data
+          ? {
+              ...res.data.data,
+              start_date: res.data.data.start_date ? res.data.data.start_date.slice(0, 10) : "",
+              end_date: res.data.data.end_date ? res.data.data.end_date.slice(0, 10) : "",
+            }
+          : firstCampaign;
+        setSelectedCampaign(campaignData);
       }
-    };
-    fetchCampaigns();
+    } catch (error) {
+      console.error("Error fetching campaigns:", error.response?.data || error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchCampaigns();
   }, []);
 
   // Fetch users
@@ -59,9 +66,13 @@ const AssignUser = () => {
     fetchUsers();
   }, []);
 
-  // Reset assignForm when campaign changes
+  // Pre-check already assigned users when campaign changes
   useEffect(() => {
-    setAssignForm({ userIds: [] });
+    setAssignForm({
+      userIds: Array.isArray(selectedCampaign?.assigned_users)
+        ? selectedCampaign.assigned_users.map(u => u.id)
+        : []
+    });
   }, [selectedCampaign]);
 
   // Only show users with role 'caller' or 'field_employee'
@@ -202,8 +213,31 @@ const AssignUser = () => {
                   <p><strong>Status:</strong> {selectedCampaign.status || 'Not set'}</p>
                   <p><strong>Priority:</strong> {selectedCampaign.priority || 'Not set'}</p>
                   <p><strong>Lead Count:</strong> {selectedCampaign.lead_count || selectedCampaign.leads?.length || 0}</p>
-                  <p><strong>Start Date:</strong> {selectedCampaign.start_date || 'Not set'}</p>
-                  <p><strong>End Date:</strong> {selectedCampaign.end_date || 'Not set'}</p>
+                 <p> <strong>Start Date:</strong>{" "}
+    {selectedCampaign.start_date
+      ? new Date(selectedCampaign.start_date).toLocaleString("en-IN", {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : "Not set"}
+  </p>
+  <p>
+    <strong>End Date:</strong>{" "}
+    {selectedCampaign.end_date
+      ? new Date(selectedCampaign.end_date).toLocaleString("en-IN", {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : "Not set"}
+  </p>
                   <p>
                     <strong>Users Assigned:</strong>{" "}
                     {Array.isArray(selectedCampaign.assigned_users) ? (
@@ -236,11 +270,7 @@ const AssignUser = () => {
                               <input
                                 type="checkbox"
                                 value={u.id}
-                                checked={
-                                  assignForm.userIds.includes(u.id) ||
-                                  (Array.isArray(selectedCampaign.assigned_users) &&
-                                    selectedCampaign.assigned_users.some(au => au.id === u.id))
-                                }
+                                checked={assignForm.userIds.includes(u.id)}
                                 onChange={handleAssignFormChange}
                                 className="accent-blue-600"
                               />

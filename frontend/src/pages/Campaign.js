@@ -160,18 +160,7 @@ const Campaign = () => {
     </button>
   </div>
 
-  <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
-    <h4 className="font-semibold text-lg mb-2">Campaign Analytics</h4>
-    <p className="text-sm text-gray-600 mb-4">
-      View performance and insights.
-    </p>
-    <button
-      className="mt-auto w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-      onClick={() => navigate("/campaign-analytics")}
-    >
-      View Analytics
-    </button>
-  </div>
+ 
 </section>
 
         {/* Filters */}

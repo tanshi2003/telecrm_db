@@ -129,34 +129,24 @@ const campaignController = {
     },
 
     // ❌ Delete Campaign
+   // ❌ Delete Campaign
     deleteCampaign: (req, res) => {
-        const { id } = req.params;
+    const { id } = req.params; // Make sure this line is present!
 
-        db.query("DELETE FROM campaign_users WHERE campaign_id = ?", [id], (err) => {
-            if (err) return res.status(500).json(responseFormatter(false, "Failed to delete campaign users"));
+    db.query("DELETE FROM campaign_users WHERE campaign_id = ?", [id], (err) => {
+        if (err) return res.status(500).json(responseFormatter(false, "Failed to delete campaign users"));
 
-            db.query("DELETE FROM campaign_logs WHERE campaign_id = ?", [id], (err) => {
-                if (err) return res.status(500).json(responseFormatter(false, "Failed to delete campaign logs"));
+        db.query("DELETE FROM campaigns WHERE id = ?", [id], (err, result) => {
+            if (err) return res.status(500).json(responseFormatter(false, "Failed to delete campaign"));
 
-                db.query("DELETE FROM campaigns WHERE id = ?", [id], (err, result) => {
-                    if (err) return res.status(500).json(responseFormatter(false, "Failed to delete campaign"));
+            if (result.affectedRows === 0) {
+                return res.status(404).json(responseFormatter(false, "Campaign not found"));
+            }
 
-                    if (result.affectedRows === 0) {
-                        return res.status(404).json(responseFormatter(false, "Campaign not found"));
-                    }
-
-                    db.query(
-                        "INSERT INTO campaign_logs (campaign_id, action, performed_by, created_at) VALUES (?, ?, ?, NOW())",
-                        [id, "Campaign deleted", req.user.id],
-                        () => {
-                            res.json(responseFormatter(true, "Campaign deleted successfully"));
-                        }
-                    );
-                });
-            });
+            res.json(responseFormatter(true, "Campaign deleted successfully"));
         });
-    },
-
+    });
+},
     // 📊 Campaign Progress
     getCampaignProgress: (req, res) => {
         const { id } = req.params;

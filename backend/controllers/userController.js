@@ -403,76 +403,66 @@ exports.assignManager = (req, res) => {
 };
 
 // Update user status in bulk
-exports.updateBulkStatus = async (req, res) => {
-    try {
-        const { userIds, status } = req.body;
-        
-        // Input validation
-        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
-            return res.status(400).json(responseFormatter(false, "Please provide valid user IDs"));
-        }
+exports.updateBulkStatus = (req, res) => {
+  const { userIds, status } = req.body;
+  console.log("🚀 Payload received:", { userIds, status });
 
-        if (!status) {
-            return res.status(400).json(responseFormatter(false, "Status is required"));
-        }
+  if (!userIds || !Array.isArray(userIds) || userIds.length === 0 || !status) {
+    return res.status(400).json({ success: false, message: "Missing userIds or status" });
+  }
 
-        // Validate status enum
-        const validStatuses = ["active", "inactive", "suspended"];
-        if (!validStatuses.includes(status)) {
-            return res.status(400).json(responseFormatter(false, "Invalid status. Must be 'active', 'inactive', or 'suspended'"));
-        }
+  const validStatuses = ["active", "inactive", "suspended"];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ success: false, message: "Invalid status" });
+  }
 
-        // Convert array to string for SQL
-        const userIdsString = userIds.join(',');
+  const placeholders = userIds.map(() => '?').join(',');
+  const checkQuery = `SELECT id FROM Users WHERE id IN (${placeholders})`;
 
-        // First check if users exist
-        const checkQuery = "SELECT id FROM Users WHERE id IN (?)";
-        db.query(checkQuery, [userIds], (checkErr, users) => {
-            if (checkErr) {
-                return res.status(500).json(responseFormatter(false, "Error checking users"));
-            }
-
-            if (!users || users.length === 0) {
-                return res.status(404).json(responseFormatter(false, "No users found with the provided IDs"));
-            }
-
-            // Perform the update
-            const updateQuery = "UPDATE Users SET status = ?, updated_at = NOW() WHERE id IN (?)";
-            db.query(updateQuery, [status, userIds], (updateErr, result) => {
-                if (updateErr) {
-                    return res.status(500).json(responseFormatter(false, "Error updating users"));
-                }
-
-                // Get updated users
-                const selectQuery = `
-                    SELECT id, name, email, status, role, updated_at 
-                    FROM Users 
-                    WHERE id IN (?)
-                `;
-                
-                db.query(selectQuery, [userIds], (selectErr, updatedUsers) => {
-                    if (selectErr) {
-                        return res.status(500).json(responseFormatter(false, "Error fetching updated users"));
-                    }
-
-                    const response = {
-                        modifiedCount: result.affectedRows,
-                        updatedUsers: updatedUsers
-                    };
-
-                    return res.json(responseFormatter(
-                        true, 
-                        `Successfully updated ${result.affectedRows} user(s) status to ${status}`,
-                        response
-                    ));
-                });
-            });
-        });
-    } catch (error) {
-        console.error("Bulk status update error:", error);
-        return res.status(500).json(responseFormatter(false, "Internal server error"));
+  db.query(checkQuery, userIds, (checkErr, checkResults) => {
+    if (checkErr) {
+      console.error("❌ Error checking user existence:", checkErr);
+      return res.status(500).json({ success: false, message: "Database error" });
     }
+
+    console.log("✅ Found users in DB:", checkResults.map(u => u.id));
+
+    if (checkResults.length !== userIds.length) {
+      return res.status(404).json({
+        success: false,
+        message: "One or more users not found",
+        data: {
+          providedIds: userIds,
+          foundIds: checkResults.map(u => u.id)
+        }
+      });
+    }
+
+    const updateQuery = `UPDATE Users SET status = ?, updated_at = NOW() WHERE id IN (${placeholders})`;
+    db.query(updateQuery, [status, ...userIds], (updateErr, updateResults) => {
+      if (updateErr) {
+        console.error("❌ Error updating statuses:", updateErr);
+        return res.status(500).json({ success: false, message: "Database error" });
+      }
+
+      console.log("✅ Update query results:", updateResults);
+
+      return res.status(200).json({
+        success: true,
+        message: "Statuses updated successfully",
+        data: {
+          affectedRows: updateResults.affectedRows,
+          changedRows: updateResults.changedRows,
+          warningCount: updateResults.warningCount,
+          userIds
+        }
+      });
+    });
+  });
 };
+
+
+
 
 // Update single user status
 exports.updateUserStatus = (req, res) => {
