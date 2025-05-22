@@ -166,9 +166,6 @@ const UpdateCampaign = () => {
           {/* Campaign Detail Panel */}
           <div className="w-2/3 p-6 bg-white overflow-y-auto relative">
             {/* Single BackButton at top right */}
-            <div className="absolute top-4 right-6 z-10">
-              <BackButton />
-            </div>
             {selectedCampaign ? (
               isEditing ? (
                 <form onSubmit={handleEditFormSubmit} className="border p-4 rounded shadow mb-4 space-y-3">
