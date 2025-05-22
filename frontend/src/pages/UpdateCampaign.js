@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { AuthContext } from "../context/AuthContext";
+import BackButton from "../components/BackButton";
 
 const UpdateCampaign = () => {
   const navigate = useNavigate();
@@ -106,7 +107,9 @@ const UpdateCampaign = () => {
         <div className="flex h-[calc(100vh-4rem)] mt-16">
           {/* Campaign List */}
           <div className="w-1/3 bg-gray-50 p-4 overflow-y-auto border-r">
-            <h2 className="text-xl font-bold mb-4">Campaigns</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Campaigns</h2>
+            </div>
             {loading ? (
               <p>Loading...</p>
             ) : campaigns.length === 0 ? (
@@ -139,10 +142,16 @@ const UpdateCampaign = () => {
 
           {/* Campaign Detail Panel */}
           <div className="w-2/3 p-6 bg-white overflow-y-auto relative">
+            {/* Single BackButton at top right */}
+            <div className="absolute top-4 right-6 z-10">
+              <BackButton />
+            </div>
             {selectedCampaign ? (
               isEditing ? (
                 <form onSubmit={handleEditFormSubmit} className="border p-4 rounded shadow mb-4 space-y-3">
-                  <h3 className="text-lg font-semibold text-purple-600 mb-2">Edit Campaign</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-purple-600">Edit Campaign</h3>
+                  </div>
                   {["name", "description", "status", "priority", "start_date", "end_date"].map((field) => (
                     <div key={field}>
                       <label className="block text-sm capitalize">{field.replace("_", " ")}</label>
@@ -173,11 +182,9 @@ const UpdateCampaign = () => {
                   </div>
                 </form>
               ) : (
-               // ...existing code...
                 <div className="space-y-2 relative border rounded p-4 shadow">
                   <div className="flex justify-between items-start">
                     <h3 className="text-xl font-semibold text-gray-700">{selectedCampaign.name}</h3>
-
                     {/* Dropdown */}
                     <div className="relative" ref={dropdownRef}>
                       <button
@@ -206,7 +213,6 @@ const UpdateCampaign = () => {
                       )}
                     </div>
                   </div>
-
                   <p><strong>Description:</strong> {selectedCampaign.description}</p>
                   <p><strong>Status:</strong> {selectedCampaign.status}</p>
                   <p><strong>Priority:</strong> {selectedCampaign.priority}</p>
@@ -214,7 +220,6 @@ const UpdateCampaign = () => {
                   <p><strong>Start Date:</strong> {selectedCampaign.start_date}</p>
                   <p><strong>End Date:</strong> {selectedCampaign.end_date}</p>
                 </div>
-// ...existing code...
               )
             ) : (
               <p className="text-gray-500">Select a campaign to view details.</p>

@@ -18,7 +18,7 @@ import {
   ClipboardList, // Icon for My Leads
   PhoneIncoming, // Icon for My Calls
 } from "lucide-react"; // Added new icons for filters dropdown
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 import axios from "axios"; // Import axios for API calls
 
@@ -241,6 +241,16 @@ const Sidebar = ({ user }) => {
               icon: PlusCircle,
               label: "Add Leads",
               isAddLeads: true,
+              children: [
+      {
+        label: "Add Single Lead",
+        path: "/Lead1", // Use route path, not import path
+      },
+      {
+        label: "Add From Excel",
+        path: "/excelupload", // Use route path, not import path
+      }
+    ]
             },
             {
               icon: FileText,
@@ -372,41 +382,24 @@ const Sidebar = ({ user }) => {
     </div>
 
     {/* Add Single Lead */}
-    <div
-      className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-      onClick={(e) => {
-        e.preventDefault();
-        console.log("Add Single Lead clicked");
-        console.log("Current user role:", role);
-        console.log("Current user:", localUser);
-        
-        // Close dropdown first
-        setShowAddLeadOptions(false);
-        
-        // Check if user has permission
-        const allowedRoles = ["admin", "manager", "caller", "field_employee"];
-        if (!allowedRoles.map(r => r.toLowerCase()).includes(role?.toLowerCase())) {
-          console.log("User does not have permission to access Lead1");
-          alert("You do not have permission to access this page");
-          return;
-        }
-        
-        // Navigate to Lead1
-        navigate("/Lead1");
-      }}
+    <Link
+      to="/Lead1"
+      className="flex items-center gap-2 px-3 py-2 hover:bg-blue-100 rounded cursor-pointer"
+      onClick={() => setShowAddLeadOptions(false)}
     >
       <UserPlus size={16} className="text-blue-500" />
       <span className="text-sm text-gray-800">Add Single Lead</span>
-    </div>
+    </Link>
 
     {/* Add From Excel */}
-    <div
-      className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-      onClick={() => navigate("/excelupload")}
+    <Link
+      to="/excelupload"
+      className="flex items-center gap-2 px-3 py-2 hover:bg-blue-100 rounded cursor-pointer"
+      onClick={() => setShowAddLeadOptions(false)}
     >
-      <FilePlus size={16} className="text-green-500" />
+      <FilePlus size={16} className="text-blue-500" />
       <span className="text-sm text-gray-800">Add From Excel</span>
-    </div>
+    </Link>
   </div>
 )}
 

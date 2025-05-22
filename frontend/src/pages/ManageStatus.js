@@ -18,6 +18,7 @@ const ManageStatus = () => {
   const [bulkStatus, setBulkStatus] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [successMsg, setSuccessMsg] = useState(""); // <-- Add this line
 
   useEffect(() => {
     fetchUsers();
@@ -81,6 +82,8 @@ const ManageStatus = () => {
 
         if (response.data.success) {
           toast.success(`✅ Successfully updated user status to ${bulkStatus.label}`);
+          setSuccessMsg(`Successfully updated user status to ${bulkStatus.label}`); // <-- Add this
+          setTimeout(() => setSuccessMsg(""), 3000); // <-- Add this
           setSelectedUsers([]);
           setBulkStatus(null);
           setShowConfirm(false);
@@ -110,6 +113,8 @@ const ManageStatus = () => {
           
           // Show success message
           toast.success(`✅ Successfully updated ${modifiedCount} user(s) to ${bulkStatus.label}`);
+          setSuccessMsg(`Successfully updated ${modifiedCount} user(s) to ${bulkStatus.label}`); // <-- Add this
+          setTimeout(() => setSuccessMsg(""), 3000); // <-- Add this
           
           // Reset state
           setSelectedUsers([]);
@@ -141,6 +146,13 @@ const ManageStatus = () => {
             </h2>
             <BackButton />
           </div>
+
+          {/* Success banner */}
+          {successMsg && (
+            <div className="mb-4 p-3 rounded bg-green-100 text-green-800 font-semibold text-center transition">
+              {successMsg}
+            </div>
+          )}
 
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
             <Select
