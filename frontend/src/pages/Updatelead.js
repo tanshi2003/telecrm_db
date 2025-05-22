@@ -296,7 +296,7 @@ const Updatelead = () => {
                               Edit 
                             </button>
                             <button
-                              className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+                            className="block w-full text-left px-4 py-2 bg-indigo-500 text-white hover:bg-indigo-600"
                               onClick={() => handleDeleteLead(selectedLead.id)}
                             >
                               Delete 

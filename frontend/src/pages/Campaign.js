@@ -118,59 +118,61 @@ const Campaign = () => {
         <p className="text-gray-600 mb-6">Create, update, analyze, and manage campaigns.</p>
 
         {/* Campaign Management Cards */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h4 className="font-semibold text-lg mb-2">Create Campaign</h4>
-            <p className="text-sm text-gray-600 mb-4">
-              Launch a new campaign and set its parameters.
-            </p>
-            <button
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              onClick={() => navigate("/admin/campaigns")}
-            >
-              + Create Campaign
-            </button>
-          </div>
+   
+<section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+  {/* Card Example */}
+  <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
+    <h4 className="font-semibold text-lg mb-2">Create Campaign</h4>
+    <p className="text-sm text-gray-600 mb-4">
+      Launch a new campaign and set its parameters.
+    </p>
+    <button
+      className="mt-auto w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+      onClick={() => navigate("/admin/campaigns")}
+    >
+      + Create Campaign
+    </button>
+  </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h4 className="font-semibold text-lg mb-2">Update Campaign</h4>
-            <p className="text-sm text-gray-600 mb-4">
-              Modify campaign details such as name or timeline.
-            </p>
-            <button
-              className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              onClick={() => navigate(`/admin/UpdateCampaign/${campaigns.id}`)}
-            >
-              + Update Campaign
-            </button>
-          </div>
+  <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
+    <h4 className="font-semibold text-lg mb-2">Update Campaign</h4>
+    <p className="text-sm text-gray-600 mb-4">
+      Modify campaign details such as name or timeline.
+    </p>
+    <button
+      className="mt-auto w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+      onClick={() => navigate(`/admin/UpdateCampaign/${campaigns.id}`)}
+    >
+      + Update Campaign
+    </button>
+  </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h4 className="font-semibold text-lg mb-2">Assign Users</h4>
-            <p className="text-sm text-gray-600 mb-4">
-              Allocate employees to campaigns.
-            </p>
-            <button
-              className="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-              onClick={() => navigate("/assignuser")}
-            >
-              + Assign Users
-            </button>
-          </div>
+  <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
+    <h4 className="font-semibold text-lg mb-2">Assign Users</h4>
+    <p className="text-sm text-gray-600 mb-4">
+      Allocate employees to campaigns.
+    </p>
+    <button
+      className="mt-auto w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+      onClick={() => navigate("/assignuser")}
+    >
+      + Assign Users
+    </button>
+  </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h4 className="font-semibold text-lg mb-2">Campaign Analytics</h4>
-            <p className="text-sm text-gray-600 mb-4">
-              View performance and insights.
-            </p>
-            <button
-              className="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
-              onClick={() => navigate("/campaign-analytics")}
-            >
-              View Analytics
-            </button>
-          </div>
-        </section>
+  <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
+    <h4 className="font-semibold text-lg mb-2">Campaign Analytics</h4>
+    <p className="text-sm text-gray-600 mb-4">
+      View performance and insights.
+    </p>
+    <button
+      className="mt-auto w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+      onClick={() => navigate("/campaign-analytics")}
+    >
+      View Analytics
+    </button>
+  </div>
+</section>
 
         {/* Filters */}
         <div className="bg-white p-6 rounded-lg shadow-md">
@@ -229,53 +231,54 @@ const Campaign = () => {
             <p>No campaigns match the current filters.</p>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {campaignsToShow.map((campaign) => (
-                  <div key={campaign.id} className="bg-white p-4 rounded-lg shadow-md">
-                    <h3 className="text-lg font-semibold mb-2">{campaign.name}</h3>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Description: <strong>{campaign.description || "N/A"}</strong>
-                    </p>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Lead Count: <strong>{campaign.lead_count ?? campaign.leads?.length ?? "N/A"}</strong>
-                    </p>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Status: <strong>{campaign.status || "N/A"}</strong>
-                    </p>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Priority: <strong>{campaign.priority || "N/A"}</strong>
-                    </p>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Start Date:{" "}
-                      {campaign.start_date
-                        ? new Date(campaign.start_date).toLocaleDateString()
-                        : "N/A"}
-                    </p>
-                    <p className="text-sm text-gray-600 mb-1">
-                      End Date:{" "}
-                      {campaign.end_date
-                        ? new Date(campaign.end_date).toLocaleDateString()
-                        : "N/A"}
-                    </p>
 
-                    {/* Edit/Delete Buttons */}
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        onClick={() => navigate(`/admin/EditCampaign/${campaign.id}`)}
-                        className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(campaign.id)}
-                        className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+  {campaignsToShow.map((campaign) => (
+    <div key={campaign.id} className="bg-white p-4 rounded-lg shadow-md flex flex-col">
+      <h3 className="text-lg font-semibold mb-2">{campaign.name}</h3>
+      <p className="text-sm text-gray-600 mb-1">
+        Description: <strong>{campaign.description || "N/A"}</strong>
+      </p>
+      <p className="text-sm text-gray-600 mb-1">
+        Lead Count: <strong>{campaign.lead_count ?? campaign.leads?.length ?? "N/A"}</strong>
+      </p>
+      <p className="text-sm text-gray-600 mb-1">
+        Status: <strong>{campaign.status || "N/A"}</strong>
+      </p>
+      <p className="text-sm text-gray-600 mb-1">
+        Priority: <strong>{campaign.priority || "N/A"}</strong>
+      </p>
+      <p className="text-sm text-gray-600 mb-1">
+        Start Date:{" "}
+        {campaign.start_date
+          ? new Date(campaign.start_date).toLocaleDateString()
+          : "N/A"}
+      </p>
+      <p className="text-sm text-gray-600 mb-1">
+        End Date:{" "}
+        {campaign.end_date
+          ? new Date(campaign.end_date).toLocaleDateString()
+          : "N/A"}
+      </p>
+      {/* Edit/Delete Buttons aligned at the bottom */}
+      <div className="mt-auto flex gap-2">
+        <button
+          onClick={() => navigate(`/admin/EditCampaign/${campaign.id}`)}
+          className="mt-auto w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => handleDelete(campaign.id)}
+          className="mt-auto w-full px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  ))}
+</div>
+
               {!showAll && filteredCampaigns.length > 6 && (
                 <div className="flex justify-center mt-6">
                   <button

@@ -70,25 +70,25 @@ const ManageRoles = () => {
         }
       );
 
-      if (response.data.success) {
-        // Update local state first for immediate feedback
-        setUsers(prevUsers => 
-          prevUsers.map(u => 
-            u.id === userId ? { ...u, role: newRole } : u
-          )
-        );
+     if (response.data.success) {
+  // Update local state first for immediate feedback
+  setUsers(prevUsers => 
+    prevUsers.map(u => 
+      u.id === userId ? { ...u, role: newRole } : u
+    )
+  );
         
         // Update managers list if needed
-        if (newRole === "manager") {
-          setManagers(prev => [...prev, { ...user, role: newRole }]);
-        } else {
-          setManagers(prev => prev.filter(m => m.id !== userId));
-        }
+         if (newRole === "manager") {
+    setManagers(prev => [...prev, { ...user, role: newRole }]);
+  } else {
+    setManagers(prev => prev.filter(m => m.id !== userId));
+  }
 
-        toast.success(`✅ Role updated successfully! ${user.name} is now a ${newRole}`);
-      } else {
-        toast.error(response.data.message || "Failed to update role");
-      }
+  toast.success("Role successfully edited!"); // <-- updated message
+} else {
+  toast.error(response.data.message || "Failed to update role");
+}
 
       // Fetch fresh data after a short delay
       setTimeout(() => {
