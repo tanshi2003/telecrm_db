@@ -144,7 +144,7 @@ const Leads = () => {
               <p className="text-sm text-gray-600 mb-4">Create new leads and connect with potential customers.</p>
             </div>
             <button
-              className="w-full px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               onClick={() => navigate("/Lead1")}
             >
               + Add Lead
@@ -157,7 +157,7 @@ const Leads = () => {
               <p className="text-sm text-gray-600 mb-4">Modify existing lead details and track progress.</p>
             </div>
             <button
-              className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               onClick={() => navigate("/Updatelead")}
             >
               + Update Lead
@@ -170,7 +170,7 @@ const Leads = () => {
               <p className="text-sm text-gray-600 mb-4">Import leads in bulk using an Excel file.</p>
             </div>
             <button
-              className="w-full px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               onClick={() => navigate("/Excelupload")}
             >
               + Import Leads
