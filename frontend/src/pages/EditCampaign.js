@@ -31,18 +31,27 @@ const EditCampaign = () => {
             (campaign) => campaign.id === parseInt(id)
           );
           if (campaignToEdit) {
-            setSelectedCampaign(campaignToEdit);
-            setEditForm(campaignToEdit);
-          } else {
-            navigate("/admin/campaigns");
-          }
+             const processedCampaign = {
+            ...campaignToEdit,
+            start_date: campaignToEdit.start_date
+              ? campaignToEdit.start_date.slice(0, 10)
+              : "",
+            end_date: campaignToEdit.end_date
+              ? campaignToEdit.end_date.slice(0, 10)
+              : "",
+          };
+           setSelectedCampaign(processedCampaign);
+          setEditForm(processedCampaign);
+        } else {
+          navigate("/admin/campaigns");
         }
-      } catch (error) {
-        console.error("Error fetching campaigns:", error.response?.data || error.message);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching campaigns:", error.response?.data || error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
     fetchCampaigns();
   }, [id, navigate]);
 
@@ -158,38 +167,103 @@ const EditCampaign = () => {
             {selectedCampaign ? (
               isEditing ? (
                 <form onSubmit={handleEditFormSubmit} className="border p-6 rounded shadow mb-4 space-y-4">
-                  <h3 className="text-lg font-semibold text-purple-600 mb-4">Edit Campaign</h3>
-                  {["name", "description", "status", "priority", "start_date", "end_date"].map((field) => (
-                    <div key={field} className="space-y-2">
-                      <label className="block text-sm capitalize">{field.replace("_", " ")}</label>
-                      <input
-                        type="text"
-                        name={field}
-                        value={editForm[field] || ""}
-                        onChange={handleEditFormChange}
-                        className="w-full border rounded p-3 text-sm"
-                      />
-                    </div>
-                  ))}
-
-                  <div className="flex gap-4 mt-4">
-                    <button
-                      type="submit"
-                      className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 w-full sm:w-auto"
-                    >
-                      Save Changes
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsEditing(false)}
-                      className="px-6 py-3 bg-gray-400 text-white rounded-md hover:bg-gray-500 w-full sm:w-auto"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
+  <h3 className="text-lg font-semibold text-purple-600 mb-4">Edit Campaign</h3>
+  {/* Name */}
+  <div className="space-y-2">
+    <label className="block text-sm capitalize">Name</label>
+    <input
+      type="text"
+      name="name"
+      value={editForm.name || ""}
+      onChange={handleEditFormChange}
+      className="w-full border rounded p-3 text-sm"
+      required
+    />
+  </div>
+  {/* Description */}
+  <div className="space-y-2">
+    <label className="block text-sm capitalize">Description</label>
+    <input
+      type="text"
+      name="description"
+      value={editForm.description || ""}
+      onChange={handleEditFormChange}
+      className="w-full border rounded p-3 text-sm"
+      required
+    />
+  </div>
+  {/* Status Dropdown */}
+  <div className="space-y-2">
+    <label className="block text-sm capitalize">Status</label>
+    <select
+      name="status"
+      value={editForm.status || ""}
+      onChange={handleEditFormChange}
+      className="w-full border rounded p-3 text-sm"
+      required
+    >
+      <option value="">Select Status</option>
+      <option value="Active">Active</option>
+      <option value="Inactive">Inactive</option>
+    </select>
+  </div>
+  {/* Priority Dropdown */}
+  <div className="space-y-2">
+    <label className="block text-sm capitalize">Priority</label>
+    <select
+      name="priority"
+      value={editForm.priority || ""}
+      onChange={handleEditFormChange}
+      className="w-full border rounded p-3 text-sm"
+      required
+    >
+      <option value="">Select Priority</option>
+      <option value="Low">Low</option>
+      <option value="Medium">Medium</option>
+      <option value="High">High</option>
+    </select>
+  </div>
+  {/* Start Date */}
+  <div className="space-y-2">
+    <label className="block text-sm capitalize">Start Date</label>
+    <input
+      type="date"
+      name="start_date"
+      value={editForm.start_date ? editForm.start_date.slice(0, 10) : ""}
+      onChange={handleEditFormChange}
+      className="w-full border rounded p-3 text-sm"
+      required
+    />
+  </div>
+  {/* End Date */}
+  <div className="space-y-2">
+    <label className="block text-sm capitalize">End Date</label>
+    <input
+      type="date"
+      name="end_date"
+      value={editForm.end_date ? editForm.end_date.slice(0, 10) : ""}
+      onChange={handleEditFormChange}
+      className="w-full border rounded p-3 text-sm"
+      required
+    />
+  </div>
+  <div className="flex gap-4 mt-4">
+    <button
+      type="submit"
+      className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 w-full sm:w-auto"
+    >
+      Save Changes
+    </button>
+    <button
+      type="button"
+      onClick={() => setIsEditing(false)}
+      className="px-6 py-3 bg-gray-400 text-white rounded-md hover:bg-gray-500 w-full sm:w-auto"
+    >
+      Cancel
+    </button>
+  </div>
+</form>
               ) : (
-                // ...existing code...
                 <div className="space-y-2 relative border rounded p-6 shadow">
                   <div className="flex justify-between items-start">
                     <h3 className="text-xl font-semibold text-gray-700">{selectedCampaign.name}</h3>
@@ -226,10 +300,33 @@ const EditCampaign = () => {
                   <p><strong>Status:</strong> {selectedCampaign.status}</p>
                   <p><strong>Priority:</strong> {selectedCampaign.priority}</p>
                   <p><strong>Lead Count:</strong> {selectedCampaign.lead_count ?? selectedCampaign.leads?.length ?? "N/A"}</p>
-                  <p><strong>Start Date:</strong> {selectedCampaign.start_date}</p>
-                  <p><strong>End Date:</strong> {selectedCampaign.end_date}</p>
+                  <p>
+  <strong>Start Date:</strong>{" "}
+  {selectedCampaign.start_date
+    ? new Date(selectedCampaign.start_date).toLocaleString("en-IN", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : "Not set"}
+</p>
+<p>
+  <strong>End Date:</strong>{" "}
+  {selectedCampaign.end_date
+    ? new Date(selectedCampaign.end_date).toLocaleString("en-IN", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : "Not set"}
+</p>
                 </div>
-// ...existing code...
               )
             ) : (
               <p className="text-gray-600">Select a campaign to edit.</p>

@@ -89,56 +89,66 @@ const handleAddLead = async () => {
 
   try {
     const token = localStorage.getItem("token");
-    if (!token) {
-      alert("⚠️ Authentication token missing!");
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    
+    if (!token || !storedUser) {
+      alert("⚠️ Authentication error! Please log in again.");
+      navigate("/login");
       return;
     }
 
-    // Get the logged-in user data
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (!user || !user.id) {
-      alert("⚠️ User data missing!");
-      return;
-    }
+    const leadData = {
+      title,
+      description,
+      status,
+      lead_category: leadCategory,
+      name,
+      phone_no: phone.startsWith('+91') ? phone : `+91${phone}`,
+      address,
+      assigned_to: assignedTo || null,
+      admin_id: storedUser.id,
+      campaign_id: campaignName ? campaigns.find(c => c.name === campaignName)?.id : null,
+      notes,
+    };
 
-    await axios.post(
+    console.log('Sending lead data:', leadData);
+
+    const response = await axios.post(
       "http://localhost:5000/api/leads",
-      {
-        title,
-        description,
-        status,
-        lead_category: leadCategory,
-        name,
-        phone_no: `+91${phone}`,
-        address,
-        assigned_to: assignedTo === "" ? null : assignedTo,
-        admin_id: user.id,
-        // If you want to save campaign by id, send campaign_id instead of campaign_name
-        // campaign_id: campaignId,
-        notes,
-      },
+      leadData,
       {
         headers: {
-          Authorization: `Bearer ${token}`,
-        },
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       }
     );
 
-    alert("✅ Lead added successfully!");
-    setName("");
-    setPhone("");
-    setTitle("");
-    setDescription("");
-    setStatus("");
-    setLeadCategory("");
-    setAddress("");
-    setAssignedTo("");
-    setCampaignName("");
-    setNotes("");
-    navigate("/leads");
+    if (response.data.success) {
+      alert("✅ Lead added successfully!");
+      // Clear form
+      setName("");
+      setPhone("");
+      setTitle("");
+      setDescription("");
+      setStatus("");
+      setLeadCategory("");
+      setAddress("");
+      setAssignedTo("");
+      setCampaignName("");
+      setNotes("");
+      navigate("/leads");
+    } else {
+      alert(response.data.message || "Failed to add lead");
+    }
   } catch (error) {
-    console.error("❌ Error adding lead:", error.response?.data || error.message);
-    alert("Failed to add lead 😔");
+    console.error("❌ Error adding lead:", error.response?.data || error);
+    if (error.response?.status === 401) {
+      alert("Session expired. Please log in again.");
+      navigate("/login");
+    } else {
+      alert(error.response?.data?.message || "Failed to add lead 😔");
+    }
   }
 };
 

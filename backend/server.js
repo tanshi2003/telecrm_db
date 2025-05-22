@@ -2,12 +2,20 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const db = require("./config/db");
+const http = require('http');
+const jwt = require('jsonwebtoken');
+const initializeSocket = require('./socket');
+const callsRouter = require('./routes/calls');
 
 // Load environment variables
 dotenv.config();
 
 // Initialize express app
 const app = express();
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+const io = initializeSocket(server);
 
 // ✅ CORS FIRST — before routes!
 app.use(cors({
@@ -39,6 +47,7 @@ app.use("/api/search", searchRoutes);
 app.use("/api/calls", callRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/managers', managerRoutes);
+app.use('/api/calls', callsRouter);
 
 // Root Endpoint
 app.get("/", (req, res) => {
@@ -51,7 +60,7 @@ app.get("/", (req, res) => {
 
 // Start the server (no need for DB connection in this case, pool is already managing it)
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`✅ Server is running on port ${PORT}`);
 });
 

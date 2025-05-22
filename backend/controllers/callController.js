@@ -1,8 +1,247 @@
 const db = require('../config/db');
 const { validationResult } = require('express-validator');
 const responseFormatter = require('../utils/responseFormatter');
+const { v4: uuidv4 } = require('uuid');
 
-const callController = {
+// Store active calls in memory (you might want to use Redis in production)
+const activeCalls = new Map();
+
+const CallController = {
+    // Initialize a new call
+    initiateCall: async (req, res) => {
+        try {
+            const { phoneNumber, offer, callId } = req.body;
+            const callerId = req.user.id;
+
+            // Store call information in memory for WebRTC signaling
+            const callInfo = {
+                id: callId,
+                callerId,
+                phoneNumber,
+                offer,
+                status: 'initiated',
+                createdAt: new Date()
+            };
+            activeCalls.set(callId, callInfo);
+
+            // Create call record in database
+            const query = `
+                INSERT INTO calls 
+                (caller_id, lead_id, start_time, status, call_type, disposition)
+                VALUES (?, ?, NOW(), 'initiated', 'outbound', 'pending')
+            `;
+
+            db.query(query, [callerId, req.body.leadId || null], (err, result) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({
+                        success: false,
+                        error: 'Failed to create call record'
+                    });
+                }
+
+                // Forward the offer to the recipient through Socket.IO
+                const io = req.app.get('io');
+                if (io) {
+                    io.to(phoneNumber).emit('call:incoming', {
+                        offer: offer,
+                        callId: callId,
+                        from: callerId
+                    });
+                }
+
+                res.json({
+                    success: true,
+                    data: {
+                        callId,
+                        dbCallId: result.insertId,
+                        message: 'Call initiated successfully'
+                    }
+                });
+            });
+        } catch (error) {
+            console.error('Error initiating call:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to initiate call'
+            });
+        }
+    },
+
+    // Handle call answer
+    answerCall: async (req, res) => {
+        try {
+            const { callId, answer } = req.body;
+            const recipientId = req.user.id;
+
+            const callInfo = activeCalls.get(callId);
+            if (!callInfo) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Call not found'
+                });
+            }
+
+            // Update call information in memory
+            callInfo.answer = answer;
+            callInfo.recipientId = recipientId;
+            callInfo.status = 'answered';
+            activeCalls.set(callId, callInfo);
+
+            // Forward the answer to the caller through Socket.IO
+            const io = req.app.get('io');
+            if (io) {
+                io.to(callInfo.callerId.toString()).emit('call:accepted', {
+                    answer: answer,
+                    callId: callId
+                });
+            }
+
+            // Update call status in database
+            const query = `
+                UPDATE calls 
+                SET status = 'in-progress',
+                    disposition = 'answered'
+                WHERE id = ?
+            `;
+
+            db.query(query, [callInfo.dbCallId], (err) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({
+                        success: false,
+                        error: 'Failed to update call status'
+                    });
+                }
+
+                res.json({
+                    success: true,
+                    data: {
+                        callId,
+                        message: 'Call answered successfully'
+                    }
+                });
+            });
+        } catch (error) {
+            console.error('Error answering call:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to answer call'
+            });
+        }
+    },
+
+    // Handle ICE candidates
+    handleIceCandidate: async (req, res) => {
+        try {
+            const { callId, candidate, to } = req.body;
+            const userId = req.user.id;
+
+            const callInfo = activeCalls.get(callId);
+            if (!callInfo) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Call not found'
+                });
+            }
+
+            // Forward ICE candidate to the other peer through Socket.IO
+            const io = req.app.get('io');
+            if (io) {
+                io.to(to).emit('call:ice-candidate', {
+                    candidate: candidate,
+                    callId: callId,
+                    from: userId
+                });
+            }
+
+            res.json({
+                success: true,
+                data: {
+                    callId,
+                    message: 'ICE candidate forwarded'
+                }
+            });
+        } catch (error) {
+            console.error('Error handling ICE candidate:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to handle ICE candidate'
+            });
+        }
+    },
+
+    // End a call
+    endCall: async (req, res) => {
+        try {
+            const { callId } = req.body;
+            const userId = req.user.id;
+
+            const callInfo = activeCalls.get(callId);
+            if (!callInfo) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Call not found'
+                });
+            }
+
+            // Update call information in memory
+            callInfo.status = 'ended';
+            callInfo.endedAt = new Date();
+            callInfo.endedBy = userId;
+
+            // Calculate call duration
+            const duration = Math.floor((callInfo.endedAt - callInfo.createdAt) / 1000);
+
+            // Update call record in database
+            const query = `
+                UPDATE calls 
+                SET end_time = NOW(),
+                    duration = ?,
+                    status = CASE 
+                        WHEN ? = 'answered' THEN 'completed'
+                        ELSE 'missed'
+                    END,
+                    disposition = CASE 
+                        WHEN ? = 'answered' THEN 'completed'
+                        ELSE 'missed'
+                    END
+                WHERE id = ?
+            `;
+
+            db.query(
+                query,
+                [duration, callInfo.status, callInfo.status, callInfo.dbCallId],
+                (err) => {
+                    if (err) {
+                        console.error('Database error:', err);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Failed to update call record'
+                        });
+                    }
+
+                    // Remove from active calls
+                    activeCalls.delete(callId);
+
+                    res.json({
+                        success: true,
+                        data: {
+                            callId,
+                            message: 'Call ended successfully'
+                        }
+                    });
+                }
+            );
+        } catch (error) {
+            console.error('Error ending call:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to end call'
+            });
+        }
+    },
+
     // Create a new call
     createCall: (req, res) => {
         try {
@@ -415,4 +654,4 @@ const callController = {
     }
 };
 
-module.exports = callController; 
+module.exports = CallController; 

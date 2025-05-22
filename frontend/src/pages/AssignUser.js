@@ -4,6 +4,7 @@ import axios from "axios";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { AuthContext } from "../context/AuthContext";
+import BackButton from "../components/BackButton";
 
 const AssignUser = () => {
   // const navigate = useNavigate();
@@ -32,15 +33,22 @@ const AssignUser = () => {
             `http://localhost:5000/api/campaigns/${firstCampaign.id}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          setSelectedCampaign(res.data.data);
-        }
-      } catch (error) {
-        console.error("Error fetching campaigns:", error.response?.data || error.message);
-      } finally {
-        setLoading(false);
+           const campaignData = res.data.data
+          ? {
+              ...res.data.data,
+              start_date: res.data.data.start_date ? res.data.data.start_date.slice(0, 10) : "",
+              end_date: res.data.data.end_date ? res.data.data.end_date.slice(0, 10) : "",
+            }
+          : firstCampaign;
+        setSelectedCampaign(campaignData);
       }
-    };
-    fetchCampaigns();
+    } catch (error) {
+      console.error("Error fetching campaigns:", error.response?.data || error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchCampaigns();
   }, []);
 
   // Fetch users
@@ -59,9 +67,13 @@ const AssignUser = () => {
     fetchUsers();
   }, []);
 
-  // Reset assignForm when campaign changes
+  // Pre-check already assigned users when campaign changes
   useEffect(() => {
-    setAssignForm({ userIds: [] });
+    setAssignForm({
+      userIds: Array.isArray(selectedCampaign?.assigned_users)
+        ? selectedCampaign.assigned_users.map(u => u.id)
+        : []
+    });
   }, [selectedCampaign]);
 
   // Only show users with role 'caller' or 'field_employee'
@@ -160,7 +172,9 @@ const AssignUser = () => {
         <div className="flex h-[calc(100vh-4rem)] mt-16">
           {/* Campaign List */}
           <div className="w-1/3 bg-gray-50 p-4 overflow-y-auto border-r">
-            <h2 className="text-xl font-bold mb-4">Campaigns</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Campaigns</h2>
+            </div>
             {loading ? (
               <p>Loading campaigns...</p>
             ) : campaigns.length === 0 ? (
@@ -190,6 +204,10 @@ const AssignUser = () => {
 
           {/* Campaign Detail Panel */}
           <div className="w-2/3 p-6 bg-white overflow-y-auto relative">
+            {/* Single BackButton at top right */}
+            <div className="absolute top-4 right-6 z-10">
+              <BackButton />
+            </div>
             {detailsLoading ? (
               <div className="flex justify-center items-center h-full">
                 <p>Loading campaign details...</p>
@@ -197,13 +215,38 @@ const AssignUser = () => {
             ) : selectedCampaign ? (
               <>
                 <div className="space-y-2 relative border rounded p-4 shadow mb-4">
-                  <h3 className="text-xl font-semibold text-gray-700">{selectedCampaign.name}</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-semibold text-gray-700">{selectedCampaign.name}</h3>
+                  </div>
                   <p><strong>Description:</strong> {selectedCampaign.description || 'No description'}</p>
                   <p><strong>Status:</strong> {selectedCampaign.status || 'Not set'}</p>
                   <p><strong>Priority:</strong> {selectedCampaign.priority || 'Not set'}</p>
                   <p><strong>Lead Count:</strong> {selectedCampaign.lead_count || selectedCampaign.leads?.length || 0}</p>
-                  <p><strong>Start Date:</strong> {selectedCampaign.start_date || 'Not set'}</p>
-                  <p><strong>End Date:</strong> {selectedCampaign.end_date || 'Not set'}</p>
+                 <p> <strong>Start Date:</strong>{" "}
+    {selectedCampaign.start_date
+      ? new Date(selectedCampaign.start_date).toLocaleString("en-IN", {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : "Not set"}
+  </p>
+  <p>
+    <strong>End Date:</strong>{" "}
+    {selectedCampaign.end_date
+      ? new Date(selectedCampaign.end_date).toLocaleString("en-IN", {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : "Not set"}
+  </p>
                   <p>
                     <strong>Users Assigned:</strong>{" "}
                     {Array.isArray(selectedCampaign.assigned_users) ? (
@@ -236,11 +279,7 @@ const AssignUser = () => {
                               <input
                                 type="checkbox"
                                 value={u.id}
-                                checked={
-                                  assignForm.userIds.includes(u.id) ||
-                                  (Array.isArray(selectedCampaign.assigned_users) &&
-                                    selectedCampaign.assigned_users.some(au => au.id === u.id))
-                                }
+                                checked={assignForm.userIds.includes(u.id)}
                                 onChange={handleAssignFormChange}
                                 className="accent-blue-600"
                               />

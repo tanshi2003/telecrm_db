@@ -4,6 +4,7 @@ const callController = require("../controllers/callController");
 const { authenticateToken } = require("../middlewares/auth");
 const db = require('../config/db');
 const auth = require('../middleware/auth');
+const CallController = require('../controllers/callController');
 
 // Protected routes - require authentication
 router.use(authenticateToken);
@@ -219,5 +220,11 @@ router.delete('/:id', auth, (req, res) => {
         });
     });
 });
+
+// WebRTC signaling routes
+router.post('/initiate', auth, CallController.initiateCall);
+router.post('/answer', auth, CallController.answerCall);
+router.post('/ice-candidate', auth, CallController.handleIceCandidate);
+router.post('/end', auth, CallController.endCall);
 
 module.exports = router; 

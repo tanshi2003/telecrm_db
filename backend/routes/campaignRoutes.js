@@ -23,8 +23,9 @@ router.get("/:id", roleMiddleware(["admin", "manager"]), campaignController.getC
 router.put("/:id", roleMiddleware(["admin", "manager"]), campaignController.updateCampaign);
 
 // Delete a campaign
-router.delete("/:id", roleMiddleware(["admin"]), campaignController.deleteCampaign);
-
+//router.delete("/:id", roleMiddleware(["admin"]), campaignController.deleteCampaign);
+//router.delete('/api/campaigns/:id', campaignController.deleteCampaign);
+router.delete('/:id', roleMiddleware(["admin"]), campaignController.deleteCampaign);
 // Assign users to campaign
 router.post("/:id/assign-users", roleMiddleware(["admin"]), campaignController.assignUsersToCampaign);
 
