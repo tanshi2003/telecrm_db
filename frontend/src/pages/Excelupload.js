@@ -1,10 +1,10 @@
 import React, { useRef, useState } from "react";
 import Sidebar from "../components/Sidebar";
+import BackButton from "../components/BackButton";
 import { FaTrashAlt, FaAt } from "react-icons/fa";
 import { MdOutlineDateRange } from "react-icons/md";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-
 
 const Excelupload = () => {
   const fileInputRef = useRef(null);
@@ -57,7 +57,11 @@ const Excelupload = () => {
   return (
     <div className="flex min-h-screen overflow-hidden">
       <Sidebar />
-      <div className="flex-grow bg-gray-100 ml-64 mt-16 p-8">
+      <div className="flex-grow bg-gray-100 ml-64 mt-16 p-8 relative">
+        {/* Back Button at top right */}
+        <div className="absolute top-8 right-8 z-10">
+          <BackButton />
+        </div>
         {/* Bulk Upload Section */}
         <div className="mb-12 max-w-2xl mx-auto">
           <h2 className="text-xl font-semibold mb-4">Bulk Upload</h2>

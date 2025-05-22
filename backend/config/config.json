@@ -5,7 +5,8 @@
       "database": "telecrm_db",
       "host": "127.0.0.1",
       "dialect": "mysql",
-      "logging": false
+      "logging": false,
+      "jwtSecret": "secret"
     },
     "test": {
       "username": "root",
@@ -13,7 +14,8 @@
       "database": "database_test",
       "host": "127.0.0.1",
       "dialect": "mysql",
-      "logging": false
+      "logging": false,
+      "jwtSecret": "secret"
     },
     "production": {
       "username": "root",
@@ -21,6 +23,7 @@
       "database": "database_production",
       "host": "127.0.0.1",
       "dialect": "mysql",
-      "logging": false
+      "logging": false,
+      "jwtSecret": "secret"
     }
   }

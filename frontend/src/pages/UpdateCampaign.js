@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { AuthContext } from "../context/AuthContext";
+import BackButton from "../components/BackButton";
 
 const UpdateCampaign = () => {
   const navigate = useNavigate();
@@ -129,7 +130,9 @@ const UpdateCampaign = () => {
         <div className="flex h-[calc(100vh-4rem)] mt-16">
           {/* Campaign List */}
           <div className="w-1/3 bg-gray-50 p-4 overflow-y-auto border-r">
-            <h2 className="text-xl font-bold mb-4">Campaigns</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Campaigns</h2>
+            </div>
             {loading ? (
               <p>Loading...</p>
             ) : campaigns.length === 0 ? (
@@ -162,6 +165,10 @@ const UpdateCampaign = () => {
 
           {/* Campaign Detail Panel */}
           <div className="w-2/3 p-6 bg-white overflow-y-auto relative">
+            {/* Single BackButton at top right */}
+            <div className="absolute top-4 right-6 z-10">
+              <BackButton />
+            </div>
             {selectedCampaign ? (
               isEditing ? (
                 <form onSubmit={handleEditFormSubmit} className="border p-4 rounded shadow mb-4 space-y-3">
