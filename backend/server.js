@@ -5,6 +5,7 @@ const db = require("./config/db");
 const http = require('http');
 const jwt = require('jsonwebtoken');
 const initializeSocket = require('./socket');
+const callsRouter = require('./routes/calls');
 
 // Load environment variables
 dotenv.config();
@@ -46,6 +47,7 @@ app.use("/api/search", searchRoutes);
 app.use("/api/calls", callRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/managers', managerRoutes);
+app.use('/api/calls', callsRouter);
 
 // Root Endpoint
 app.get("/", (req, res) => {
