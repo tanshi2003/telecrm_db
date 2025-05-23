@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const db = require("./config/db");
+const viewsRoutes = require('./routes/viewsRoutes');
 
 // Load environment variables
 dotenv.config();
@@ -39,6 +40,7 @@ app.use("/api/search", searchRoutes);
 app.use("/api/calls", callRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/managers', managerRoutes);
+app.use('/api/Views', viewsRoutes);
 
 // Root Endpoint
 app.get("/", (req, res) => {

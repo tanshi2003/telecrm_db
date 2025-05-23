@@ -36,7 +36,10 @@ import TeamsList from "./pages/TeamsList";
 import TeamManagement from "./pages/team-management";
 import Meetings from "./pages/Meetings";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Reports from "./pages/ReportsLeaderboard";
+import Reports from "./pages/Report";
+import Reports1 from "./pages/ReportLeaderboard";
+import Reports2 from "./pages/CallReport";
+import LeadsChartReport from "./pages/LeadsReport";
 import ManagerUserManagement from "./pages/ManagerUserManagement";
 import TeamView from "./pages/TeamView";
 import ViewTeam from "./pages/ViewTeam";
@@ -326,6 +329,41 @@ function AppContent() {
                 </ProtectedRoute>
               }
             />
+             <Route
+              path="/Report"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <Reports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ReportLeaderboard"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <Reports1 />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/CallReport"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <Reports2 />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/LeadsReport"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <LeadsChartReport />
+                </ProtectedRoute>
+              }
+            />
+            
+            
+
 
             {/* Add catch-all routes for old paths */}
             <Route

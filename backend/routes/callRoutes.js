@@ -4,6 +4,7 @@ const callController = require("../controllers/callController");
 const { authenticateToken } = require("../middlewares/auth");
 const db = require('../config/db');
 const auth = require('../middleware/auth');
+const jwt = require('jsonwebtoken');
 
 // Protected routes - require authentication
 router.use(authenticateToken);
@@ -12,7 +13,7 @@ router.use(authenticateToken);
 router.post("/", callController.createCall);
 
 // Get all calls for a specific caller
-router.get("/", callController.getCallsByCallerId);
+//router.get("/", callController.getCallsByCallerId);
 
 // Get a specific call record
 router.get("/:id", callController.getCallById);
@@ -32,13 +33,14 @@ router.get("/stats/monthly/:callerId", callController.getMonthlyCallerStats);
 router.get("/stats/caller/:callerId", callController.getCallerStats);
 
 // Get all calls
+
 router.get('/', auth, (req, res) => {
     const query = req.user.role === 'admin' || req.user.role === 'manager'
         ? 'SELECT * FROM calls'
         : 'SELECT * FROM calls WHERE caller_id = ?';
-    
     const params = req.user.role === 'admin' || req.user.role === 'manager' ? [] : [req.user.id];
-    
+    console.log("Query:", query, "Params:", params);
+
     db.query(query, params, (err, results) => {
         if (err) {
             console.error('Database error:', err);
@@ -47,13 +49,13 @@ router.get('/', auth, (req, res) => {
                 message: 'Database error'
             });
         }
-        
         res.json({
             success: true,
             data: results
         });
     });
 });
+
 
 // Get call by ID
 router.get('/:id', auth, (req, res) => {

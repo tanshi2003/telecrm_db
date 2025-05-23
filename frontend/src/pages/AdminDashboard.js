@@ -100,7 +100,7 @@ const AdminDashboard = () => {
             <p>Performance summaries by user, team, or campaign. Export data and download PDFs.</p>
             <button
               className="mt-4 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-              onClick={() => handleNavigation("/ReportsLeaderboard")}
+              onClick={() => handleNavigation("/Report")}
             >
               View Reports
             </button>

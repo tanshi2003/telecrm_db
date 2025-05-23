@@ -14,6 +14,7 @@
     "jsonwebtoken": "^9.0.2",
     "mysql": "^2.18.1",
     "mysql2": "^3.12.0",
+    "recharts": "^2.15.3",
     "sequelize": "^6.37.5"
   },
   "name": "backend",
