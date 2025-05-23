@@ -42,6 +42,7 @@ import TeamView from "./pages/TeamView";
 import ViewTeam from "./pages/ViewTeam";
 import LeadAssignment from "./pages/LeadAssignment";
 import CampaignManagement from "./pages/CampaignManagement";
+import CreateCampaignWithUsers from "./pages/CreateCampaignWithUsers";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Toaster } from 'react-hot-toast';
@@ -348,7 +349,14 @@ function AppContent() {
                 </ProtectedRoute>
               }
             />
-
+            <Route
+              path="/create-campaign-with-users"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <CreateCampaignWithUsers />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </AnimatePresence>

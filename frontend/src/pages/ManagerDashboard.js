@@ -130,13 +130,7 @@ const ManagerDashboard = () => {
                 <UserCog size={20} />
                 Manage Team
               </button>
-              <button
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                onClick={() => navigate("/manager/campaigns")}
-              >
-                <BarChart2 size={20} />
-                Manage Campaigns
-              </button>
+              
             </div>
           </div>
 
@@ -671,7 +665,7 @@ const ManagerDashboard = () => {
                         <div
                           className="bg-green-600 h-1.5 rounded-full"
                           style={{ width: `${campaign.conversion_rate}%` }}
-                        ></div>
+                        />
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
                         <span>Assigned to: {campaign.assigned_users} users</span>

@@ -10,7 +10,8 @@ const campaignController = {
             leads = []
         } = req.body;
 
-        const admin_id = req.user.id;
+        const user = req.user;
+        const admin_id = user.role === 'admin' ? user.id : null;
 
         if (!name || !description || !status || !priority || !start_date) {
             return res.status(400).json(responseFormatter(false, "All required fields must be provided"));
@@ -33,10 +34,24 @@ const campaignController = {
 
                 const campaignId = campaignResult.insertId;
 
-                // Insert assigned users
-                assigned_users.forEach((userId) => {
-                    db.query("INSERT INTO campaign_users (campaign_id, user_id) VALUES (?, ?)", [campaignId, userId]);
-                });
+                // Insert assigned users (including the manager if they're creating the campaign)
+                const usersToAssign = Array.isArray(assigned_users) ? [...assigned_users] : [];
+                if (user.role === 'manager') {
+                    usersToAssign.push(user.id);
+                }
+                
+                if (usersToAssign.length > 0) {
+                    const values = usersToAssign.map(userId => [campaignId, userId]);
+                    db.query(
+                        "INSERT INTO campaign_users (campaign_id, user_id) VALUES ?",
+                        [values],
+                        (err) => {
+                            if (err) {
+                                console.error("Error assigning users:", err);
+                            }
+                        }
+                    );
+                }
 
                 // Insert leads
                 leads.forEach((lead) => {
@@ -54,7 +69,7 @@ const campaignController = {
                 // Log campaign creation
                 db.query(
                     "INSERT INTO campaign_logs (campaign_id, action, performed_by, created_at) VALUES (?, ?, ?, NOW())",
-                    [campaignId, "Campaign created", admin_id]
+                    [campaignId, "Campaign created", user.id]
                 );
 
                 res.status(201).json(responseFormatter(true, "Campaign created successfully", { campaign_id: campaignId }));
@@ -62,14 +77,91 @@ const campaignController = {
         );
     },
 
-    // 📤 Get All Campaigns
+    // 📤 Get All Campaigns (with assigned users and progress/statistics)
     getCampaigns: (req, res) => {
         db.query("SELECT * FROM campaigns", (err, campaigns) => {
             if (err) {
                 console.error("Error fetching campaigns:", err);
                 return res.status(500).json(responseFormatter(false, "Database error", err.message));
             }
-            res.json(responseFormatter(true, "Campaigns fetched successfully", campaigns));
+            if (!campaigns.length) {
+                return res.json(responseFormatter(true, "Campaigns fetched successfully", []));
+            }
+
+            const campaignIds = campaigns.map(c => c.id);
+
+            // Fetch assigned users for all campaigns
+            db.query(
+                `SELECT cu.campaign_id, u.id, u.name, u.email, u.role
+                 FROM campaign_users cu
+                 JOIN users u ON cu.user_id = u.id
+                 WHERE cu.campaign_id IN (?)`,
+                [campaignIds],
+                (err, userRows) => {
+                    if (err) {
+                        console.error("Error fetching assigned users:", err);
+                        return res.status(500).json(responseFormatter(false, "Database error", err.message));
+                    }
+
+                    // Fetch lead stats for all campaigns
+                    db.query(
+                        `SELECT campaign_id, 
+                                SUM(status='Cold') AS cold,
+                                SUM(status='Warm') AS warm,
+                                SUM(status='Hot') AS hot,
+                                SUM(status='Converted') AS converted,
+                                COUNT(*) AS total
+                         FROM leads
+                         WHERE campaign_id IN (?)
+                         GROUP BY campaign_id`,
+                        [campaignIds],
+                        (err, leadStatsRows) => {
+                            if (err) {
+                                console.error("Error fetching leads:", err);
+                                return res.status(500).json(responseFormatter(false, "Database error", err.message));
+                            }
+
+                            // Map users and stats to campaigns
+                            const usersByCampaign = {};
+                            userRows.forEach(u => {
+                                if (!usersByCampaign[u.campaign_id]) usersByCampaign[u.campaign_id] = [];
+                                usersByCampaign[u.campaign_id].push({
+                                    id: u.id,
+                                    name: u.name,
+                                    email: u.email,
+                                    role: u.role
+                                });
+                            });
+
+                            const statsByCampaign = {};
+                            leadStatsRows.forEach(row => {
+                                statsByCampaign[row.campaign_id] = row;
+                            });
+
+                            // Attach all info to each campaign
+                            const campaignsWithDetails = campaigns.map(c => {
+                                const stats = statsByCampaign[c.id] || {};
+                                const total = stats.total || 0;
+                                const cold = stats.cold || 0;
+                                const warm = stats.warm || 0;
+                                const hot = stats.hot || 0;
+                                const converted = stats.converted || 0;
+                                return {
+                                    ...c,
+                                    assigned_users: usersByCampaign[c.id] || [],
+                                    total_leads: total,
+                                    conversion_rate: total ? ((converted / total) * 100).toFixed(2) : "0.00",
+                                    coldLeadsPercentage: total ? ((cold / total) * 100).toFixed(2) : "0.00",
+                                    warmLeadsPercentage: total ? ((warm / total) * 100).toFixed(2) : "0.00",
+                                    hotLeadsPercentage: total ? ((hot / total) * 100).toFixed(2) : "0.00"
+                                };
+                            });
+
+                            res.json(responseFormatter(true, "Campaigns fetched successfully", campaignsWithDetails));
+                        }
+                    );
+                }
+            );
         });
     },
 
@@ -129,24 +221,24 @@ const campaignController = {
     },
 
     // ❌ Delete Campaign
-   // ❌ Delete Campaign
     deleteCampaign: (req, res) => {
-    const { id } = req.params; // Make sure this line is present!
+        const { id } = req.params;
 
-    db.query("DELETE FROM campaign_users WHERE campaign_id = ?", [id], (err) => {
-        if (err) return res.status(500).json(responseFormatter(false, "Failed to delete campaign users"));
+        db.query("DELETE FROM campaign_users WHERE campaign_id = ?", [id], (err) => {
+            if (err) return res.status(500).json(responseFormatter(false, "Failed to delete campaign users"));
 
-        db.query("DELETE FROM campaigns WHERE id = ?", [id], (err, result) => {
-            if (err) return res.status(500).json(responseFormatter(false, "Failed to delete campaign"));
+            db.query("DELETE FROM campaigns WHERE id = ?", [id], (err, result) => {
+                if (err) return res.status(500).json(responseFormatter(false, "Failed to delete campaign"));
 
-            if (result.affectedRows === 0) {
-                return res.status(404).json(responseFormatter(false, "Campaign not found"));
-            }
+                if (result.affectedRows === 0) {
+                    return res.status(404).json(responseFormatter(false, "Campaign not found"));
+                }
 
-            res.json(responseFormatter(true, "Campaign deleted successfully"));
+                res.json(responseFormatter(true, "Campaign deleted successfully"));
+            });
         });
-    });
-},
+    },
+
     // 📊 Campaign Progress
     getCampaignProgress: (req, res) => {
         const { id } = req.params;
@@ -204,8 +296,16 @@ const campaignController = {
 
                 console.log("Found assigned users:", userRows);
 
-                // Get total leads
-                const leadQuery = "SELECT COUNT(*) AS total_leads FROM leads WHERE campaign_id = ?";
+                // Get total leads and lead stats
+                const leadQuery = `
+                    SELECT 
+                        COUNT(*) AS total_leads,
+                        SUM(status='Cold') AS cold,
+                        SUM(status='Warm') AS warm,
+                        SUM(status='Hot') AS hot,
+                        SUM(status='Converted') AS converted
+                    FROM leads WHERE campaign_id = ?
+                `;
                 console.log("Executing lead query:", leadQuery, "with ID:", id);
                 
                 db.query(leadQuery, [id], (err, leadRows) => {
@@ -214,9 +314,19 @@ const campaignController = {
                         return res.status(500).json(responseFormatter(false, "Database error", err.message));
                     }
 
-                    console.log("Found lead count:", leadRows[0]);
+                    const stats = leadRows[0] || {};
+                    const total = stats.total_leads || 0;
+                    const cold = stats.cold || 0;
+                    const warm = stats.warm || 0;
+                    const hot = stats.hot || 0;
+                    const converted = stats.converted || 0;
+
                     campaign.assigned_users = userRows;
-                    campaign.total_leads = leadRows[0].total_leads;
+                    campaign.total_leads = total;
+                    campaign.conversion_rate = total ? ((converted / total) * 100).toFixed(2) : "0.00";
+                    campaign.coldLeadsPercentage = total ? ((cold / total) * 100).toFixed(2) : "0.00";
+                    campaign.warmLeadsPercentage = total ? ((warm / total) * 100).toFixed(2) : "0.00";
+                    campaign.hotLeadsPercentage = total ? ((hot / total) * 100).toFixed(2) : "0.00";
 
                     console.log("Final campaign object being sent:", campaign);
                     res.json(responseFormatter(true, "Campaign fetched successfully", campaign));
@@ -268,7 +378,7 @@ const campaignController = {
         });
     },
 
-    // 🗑️ Remove users from campaign
+    // 🗑 Remove users from campaign
     removeUsersFromCampaign: (req, res) => {
         const { id } = req.params;
         const { user_ids } = req.body;
@@ -388,7 +498,20 @@ const campaignController = {
             console.log("Processed campaign results:", processedResults);
             res.json(responseFormatter(true, "Campaigns fetched successfully", processedResults));
         });
-    }
+    },
+
+    // Get active campaigns count
+    getActiveCampaignsCount: (req, res) => {
+        db.query(
+            "SELECT COUNT(*) AS activeCount FROM campaigns WHERE status = 'active'",
+            (err, result) => {
+                if (err) {
+                    return res.status(500).json({ success: false, message: "Database error", error: err.message });
+                }
+                res.json({ success: true, data: result[0].activeCount });
+            }
+        );
+    },
 };
 
 module.exports = campaignController;
