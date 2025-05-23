@@ -112,33 +112,38 @@ const CallerDashboard = () => {
 
   // Function to fetch KPI data
   const fetchKpiData = async (userId) => {
+    console.log('Starting fetchKpiData for user:', userId);
     setIsLoading(true);
     setError(null);
     const token = localStorage.getItem("token");
+    console.log('Token available:', !!token);
 
     try {
       const axiosConfig = {
-        baseURL: 'http://localhost:5000/api',
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       };
 
-      // Get caller's leads - using the main leads endpoint
-      const leadsResponse = await axios.get('/leads', axiosConfig);
+      console.log('Fetching leads...');
+      // Get caller's leads
+      const leadsResponse = await axios.get('http://localhost:5000/api/leads', axiosConfig);
+      console.log('Leads response:', leadsResponse.data);
       const leads = leadsResponse.data.data || [];
-      setLeads(leads); // Store leads in state
+      setLeads(leads);
 
+      console.log('Fetching campaigns...');
       // Get caller's assigned campaigns
-      const campaignResponse = await axios.get(`/campaigns/user/${userId}/campaigns`, axiosConfig);
-      console.log('Campaign Response:', campaignResponse.data); // Debug log
+      const campaignResponse = await axios.get(`http://localhost:5000/api/campaigns/user/${userId}/campaigns`, axiosConfig);
+      console.log('Campaigns response:', campaignResponse.data);
       const campaigns = campaignResponse.data.data || [];
       
       // Calculate KPIs from leads
       const today = new Date().toISOString().split('T')[0];
+      console.log('Calculating KPIs for date:', today);
       
-      setKpiData({
+      const kpiData = {
         totalLeads: leads.length,
         contactedToday: leads.filter(lead => 
           lead.status === "Contacted" && 
@@ -157,11 +162,20 @@ const CallerDashboard = () => {
           lead.status === "Not Reachable"
         ).length,
         currentCampaign: campaigns.length > 0 ? campaigns[0].name : "No Campaign Assigned",
-        assignedCampaigns: campaigns // Store all assigned campaigns
-      });
+        assignedCampaigns: campaigns
+      };
+      
+      console.log('Setting KPI data:', kpiData);
+      setKpiData(kpiData);
 
     } catch (error) {
-      console.error('Error fetching KPI data:', error);
+      console.error('Error in fetchKpiData:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config
+      });
       setError(error.response?.data?.message || "Failed to fetch data");
     } finally {
       setIsLoading(false);
@@ -169,8 +183,11 @@ const CallerDashboard = () => {
   };
 
   const fetchCallMetrics = async (userId) => {
+    console.log('Starting fetchCallMetrics for user:', userId);
     try {
       const token = localStorage.getItem("token");
+      console.log('Token available:', !!token);
+      
       const axiosConfig = {
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -178,32 +195,48 @@ const CallerDashboard = () => {
         }
       };
 
+      console.log('Fetching performance metrics...');
       // Get performance metrics
       const metrics = await axios.get(
         `http://localhost:5000/api/calls/stats/performance/${userId}`,
         axiosConfig
       );
+      console.log('Performance metrics response:', metrics.data);
 
+      console.log('Fetching callback efficiency...');
       // Get callback efficiency
       const efficiency = await axios.get(
         `http://localhost:5000/api/calls/stats/callback-efficiency/${userId}`,
         axiosConfig
       );
+      console.log('Callback efficiency response:', efficiency.data);
       
-      setCallMetrics({
+      const callMetrics = {
         totalCalls: metrics.data.data.totalCalls || 0,
         avgCallDuration: metrics.data.data.averageCallDuration || 0,
         successRate: metrics.data.data.successRate || 0,
         callbackRate: efficiency.data.data.callbackRate || 0
-      });
+      };
+      
+      console.log('Setting call metrics:', callMetrics);
+      setCallMetrics(callMetrics);
     } catch (error) {
-      console.error('Error fetching call metrics:', error);
+      console.error('Error in fetchCallMetrics:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config
+      });
     }
   };
 
   const fetchBestHours = async (userId) => {
+    console.log('Starting fetchBestHours for user:', userId);
     try {
       const token = localStorage.getItem("token");
+      console.log('Token available:', !!token);
+      
       const axiosConfig = {
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -211,15 +244,36 @@ const CallerDashboard = () => {
         }
       };
 
+      console.log('Fetching best hours...');
       const response = await axios.get(
         `http://localhost:5000/api/calls/stats/best-hours/${userId}`,
         axiosConfig
       );
+      console.log('Best hours response:', response.data);
       
       setBestHours(response.data.data || []);
     } catch (error) {
-      console.error('Error fetching best hours:', error);
-      setBestHours([]); // Reset to empty array on error
+      console.error('Error in fetchBestHours:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config
+      });
+      setBestHours([]);
+    }
+  };
+
+  // Function to refresh KPI data
+  const refreshData = () => {
+    console.log('Refreshing all data...');
+    if (user?.id) {
+      console.log('User ID available:', user.id);
+      fetchKpiData(user.id);
+      fetchCallMetrics(user.id);
+      fetchBestHours(user.id);
+    } else {
+      console.error('No user ID available for refresh');
     }
   };
 
@@ -253,15 +307,6 @@ const CallerDashboard = () => {
     } catch (error) {
       console.error('Error creating call:', error);
       setError(error.response?.data?.message || "Failed to create call");
-    }
-  };
-
-  // Function to refresh KPI data
-  const refreshData = () => {
-    if (user?.id) {
-      fetchKpiData(user.id);
-      fetchCallMetrics(user.id);
-      fetchBestHours(user.id);
     }
   };
 
@@ -596,20 +641,35 @@ const CallerDashboard = () => {
         error: null
       }));
 
-      // End the call through your backend
-      const token = localStorage.getItem("token");
-      await axios.post(
-        'http://localhost:5000/api/calls/end',
-        {
-          callSid: callId // The Twilio Call SID
-        },
-        {
-          headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+      // Get Exotel configuration
+      const token = localStorage.getItem('token');
+      const configResponse = await axios.get('http://localhost:5000/api/exotel-config', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      );
+      });
+
+      if (!configResponse.data.success) {
+        throw new Error('Failed to get Exotel configuration');
+      }
+
+      const { sid, token: exotelToken } = configResponse.data.data;
+
+      // End the call through Exotel API
+      await axios({
+        method: 'post',
+        url: `https://api.exotel.com/v1/Accounts/${sid}/Calls/${callId}.json`,
+        data: new URLSearchParams({ Status: 'completed' }),
+        auth: {
+          username: sid,
+          password: exotelToken
+        },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
+        }
+      });
 
       // Reset all call state
       setCallStatus('idle');
@@ -626,6 +686,7 @@ const CallerDashboard = () => {
 
     } catch (error) {
       console.error('Error ending call:', error);
+      setCallFeedback(error.message || 'Failed to end call');
     }
   };
 
@@ -755,78 +816,162 @@ const CallerDashboard = () => {
     try {
       console.log('Starting call to:', phoneNumber);
       
-      // Clean the phone number
-      let cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
-      if (cleanNumber.startsWith('91')) {
-        cleanNumber = cleanNumber.substring(2);
-      }
-      cleanNumber = '+91' + cleanNumber;
-      
-      // Set the cleaned number
-      setDialedNumber(cleanNumber);
-      
       // Get token from localStorage
-      const token = localStorage.getItem("token");
-      console.log('Token:', token); // Debug log
-      
+      const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('No authentication token found');
       }
 
+      // Get user data from localStorage
+      const userData = localStorage.getItem('user');
+      if (!userData) {
+        throw new Error('No user data found');
+      }
+
+      const user = JSON.parse(userData);
+      if (!user || !user.id) {
+        throw new Error('Invalid user data');
+      }
+
+      // Clean the phone number
+      let cleanedNumber = phoneNumber.replace(/[^0-9]/g, '');
+      if (cleanedNumber.startsWith('91')) {
+        cleanedNumber = cleanedNumber.substring(2);
+      }
+      if (!cleanedNumber.startsWith('0')) {
+        cleanedNumber = '0' + cleanedNumber;
+      }
+
       // Set call status to dialing
       setCallStatus('dialing');
-      
-      // Make API call to your backend to initiate Exotel call
-      const response = await axios({
-        method: 'post',
-        url: 'http://localhost:5000/api/calls/initiate',
-        data: {
-          to: cleanNumber,
-          from: companyNumber,
-          leadId: recipientId,
-          callerId: user?.id // Add callerId from user object
-        },
+      setCallTimer(0);
+
+      // Get Exotel configuration
+      const configResponse = await axios.get('http://localhost:5000/api/exotel-config', {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        validateStatus: function (status) {
-          return status < 500; // Resolve only if the status code is less than 500
+          'Content-Type': 'application/json'
         }
       });
 
-      console.log('Call API Response:', response.data); // Debug log
-
-      if (response.status === 401) {
-        throw new Error('Authentication failed. Please log in again.');
+      if (!configResponse.data.success) {
+        throw new Error('Failed to get Exotel configuration');
       }
 
-      if (response.data.success) {
-        setCallStatus('connected');
-        // Start call timer
-        const timer = setInterval(() => {
-          setCallDuration(prev => prev + 1);
-        }, 1000);
-        setCallTimer(timer);
-      } else {
-        throw new Error(response.data.message || 'Failed to initiate call');
-      }
-      
-    } catch (error) {
-      console.error('Error starting call:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        headers: error.response?.headers,
-        config: error.config // Log the request configuration
+      const { sid, token: exotelToken, phone_number: exotelNumber } = configResponse.data.data;
+
+      // Make the API call directly to Exotel
+      const formData = new URLSearchParams();
+      formData.append('From', exotelNumber);
+      formData.append('To', cleanedNumber);
+      formData.append('CallerId', exotelNumber);
+      formData.append('CallType', 'trans');
+      formData.append('TimeLimit', '300');
+      formData.append('Record', 'true');
+      formData.append('PlayDtmf', 'true');
+      formData.append('CallerName', 'TeleCRM');
+
+      console.log('Making Exotel API request with data:', {
+        url: `https://api.exotel.com/v1/Accounts/${sid}/Calls/connect`,
+        formData: Object.fromEntries(formData),
+        phoneNumber: {
+          original: phoneNumber,
+          formatted: cleanedNumber,
+          exotelNumber: exotelNumber
+        }
       });
-      
-      setCallStatus('idle');
-      setCallFeedback(prev => ({
-        ...prev,
-        error: error.response?.data?.message || error.message || 'Failed to start call'
-      }));
+
+      const response = await axios({
+        method: 'post',
+        url: `https://api.exotel.com/v1/Accounts/${sid}/Calls/connect`,
+        data: formData,
+        auth: {
+          username: sid,
+          password: exotelToken
+        },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
+        }
+      });
+
+      console.log('Exotel API response:', response.data);
+
+      if (response.data.RestException) {
+        throw new Error(`Exotel API error: ${response.data.RestException.Message}`);
+      }
+
+      // Get the call SID from the response
+      let exotelCallSid = null;
+      if (response.data.Call && response.data.Call.Sid) {
+        exotelCallSid = response.data.Call.Sid;
+      } else if (response.data.Sid) {
+        exotelCallSid = response.data.Sid;
+      } else if (response.data.call_sid) {
+        exotelCallSid = response.data.call_sid;
+      } else if (response.data.callSid) {
+        exotelCallSid = response.data.callSid;
+      }
+
+      if (!exotelCallSid) {
+        throw new Error('No call SID received from Exotel');
+      }
+
+      setCallId(exotelCallSid);
+      console.log('Setting call ID:', exotelCallSid);
+
+      // Start the timer
+      const timer = setInterval(() => {
+        setCallTimer(prev => prev + 1);
+      }, 1000);
+      setTimerInterval(timer);
+
+      // Poll for call status
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await axios({
+            method: 'get',
+            url: `https://api.exotel.com/v1/Accounts/${sid}/Calls/${exotelCallSid}`,
+            auth: {
+              username: sid,
+              password: exotelToken
+            },
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+
+          console.log('Call status response:', statusResponse.data);
+
+          if (statusResponse.data.Call && statusResponse.data.Call.Status) {
+            const status = statusResponse.data.Call.Status.toLowerCase();
+            if (status === 'completed') {
+              clearInterval(pollInterval);
+              setCallStatus('connected');
+            } else if (status === 'failed' || status === 'busy') {
+              clearInterval(pollInterval);
+              setCallStatus('failed');
+              setCallFeedback(statusResponse.data.Call.StatusMessage || 'Call failed');
+            }
+          }
+        } catch (error) {
+          console.error('Error polling call status:', error);
+        }
+      }, 2000);
+
+      // Clear polling after 30 seconds if call hasn't connected
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (callStatus === 'dialing') {
+          setCallStatus('failed');
+          setCallFeedback('Call timed out');
+        }
+      }, 30000);
+
+    } catch (error) {
+      console.error('Error starting call:', error);
+      setCallStatus('failed');
+      setCallFeedback(error.message || 'Failed to start call');
     }
   };
 
