@@ -32,9 +32,11 @@ const EditLead = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data) {
-          // Filter only callers from the users list
-          const callers = response.data.data.filter(user => user.role === 'caller');
-          setUsers(callers);
+          // Filter to include users whose role is either "caller" or "field_employee"
+          const eligibleUsers = response.data.data.filter(
+            (user) => user.role === "caller" || user.role === "field_employee"
+          );
+          setUsers(eligibleUsers);
         }
       } catch (error) {
         console.error("Error fetching users:", error.response?.data || error.message);

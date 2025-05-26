@@ -195,7 +195,9 @@ const Sidebar = ({ user }) => {
       case 'manager':
         return '/manager-dashboard';
       case 'caller':
-        return '/caller';
+        return '/caller-dashboard';
+      case 'field_employee': // added for field employees
+        return '/field_employee-dashboard';
       default:
         return '/';
     }

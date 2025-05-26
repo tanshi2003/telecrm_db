@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const campaignController = require("../controllers/campaignController");
-const { authenticateToken } = require("../middlewares/auth");
-const roleMiddleware = require("../middlewares/role");
+const { authenticateToken } = require("../middleware/auth");
+const roleMiddleware = require("../middleware/checkRole");
 
 // Protected routes - require authentication
 router.use(authenticateToken);

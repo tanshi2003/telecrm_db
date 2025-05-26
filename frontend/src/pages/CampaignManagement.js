@@ -7,6 +7,7 @@ import Navbar from '../components/Navbar';
 
 const CampaignManagement = () => {
   const [campaigns, setCampaigns] = useState([]);
+  const [allCampaigns, setAllCampaigns] = useState([]); // For system-wide stats
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [employees, setEmployees] = useState([]);
@@ -26,7 +27,13 @@ const CampaignManagement = () => {
     setUser(storedUser);
     fetchCampaigns();
     fetchEmployees();
+    fetchAllCampaigns();
   }, [navigate]);
+
+  useEffect(() => {
+    // Debug: log all campaigns to verify status values
+    console.log('All campaigns:', allCampaigns);
+  }, [allCampaigns]);
 
   const fetchCampaigns = async () => {
     try {
@@ -35,7 +42,6 @@ const CampaignManagement = () => {
       const storedUser = JSON.parse(localStorage.getItem('user'));
       
       if (!token || !storedUser) {
-        console.error('No token or user data found');
         setLoading(false);
         return;
       }
@@ -48,10 +54,7 @@ const CampaignManagement = () => {
       );
 
       if (response.data.success && response.data.data) {
-        // Ensure we have an array of campaigns
         const campaignsData = Array.isArray(response.data.data) ? response.data.data : [response.data.data];
-        
-        // Add additional metrics for each campaign
         const campaignsWithMetrics = campaignsData.map(campaign => ({
           ...campaign,
           total_leads: campaign.lead_count || 0,
@@ -61,14 +64,27 @@ const CampaignManagement = () => {
 
         setCampaigns(campaignsWithMetrics);
       } else {
-        console.error('Invalid response format:', response.data);
         setCampaigns([]);
       }
     } catch (error) {
-      console.error('Error fetching campaigns:', error);
       setCampaigns([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllCampaigns = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        'http://localhost:5000/api/campaigns',
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (response.data.success && Array.isArray(response.data.data)) {
+        setAllCampaigns(response.data.data);
+      }
+    } catch (err) {
+      setAllCampaigns([]);
     }
   };
 
@@ -79,7 +95,6 @@ const CampaignManagement = () => {
       const storedUser = JSON.parse(localStorage.getItem('user'));
 
       if (!token || !storedUser) {
-        console.error('No token or user data found');
         setLoading(false);
         return;
       }
@@ -94,26 +109,30 @@ const CampaignManagement = () => {
       const teamMembers = response.data.data?.team_members || [];
       setEmployees(Array.isArray(teamMembers) ? teamMembers : []);
     } catch (err) {
-      console.error('Failed to fetch employees:', err);
       setEmployees([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAssignEmployee = async (campaignId, employeeId) => {
+  const handleAssignUsers = async (campaignId, userIds) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post(
-        `http://localhost:5000/api/campaigns/${campaignId}/assign`,
-        { employeeId },
+      const response = await axios.post(
+        `http://localhost:5000/api/campaigns/${campaignId}/assign-users`,
+        { user_ids: userIds },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Refresh campaigns after assignment
-      fetchCampaigns();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to assign employee');
+      if (response.data.success) {
+        // Refresh the campaigns list
+        fetchCampaigns();
+      } else {
+        throw new Error(response.data.message || 'Failed to assign users');
+      }
+    } catch (error) {
+      console.error('Error assigning users:', error);
+      setError('Failed to assign users to campaign');
     }
   };
 
@@ -141,6 +160,12 @@ const CampaignManagement = () => {
     </div>
   );
 
+  // Calculate system-wide total leads from allCampaigns
+  const systemWideTotalLeads = allCampaigns.reduce(
+    (sum, c) => sum + (Number(c.lead_count) || 0),
+    0
+  );
+
   return (
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
@@ -159,7 +184,7 @@ const CampaignManagement = () => {
                 <p className="text-gray-600 mt-2">Manage and track your campaigns</p>
               </div>
               <button
-                onClick={() => navigate('/create-campaign')}
+                onClick={() => navigate('/create-campaign-with-users')}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <PlusCircle size={20} />
@@ -174,7 +199,9 @@ const CampaignManagement = () => {
                   <BarChart2 className="text-blue-500" size={20} />
                   <p className="text-sm text-gray-600">Total Campaigns</p>
                 </div>
-                <p className="text-2xl font-semibold mt-1">{Array.isArray(campaigns) ? campaigns.length : 0}</p>
+                <p className="text-2xl font-semibold mt-1">
+                  {allCampaigns.length}
+                </p>
               </div>
               <div className="bg-white rounded-lg p-4 border-l-4 border-green-500">
                 <div className="flex items-center gap-2">
@@ -182,7 +209,7 @@ const CampaignManagement = () => {
                   <p className="text-sm text-gray-600">Active Campaigns</p>
                 </div>
                 <p className="text-2xl font-semibold mt-1">
-                  {Array.isArray(campaigns) ? campaigns.filter(c => c.status === 'active').length : 0}
+                  {allCampaigns.filter(c => String(c.status).toLowerCase() === 'active').length}
                 </p>
               </div>
               <div className="bg-white rounded-lg p-4 border-l-4 border-yellow-500">
@@ -191,7 +218,7 @@ const CampaignManagement = () => {
                   <p className="text-sm text-gray-600">Total Leads</p>
                 </div>
                 <p className="text-2xl font-semibold mt-1">
-                  {Array.isArray(campaigns) ? campaigns.reduce((sum, c) => sum + (c.total_leads || 0), 0) : 0}
+                  {systemWideTotalLeads}
                 </p>
               </div>
             </div>
@@ -279,7 +306,7 @@ const CampaignManagement = () => {
                       <p className="text-sm text-gray-500">{employee.role}</p>
                     </div>
                     <button
-                      onClick={() => handleAssignEmployee(selectedCampaign, employee.id)}
+                      onClick={() => handleAssignUsers(selectedCampaign, [employee.id])}
                       className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
                     >
                       Assign
@@ -301,4 +328,4 @@ const CampaignManagement = () => {
   );
 };
 
-export default CampaignManagement; 
+export default CampaignManagement;

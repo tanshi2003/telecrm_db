@@ -4,8 +4,19 @@ const cors = require("cors");
 const db = require("./config/db");
 const http = require('http');
 const jwt = require('jsonwebtoken');
+const morgan = require('morgan');
 const initializeSocket = require('./socket');
+
+// Import Routes
+const adminRoutes = require("./routes/adminRoutes");
+const userRoutes = require("./routes/userRoutes");
+const leadRoutes = require("./routes/leadRoutes");
+const campaignRoutes = require("./routes/campaignRoutes");
+const searchRoutes = require("./routes/searchRoutes");
+const authRoutes = require('./routes/authRoutes');
+const managerRoutes = require('./routes/managerRoutes');
 const callsRouter = require('./routes/calls');
+const settingsRoutes = require('./routes/settings');
 
 // Load environment variables
 dotenv.config();
@@ -16,6 +27,13 @@ const server = http.createServer(app);
 
 // Initialize Socket.IO
 const io = initializeSocket(server);
+
+// Configure logging
+app.use(morgan('dev')); // HTTP request logger
+console.log = (...args) => {
+    const timestamp = new Date().toISOString();
+    console.info(`[${timestamp}]`, ...args);
+};
 
 // ✅ CORS FIRST — before routes!
 app.use(cors({
@@ -28,26 +46,16 @@ app.use(cors({
 app.use(express.json()); // Using built-in express.json instead of body-parser
 app.use(express.urlencoded({ extended: true })); // Using built-in express.urlencoded
 
-// Import Routes
-const adminRoutes = require("./routes/adminRoutes");
-const userRoutes = require("./routes/userRoutes");
-const leadRoutes = require("./routes/leadRoutes");
-const campaignRoutes = require("./routes/campaignRoutes");
-const searchRoutes = require("./routes/searchRoutes");
-const callRoutes = require("./routes/callRoutes");
-const authRoutes = require('./routes/authRoutes');
-const managerRoutes = require('./routes/managerRoutes');
-
 // Use Routes
 app.use("/api/admins", adminRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/campaigns", campaignRoutes);
 app.use("/api/search", searchRoutes);
-app.use("/api/calls", callRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/managers', managerRoutes);
 app.use('/api/calls', callsRouter);
+app.use('/api/settings', settingsRoutes);
 
 // Root Endpoint
 app.get("/", (req, res) => {

@@ -15,7 +15,6 @@ const roleOptions = [
 const ManageRoles = () => {
   const [admin, setAdmin] = useState(null);
   const [users, setUsers] = useState([]);
-  const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -37,7 +36,6 @@ const ManageRoles = () => {
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
         setUsers(data.data);
-        setManagers(data.data.filter((u) => u.role === "manager"));
       } else {
         toast.error("Failed to fetch users.");
       }
@@ -78,14 +76,7 @@ const ManageRoles = () => {
     )
   );
         
-        // Update managers list if needed
-         if (newRole === "manager") {
-    setManagers(prev => [...prev, { ...user, role: newRole }]);
-  } else {
-    setManagers(prev => prev.filter(m => m.id !== userId));
-  }
-
-  toast.success("Role successfully edited!"); // <-- updated message
+        toast.success("Role successfully edited!"); // <-- updated message
 } else {
   toast.error(response.data.message || "Failed to update role");
 }
@@ -160,7 +151,8 @@ const ManageRoles = () => {
                         onUpdate={handleRoleChange}
                       />
                     ))
-                  )}
+                  )
+                  }
                 </tbody>
               </table>
             </div>

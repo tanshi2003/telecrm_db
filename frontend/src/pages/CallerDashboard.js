@@ -73,6 +73,10 @@ const CallerDashboard = () => {
   const [socketError, setSocketError] = useState(null);
   // Add a ref to store the peer connection
   const peerConnectionRef = React.useRef(null);
+  const [callbook, setCallbook] = useState([]);
+  const [currentCallId, setCurrentCallId] = useState(null);
+  const [currentCallSid, setCurrentCallSid] = useState(null);
+  const [callDisposition, setCallDisposition] = useState('pending');
 
   // Add WebRTC configuration
   const configuration = {
@@ -112,33 +116,38 @@ const CallerDashboard = () => {
 
   // Function to fetch KPI data
   const fetchKpiData = async (userId) => {
+    console.log('Starting fetchKpiData for user:', userId);
     setIsLoading(true);
     setError(null);
     const token = localStorage.getItem("token");
+    console.log('Token available:', !!token);
 
     try {
       const axiosConfig = {
-        baseURL: 'http://localhost:5000/api',
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       };
 
-      // Get caller's leads - using the main leads endpoint
-      const leadsResponse = await axios.get('/leads', axiosConfig);
+      console.log('Fetching leads...');
+      // Get caller's leads
+      const leadsResponse = await axios.get('http://localhost:5000/api/leads', axiosConfig);
+      console.log('Leads response:', leadsResponse.data);
       const leads = leadsResponse.data.data || [];
-      setLeads(leads); // Store leads in state
+      setLeads(leads);
 
+      console.log('Fetching campaigns...');
       // Get caller's assigned campaigns
-      const campaignResponse = await axios.get(`/campaigns/user/${userId}/campaigns`, axiosConfig);
-      console.log('Campaign Response:', campaignResponse.data); // Debug log
+      const campaignResponse = await axios.get(`http://localhost:5000/api/campaigns/user/${userId}/campaigns`, axiosConfig);
+      console.log('Campaigns response:', campaignResponse.data);
       const campaigns = campaignResponse.data.data || [];
       
       // Calculate KPIs from leads
       const today = new Date().toISOString().split('T')[0];
+      console.log('Calculating KPIs for date:', today);
       
-      setKpiData({
+      const kpiData = {
         totalLeads: leads.length,
         contactedToday: leads.filter(lead => 
           lead.status === "Contacted" && 
@@ -157,11 +166,20 @@ const CallerDashboard = () => {
           lead.status === "Not Reachable"
         ).length,
         currentCampaign: campaigns.length > 0 ? campaigns[0].name : "No Campaign Assigned",
-        assignedCampaigns: campaigns // Store all assigned campaigns
-      });
+        assignedCampaigns: campaigns
+      };
+      
+      console.log('Setting KPI data:', kpiData);
+      setKpiData(kpiData);
 
     } catch (error) {
-      console.error('Error fetching KPI data:', error);
+      console.error('Error in fetchKpiData:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config
+      });
       setError(error.response?.data?.message || "Failed to fetch data");
     } finally {
       setIsLoading(false);
@@ -169,8 +187,11 @@ const CallerDashboard = () => {
   };
 
   const fetchCallMetrics = async (userId) => {
+    console.log('Starting fetchCallMetrics for user:', userId);
     try {
       const token = localStorage.getItem("token");
+      console.log('Token available:', !!token);
+      
       const axiosConfig = {
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -178,32 +199,48 @@ const CallerDashboard = () => {
         }
       };
 
+      console.log('Fetching performance metrics...');
       // Get performance metrics
       const metrics = await axios.get(
         `http://localhost:5000/api/calls/stats/performance/${userId}`,
         axiosConfig
       );
+      console.log('Performance metrics response:', metrics.data);
 
+      console.log('Fetching callback efficiency...');
       // Get callback efficiency
       const efficiency = await axios.get(
         `http://localhost:5000/api/calls/stats/callback-efficiency/${userId}`,
         axiosConfig
       );
+      console.log('Callback efficiency response:', efficiency.data);
       
-      setCallMetrics({
+      const callMetrics = {
         totalCalls: metrics.data.data.totalCalls || 0,
         avgCallDuration: metrics.data.data.averageCallDuration || 0,
         successRate: metrics.data.data.successRate || 0,
         callbackRate: efficiency.data.data.callbackRate || 0
-      });
+      };
+      
+      console.log('Setting call metrics:', callMetrics);
+      setCallMetrics(callMetrics);
     } catch (error) {
-      console.error('Error fetching call metrics:', error);
+      console.error('Error in fetchCallMetrics:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config
+      });
     }
   };
 
   const fetchBestHours = async (userId) => {
+    console.log('Starting fetchBestHours for user:', userId);
     try {
       const token = localStorage.getItem("token");
+      console.log('Token available:', !!token);
+      
       const axiosConfig = {
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -211,15 +248,36 @@ const CallerDashboard = () => {
         }
       };
 
+      console.log('Fetching best hours...');
       const response = await axios.get(
         `http://localhost:5000/api/calls/stats/best-hours/${userId}`,
         axiosConfig
       );
+      console.log('Best hours response:', response.data);
       
       setBestHours(response.data.data || []);
     } catch (error) {
-      console.error('Error fetching best hours:', error);
-      setBestHours([]); // Reset to empty array on error
+      console.error('Error in fetchBestHours:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config
+      });
+      setBestHours([]);
+    }
+  };
+
+  // Function to refresh KPI data
+  const refreshData = () => {
+    console.log('Refreshing all data...');
+    if (user?.id) {
+      console.log('User ID available:', user.id);
+      fetchKpiData(user.id);
+      fetchCallMetrics(user.id);
+      fetchBestHours(user.id);
+    } else {
+      console.error('No user ID available for refresh');
     }
   };
 
@@ -253,15 +311,6 @@ const CallerDashboard = () => {
     } catch (error) {
       console.error('Error creating call:', error);
       setError(error.response?.data?.message || "Failed to create call");
-    }
-  };
-
-  // Function to refresh KPI data
-  const refreshData = () => {
-    if (user?.id) {
-      fetchKpiData(user.id);
-      fetchCallMetrics(user.id);
-      fetchBestHours(user.id);
     }
   };
 
@@ -596,20 +645,27 @@ const CallerDashboard = () => {
         error: null
       }));
 
-      // End the call through your backend
-      const token = localStorage.getItem("token");
-      await axios.post(
-        'http://localhost:5000/api/calls/end',
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // End the call through our backend API
+      const response = await axios.post(
+        `http://localhost:5000/api/calls/${callId}/end`,
+        {},
         {
-          callSid: callId // The Twilio Call SID
-        },
-        {
-          headers: { 
+          headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         }
       );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Failed to end call');
+      }
 
       // Reset all call state
       setCallStatus('idle');
@@ -626,6 +682,7 @@ const CallerDashboard = () => {
 
     } catch (error) {
       console.error('Error ending call:', error);
+      setCallFeedback(error.message || 'Failed to end call');
     }
   };
 
@@ -751,48 +808,56 @@ const CallerDashboard = () => {
   };
 
   // Update the startCall function
-  const startCall = async (phoneNumber) => {
+  const startCall = async (phoneNumber, isManual = false, recipientId = null) => {
     try {
-      console.log('Starting call to:', phoneNumber);
-      
-      // Clean the phone number
-      let cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
-      if (cleanNumber.startsWith('91')) {
-        cleanNumber = cleanNumber.substring(2);
-      }
-      cleanNumber = '+91' + cleanNumber;
-      
-      // Set the cleaned number
-      setDialedNumber(cleanNumber);
-      
-      // Get token from localStorage
-      const token = localStorage.getItem("token");
-      console.log('Token:', token); // Debug log
-      
+      const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('No authentication token found');
       }
 
-      // Set call status to dialing
+      // Clean the phone number
+      let cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+      if (!cleanNumber.startsWith('0')) {
+        cleanNumber = '0' + cleanNumber;
+      }
+
       setCallStatus('dialing');
-      
-      // Make API call to your backend to initiate Exotel call
-      const response = await axios({
-        method: 'post',
-        url: 'http://localhost:5000/api/calls/initiate',
-        data: {
+      setCallTimer(0);
+      const timerInterval = setInterval(() => {
+        setCallTimer(prev => prev + 1);
+      }, 1000);
+
+      // Use the main leads array for leadId lookup
+      let leadId = null;
+      if (!isManual && recipientId) {
+        const lead = leads.find(lead => lead.id === recipientId);
+        if (lead) {
+          leadId = lead.id;
+        }
+      }
+      // Fallback for from number
+      const fromNumber = user?.phone_number || user?.phone || '7817822675';
+
+      // Debug log what is being sent to the backend
+      console.log(
+        'Calling backend with:',
+        'to:', cleanNumber,
+        'from:', fromNumber,
+        'leadId:', leadId,
+        'recipientId:', recipientId
+      );
+
+      const response = await axios.post(
+        'http://localhost:5000/api/calls/initiate',
+        {
           to: cleanNumber,
-          from: companyNumber,
-          leadId: recipientId,
-          callerId: user?.id // Add callerId from user object
+          from: fromNumber,
+          leadId: leadId
         },
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        validateStatus: function (status) {
-          return status < 500; // Resolve only if the status code is less than 500
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         }
       });
 
@@ -803,30 +868,62 @@ const CallerDashboard = () => {
       }
 
       if (response.data.success) {
-        setCallStatus('connected');
-        // Start call timer
-        const timer = setInterval(() => {
-          setCallDuration(prev => prev + 1);
-        }, 1000);
-        setCallTimer(timer);
-      } else {
-        throw new Error(response.data.message || 'Failed to initiate call');
+        const { dbCallId, exotelCallSid } = response.data.data;
+        setCurrentCallId(dbCallId);
+        setCurrentCallSid(exotelCallSid);
+
+        // Start polling for call status
+        const pollInterval = setInterval(async () => {
+          try {
+            const statusResponse = await axios.get(
+              `http://localhost:5000/api/calls/${dbCallId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`
+                }
+              }
+            );
+
+            if (statusResponse.data.success) {
+              const { status, disposition } = statusResponse.data.data;
+              setCallStatus(status);
+              setCallDisposition(disposition);
+
+              if (['completed', 'failed', 'busy', 'no-answer'].includes(status)) {
+                clearInterval(pollInterval);
+                clearInterval(timerInterval);
+                
+                // Update callbook if call was successful
+                if (status === 'completed' && !isManual) {
+                  setCallbook(prev => prev.map(call => 
+                    call.id === recipientId 
+                      ? { ...call, status: 'completed', disposition: disposition }
+                      : call
+                  ));
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error polling call status:', error);
+            clearInterval(pollInterval);
+            clearInterval(timerInterval);
+            setCallStatus('failed');
+          }
+        }, 2000);
+
+        // Stop polling after 30 seconds if call hasn't connected
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          if (callStatus === 'dialing') {
+            setCallStatus('failed');
+            clearInterval(timerInterval);
+          }
+        }, 30000);
       }
-      
     } catch (error) {
-      console.error('Error starting call:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        headers: error.response?.headers,
-        config: error.config // Log the request configuration
-      });
-      
-      setCallStatus('idle');
-      setCallFeedback(prev => ({
-        ...prev,
-        error: error.response?.data?.message || error.message || 'Failed to start call'
-      }));
+      console.error('Error starting call:', error);
+      setCallStatus('failed');
+      clearInterval(timerInterval);
     }
   };
 
@@ -1004,14 +1101,16 @@ const CallerDashboard = () => {
             onClick={() => {
               if (callStatus === 'connected' || callStatus === 'dialing') {
                 handleCallEnd();
-              } else if (dialedNumber) {
-                startCall(dialedNumber);
+              } else if (dialedNumber && recipientId) {
+                startCall(dialedNumber, false, recipientId);
+              } else {
+                alert('Please select a lead from the callbook to make a call.');
               }
             }}
             className={`w-full mt-2 p-2 text-sm text-white rounded ${
               callStatus === 'connected' || callStatus === 'dialing'
                 ? 'bg-red-500 hover:bg-red-600'
-                : dialedNumber
+                : dialedNumber && recipientId
                 ? 'bg-green-500 hover:bg-green-600'
                 : 'bg-gray-300 cursor-not-allowed'
             }`}
@@ -1067,6 +1166,12 @@ const CallerDashboard = () => {
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
               Add Call
+            </button>
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={() => window.location.href = "/addlead"}
+            >
+              Create Lead
             </button>
           </div>
         </div>

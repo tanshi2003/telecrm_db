@@ -3,11 +3,10 @@ import Sidebar from "../components/Sidebar";
 import { useNavigate } from 'react-router-dom';
 import BackButton from "../components/BackButton";
 import { Users, FileText, BarChart2, UserCheck } from "lucide-react";
-import { getUsers, updateUserStatus, assignLead } from "../services/managerService";
+import { getUsers, updateUserStatus } from "../services/managerService";
 import toast from "react-hot-toast";
 
 const ManagerUserManagement = () => {
-  const [manager, setManager] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,15 +16,8 @@ const ManagerUserManagement = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedManager = JSON.parse(localStorage.getItem("user"));
-    if (storedManager) {
-      setManager(storedManager);
-      fetchTeamMembers();
-    } else {
-      setError("Manager not found. Please login again.");
-      navigate("/login");
-    }
-  }, [navigate]);
+    fetchTeamMembers();
+  }, []);
 
   const fetchTeamMembers = async () => {
     try {
@@ -257,4 +249,4 @@ const ManagerUserManagement = () => {
   );
 };
 
-export default ManagerUserManagement; 
+export default ManagerUserManagement;

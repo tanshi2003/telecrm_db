@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
-const { authenticateToken } = require('../middlewares/auth');
+const { authenticateToken } = require("../middleware/auth");
 
 // Middleware to check if user is a manager or admin
 const checkManagerAccess = (req, res, next) => {
@@ -538,4 +538,73 @@ router.get('/active-callers', authenticateToken, checkManagerAccess, (req, res) 
     });
 });
 
-module.exports = router; 
+// Get manager's team members
+router.get('/:managerId/team', authenticateToken, checkManagerAccess, (req, res) => {
+    const { managerId } = req.params;
+    
+    console.log('Fetching team for manager:', managerId);
+    console.log('Request user:', req.user);
+    
+    // If manager role, can only access their own team
+    if (req.user.role === 'manager' && req.user.id !== parseInt(managerId)) {
+        console.log('Access denied: Manager trying to access another team');
+        return res.status(403).json({
+            success: false,
+            message: 'Access denied. You can only view your own team.'
+        });
+    }
+
+    // First verify the manager exists
+    db.query('SELECT id, role FROM users WHERE id = ? AND role = "manager"', [managerId], (err, managers) => {
+        if (err) {
+            console.error('Error checking manager:', err);
+            return res.status(500).json({
+                success: false,
+                message: 'Error verifying manager'
+            });
+        }
+
+        if (managers.length === 0) {
+            console.log('Manager not found:', managerId);
+            return res.status(404).json({
+                success: false,
+                message: 'Manager not found'
+            });
+        }
+
+        const query = `
+            SELECT 
+                u.id,
+                u.name,
+                u.email,
+                u.role,
+                u.status
+            FROM users u
+            WHERE u.manager_id = ?
+            AND u.role IN ('caller', 'field_employee')
+            AND u.status = 'active'
+            ORDER BY u.name
+        `;
+
+        console.log('Executing query:', query, 'with managerId:', managerId);
+
+        db.query(query, [managerId], (err, results) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Error fetching team members'
+                });
+            }
+
+            console.log('Query results:', results);
+
+            res.json({
+                success: true,
+                data: results
+            });
+        });
+    });
+});
+
+module.exports = router;

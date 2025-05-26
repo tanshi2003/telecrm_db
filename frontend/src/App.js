@@ -42,16 +42,12 @@ import TeamView from "./pages/TeamView";
 import ViewTeam from "./pages/ViewTeam";
 import LeadAssignment from "./pages/LeadAssignment";
 import CampaignManagement from "./pages/CampaignManagement";
-import AssignLeads from "./pages/AssignLeads";
-import Tasks from "./pages/Tasks";
-import Notifications from "./pages/Notifications";
-import VisitTracking from "./pages/VisitTracking";
-import SubmitReport from "./pages/SubmitReport";
-import ClientFeedback from "./pages/ClientFeedback";
-import MeetingSchedule from "./pages/MeetingSchedule";
+import CreateCampaignWithUsers from "./pages/CreateCampaignWithUsers";
+import CampaignDetails from "./pages/CampaignDetails";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Toaster } from 'react-hot-toast';
+import AddLead from "./pages/AddLead";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -91,15 +87,6 @@ function AppContent() {
             <Route path="/login" element={<Login />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/Updatelead" element={<Updatelead />} />
-            <Route path="/assign-leads" element={<AssignLeads />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/visit-tracking" element={<VisitTracking />} />
-            <Route path="/submit-report" element={<SubmitReport />} />
-            <Route path="/client-feedback" element={<ClientFeedback />} />
-            <Route path="/meeting-schedule" element={<MeetingSchedule />} />
-            
-       
 
             {/* Admin/User Management Routes */}
             <Route path="/admin/users" element={<ManageUsers />} />
@@ -364,7 +351,30 @@ function AppContent() {
                 </ProtectedRoute>
               }
             />
-
+            <Route
+              path="/create-campaign-with-users"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <CreateCampaignWithUsers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/CampaignDetails"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager", "field_employee", "caller"]}>
+                  <CampaignDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/addlead"
+              element={
+                <ProtectedRoute allowedRoles={["manager", "caller", "field_employee", "user"]}>
+                  <AddLead />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </AnimatePresence>

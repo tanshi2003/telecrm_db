@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import BackButton from "../components/BackButton";
 import { getTeamById } from "../services/managerService";
-import { Users, Mail, Phone } from "lucide-react";
+import { Users, Mail } from "lucide-react";
 import toast from "react-hot-toast";
 
 const ViewTeam = () => {
@@ -14,7 +14,7 @@ const ViewTeam = () => {
 
   useEffect(() => {
     fetchTeamData();
-  }, [id]);
+  }, [fetchTeamData, id]);
 
   const fetchTeamData = async () => {
     try {
@@ -134,4 +134,4 @@ const ViewTeam = () => {
   );
 };
 
-export default ViewTeam; 
+export default ViewTeam;

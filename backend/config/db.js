@@ -16,6 +16,16 @@ const db = mysql.createPool({
     connectTimeout: 60000
 });
 
+// Test the connection
+db.getConnection((err, connection) => {
+    if (err) {
+        console.error('Error connecting to the database:', err);
+        return;
+    }
+    console.log('Successfully connected to database.');
+    connection.release();
+});
+
 db.on('error', (err) => {
     console.error('Database error:', err);
     if (err.code === 'PROTOCOL_CONNECTION_LOST') {

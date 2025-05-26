@@ -104,11 +104,6 @@ const ManageCampaigns = () => {
     }
   };
 
-  const handleEditCampaign = (id) => {
-    setIsEditing(true);
-    setEditId(id);
-  };
-
   const handleUpdateCampaign = async () => {
     const submitData = { ...formData, lead_count: formData.leads.length.toString() };
     try {

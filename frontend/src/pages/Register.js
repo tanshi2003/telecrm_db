@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -20,8 +19,6 @@ function AddUser() {
   });
 
   const [managers, setManagers] = useState([]);
-  const [isEditing, setIsEditing] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchManagers();
@@ -214,7 +211,7 @@ function AddUser() {
           <BackButton />
         </div>
         <div style={formCardStyle}>
-          <h2 style={formTitleStyle}>{isEditing ? "Edit User" : "Add User"}</h2>
+          <h2 style={formTitleStyle}>Add User</h2>
           
           <div style={formGridStyle}>
             <input
