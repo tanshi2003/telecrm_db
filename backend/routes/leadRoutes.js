@@ -25,7 +25,11 @@ router.delete("/:id", roleMiddleware(['admin']), leadController.deleteLead);
 // New route for getting user lead counts
 router.get("/user/:userId/lead-counts", leadController.getUserLeadCounts);
 
-// Add lead for all users (manager, caller, field_employee)
-router.post("/add-lead", roleMiddleware(['manager', 'caller', 'field_employee', 'user']), leadController.addLeadForAllUsers);
+// Add lead for all users (caller, field_employee only)
+router.post("/add-lead", roleMiddleware(['caller', 'field_employee']), leadController.addLeadForAllUsers);
 
+// Assign campaign to a lead (manager only)
+router.post("/assign-campaign", roleMiddleware(['manager']), leadController.assignCampaignToLead);
+// Assign user to a lead (manager only)
+router.post("/assign-user", roleMiddleware(['manager']), leadController.assignUserToLead);
 module.exports = router;

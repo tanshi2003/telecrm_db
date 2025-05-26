@@ -607,4 +607,48 @@ router.get('/:managerId/team', authenticateToken, checkManagerAccess, (req, res)
     });
 });
 
+// Get users assigned to a manager (callers and field employees)
+router.get('/:managerId/users', authenticateToken, checkManagerAccess, (req, res) => {
+    const { managerId } = req.params;
+    // Only allow manager to access their own users, or admin to access any
+    if (req.user.role === 'manager' && req.user.id !== parseInt(managerId)) {
+        return res.status(403).json({
+            success: false,
+            message: 'Access denied. You can only view your own users.'
+        });
+    }
+    db.query(
+        `SELECT id, name, email, role, status FROM users WHERE manager_id = ? AND status = 'active' AND role IN ('caller', 'field_employee') ORDER BY name`,
+        [managerId],
+        (err, results) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: 'Database error', error: err.message });
+            }
+            res.json({ success: true, data: results });
+        }
+    );
+});
+
+// Get campaigns assigned to a manager
+router.get('/:managerId/campaigns', authenticateToken, checkManagerAccess, (req, res) => {
+    const { managerId } = req.params;
+    // Only allow manager to access their own campaigns, or admin to access any
+    if (req.user.role === 'manager' && req.user.id !== parseInt(managerId)) {
+        return res.status(403).json({
+            success: false,
+            message: 'Access denied. You can only view your own campaigns.'
+        });
+    }
+    db.query(
+        `SELECT c.id, c.name, c.status FROM campaigns c WHERE c.manager_id = ? AND c.status != 'archived' ORDER BY c.name`,
+        [managerId],
+        (err, results) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: 'Database error', error: err.message });
+            }
+            res.json({ success: true, data: results });
+        }
+    );
+});
+
 module.exports = router;

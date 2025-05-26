@@ -12,6 +12,7 @@ const campaignController = {
 
         const user = req.user;
         const admin_id = user.role === 'admin' ? user.id : null;
+        const manager_id = user.role === 'manager' ? user.id : null;
 
         if (!name || !description || !status || !priority || !start_date) {
             return res.status(400).json(responseFormatter(false, "All required fields must be provided"));
@@ -19,13 +20,13 @@ const campaignController = {
 
         const campaignQuery = `
             INSERT INTO campaigns 
-            (name, description, status, lead_count, priority, start_date, end_date, created_at, updated_at, admin_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?)
+            (name, description, status, lead_count, priority, start_date, end_date, created_at, updated_at, admin_id, manager_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)
         `;
 
         db.query(
             campaignQuery,
-            [name, description, status, leads.length, priority, start_date, end_date || null, admin_id],
+            [name, description, status, leads.length, priority, start_date, end_date || null, admin_id, manager_id],
             (err, campaignResult) => {
                 if (err) {
                     console.error("Error inserting campaign:", err);

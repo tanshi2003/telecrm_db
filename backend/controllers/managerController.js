@@ -184,6 +184,36 @@ const assignLead = async (req, res) => {
     });
   }
 };
+//getCampaignsForManager.js
+
+exports.getCampaignsForManager = async (req, res) => {
+  const managerId = req.user.id; // JWT se nikalo ya req.params se aaya ho toh waisa
+
+  try {
+    const [createdCampaigns] = await db.query(
+      `SELECT * FROM campaigns WHERE admin_id = ?`, [managerId]
+    );
+
+    const [assignedCampaigns] = await db.query(
+      `SELECT c.* FROM campaigns c
+       JOIN campaign_users cu ON c.id = cu.campaign_id
+       WHERE cu.user_id = ?`, [managerId]
+    );
+
+    // Remove duplicates if any
+    const campaignMap = new Map();
+    [...createdCampaigns, ...assignedCampaigns].forEach(camp => {
+      campaignMap.set(camp.id, camp);
+    });
+
+    const allCampaigns = Array.from(campaignMap.values());
+
+    res.json({ success: true, campaigns: allCampaigns });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Error fetching campaigns" });
+  }
+};
 
 module.exports = {
   getDashboardStats,

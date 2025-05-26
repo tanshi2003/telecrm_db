@@ -285,3 +285,106 @@ exports.addLeadForAllUsers = (req, res) => {
         }
     );
 };
+
+// Create lead by manager
+exports.createLeadByManager = (req, res) => {
+    const { name, phone_no, lead_category = "Cold Lead", status = "New", address = "", notes = "", assigned_to = null, campaign_id = null } = req.body;
+    const created_by = req.user.id;
+    const created_at = new Date();
+    const updated_at = new Date();
+
+    if (!name || !phone_no) {
+        return res.status(400).json(responseFormatter(false, "Name and phone number are required"));
+    }
+
+    db.query(
+        `INSERT INTO Leads (name, phone_no, lead_category, status, address, notes, assigned_to, campaign_id, created_by, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [name, phone_no, lead_category, status, address, notes, assigned_to, campaign_id, created_by, created_at, updated_at],
+        (err, result) => {
+            if (err) {
+                console.error("Add lead by manager error:", err);
+                return res.status(500).json(responseFormatter(false, "Database error", err.message));
+            }
+            db.query("SELECT * FROM Leads WHERE id = ?", [result.insertId], (err, lead) => {
+                if (err) {
+                    return res.status(500).json(responseFormatter(false, "Fetch new lead failed", err.message));
+                }
+                res.status(201).json(responseFormatter(true, "Lead added successfully by manager", lead[0]));
+            });
+        }
+    );
+};
+
+// Update lead by manager
+exports.updateLeadByManager = (req, res) => {
+    const { id } = req.params;
+    const { name, phone_no, lead_category, status, address, notes, assigned_to, campaign_id } = req.body;
+    const updated_at = new Date();
+
+    db.query("SELECT * FROM Leads WHERE id = ?", [id], (err, leads) => {
+        if (err) {
+            return res.status(500).json(responseFormatter(false, "Database error", err.message));
+        }
+        if (leads.length === 0) {
+            return res.status(404).json(responseFormatter(false, "Lead not found"));
+        }
+        db.query(
+            `UPDATE Leads SET name = ?, phone_no = ?, lead_category = ?, status = ?, address = ?, notes = ?, assigned_to = ?, campaign_id = ?, updated_at = ? WHERE id = ?`,
+            [name, phone_no, lead_category, status, address, notes, assigned_to, campaign_id, updated_at, id],
+            (err, result) => {
+                if (err) {
+                    return res.status(500).json(responseFormatter(false, "Database error", err.message));
+                }
+                db.query("SELECT * FROM Leads WHERE id = ?", [id], (err, lead) => {
+                    if (err) {
+                        return res.status(500).json(responseFormatter(false, "Fetch updated lead failed", err.message));
+                    }
+                    res.json(responseFormatter(true, "Lead updated successfully by manager", lead[0]));
+                });
+            }
+        );
+    });
+};
+
+// Assign a campaign to a lead (manager only)
+exports.assignCampaignToLead = (req, res) => {
+    const { leadId, campaignId } = req.body;
+    if (!leadId || !campaignId) {
+        return res.status(400).json(responseFormatter(false, "leadId and campaignId are required"));
+    }
+    db.query(
+        "UPDATE Leads SET campaign_id = ? WHERE id = ?",
+        [campaignId, leadId],
+        (err, result) => {
+            if (err) {
+                return res.status(500).json(responseFormatter(false, "Database error", err.message));
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).json(responseFormatter(false, "Lead not found"));
+            }
+            res.json(responseFormatter(true, "Campaign assigned to lead successfully"));
+        }
+    );
+};
+
+// Assign a user to a lead (manager only)
+exports.assignUserToLead = (req, res) => {
+    const { leadId, userId } = req.body;
+    if (!leadId || !userId) {
+        return res.status(400).json(responseFormatter(false, "leadId and userId are required"));
+    }
+    db.query(
+        "UPDATE Leads SET assigned_to = ? WHERE id = ?",
+        [userId, leadId],
+        (err, result) => {
+            if (err) {
+                return res.status(500).json(responseFormatter(false, "Database error", err.message));
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).json(responseFormatter(false, "Lead not found"));
+            }
+            res.json(responseFormatter(true, "User assigned to lead successfully"));
+        }
+    );
+};

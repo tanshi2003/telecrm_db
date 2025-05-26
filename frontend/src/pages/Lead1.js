@@ -55,6 +55,47 @@ const Lead1 = () => {
     }
   }, [navigate]);
 
+  // Fetch the user's name from localStorage
+  const storedUser = JSON.parse(localStorage.getItem("user"));
+
+  // Fetch users and campaigns assigned to this manager (or all if admin)
+  useEffect(() => {
+    const fetchManagerUsersAndCampaigns = async () => {
+      const token = localStorage.getItem("token");
+      if (!token || !storedUser) return;
+      try {
+        if (role === "admin") {
+          // Admin: fetch all callers for assignment
+          const usersRes = await axios.get("http://localhost:5000/api/users", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setUsers(usersRes.data?.data?.filter(u => u.role === "caller") || []);
+          // Admin: fetch all campaigns
+          const campRes = await axios.get("http://localhost:5000/api/campaigns", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setCampaigns(campRes.data?.data || []);
+        } else if (role === "manager") {
+          // Manager: fetch only users assigned to this manager
+          const usersRes = await axios.get(`http://localhost:5000/api/managers/${storedUser.id}/users`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setUsers(usersRes.data?.data || []);
+          // Manager: fetch all campaigns assigned to or created by this manager
+          const campRes = await axios.get(`http://localhost:5000/api/users/${storedUser.id}/campaigns`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setCampaigns(campRes.data?.data || []);
+        }
+      } catch (error) {
+        console.error("Error fetching manager's users/campaigns:", error.response?.data || error.message);
+      }
+    };
+    if (role === "admin" || role === "manager") {
+      fetchManagerUsersAndCampaigns();
+    }
+  }, [role]);
+
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -111,7 +152,8 @@ const Lead1 = () => {
         phone_no: leadData.phone_no.startsWith('+91') ? leadData.phone_no : `+91${leadData.phone_no}`,
         address: leadData.address,
         assigned_to: leadData.assigned_to || null,
-        admin_id: storedUser.id,
+        admin_id: role === "admin" ? storedUser.id : null,
+        manager_id: role === "manager" ? storedUser.id : null,
         campaign_id: leadData.campaign_id ? campaigns.find(c => c.name === leadData.campaign_id)?.id : null,
         notes: leadData.notes,
       };
@@ -273,7 +315,7 @@ const Lead1 = () => {
 
           <div>
             <label className="block font-semibold">Assigned To</label>
-            {role === "admin" ? (
+            {(role === "admin" || role === "manager") ? (
               <select
                 value={leadData.assigned_to || ""}
                 onChange={(e) => setLeadData({...leadData, assigned_to: e.target.value})}
@@ -293,18 +335,20 @@ const Lead1 = () => {
 
           <div>
             <label className="block font-semibold">Campaign Name</label>
-            {role === "admin" ? (
+            {(role === "admin" || role === "manager") ? (
               <select
                 value={leadData.campaign_id || ""}
                 onChange={(e) => setLeadData({...leadData, campaign_id: e.target.value})}
                 className="w-full p-2 rounded border shadow bg-white"
               >
                 <option value="">Select Campaign</option>
-                {campaigns.map((campaign) => (
-                  <option key={campaign.id} value={campaign.name}>
-                    {campaign.name}
-                  </option>
-                ))}
+                {campaigns
+                  .filter(c => role === "admin" || role === "manager"|| c.manager_id === storedUser.id || (Array.isArray(c.assigned_users) && c.assigned_users.some(u => u.id === storedUser.id)))
+                  .map((campaign) => (
+                    <option key={campaign.id} value={campaign.name}>
+                      {campaign.name}
+                    </option>
+                  ))}
               </select>
             ) : (
               <p className="p-2 border rounded bg-gray-100">N/A</p>
