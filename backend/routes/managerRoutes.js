@@ -327,18 +327,21 @@ router.get('/team-performance', authenticateToken, checkManagerAccess, (req, res
         SELECT 
             u.id,
             u.name,
-            COUNT(c.id) as total_calls,
-            COUNT(CASE WHEN c.status = 'completed' THEN 1 END) as completed_calls,
+            COUNT(DISTINCT l.id) as total_leads_handled,
+            COUNT(DISTINCT c.id) as total_campaigns_handled,
             COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) as conversions,
-            ROUND(AVG(c.duration)) as avg_call_duration
+            ROUND((COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) * 100.0 / NULLIF(COUNT(DISTINCT l.id), 0)), 2) as conversion_rate,
+            COUNT(DISTINCT CASE WHEN c.status = 'active' THEN c.id END) as active_campaigns
         FROM users u
-        LEFT JOIN calls c ON u.id = c.caller_id
-        LEFT JOIN leads l ON c.lead_id = l.id
-        WHERE u.role = 'caller'
-        GROUP BY u.id
+        LEFT JOIN campaign_members cm ON u.id = cm.user_id
+        LEFT JOIN campaigns c ON cm.campaign_id = c.id
+        LEFT JOIN leads l ON l.assigned_to = u.id
+        WHERE u.manager_id = ? AND u.role IN ('caller', 'field_employee')
+        GROUP BY u.id, u.name
+        ORDER BY total_leads_handled DESC
     `;
 
-    db.query(query, (err, results) => {
+    db.query(query, [req.user.id], (err, results) => {
         if (err) {
             console.error('Database error:', err);
             return res.status(500).json({
@@ -358,15 +361,22 @@ router.get('/team-performance', authenticateToken, checkManagerAccess, (req, res
 router.get('/campaign-performance', authenticateToken, checkManagerAccess, (req, res) => {
     const query = `
         SELECT 
-            c.id,
-            c.name,
-            c.status,
-            COUNT(l.id) as total_leads,
-            COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) as converted_leads,
-            ROUND((COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) / COUNT(l.id)) * 100, 2) as conversion_rate
+            c.id, 
+            c.name, 
+            c.status, 
+            c.priority,
+            c.start_date, 
+            c.end_date, 
+            c.lead_count,
+            COUNT(DISTINCT l.id) as total_leads,
+            ROUND((COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) / NULLIF(COUNT(l.id), 0)) * 100, 2) as conversion_rate,
+            GROUP_CONCAT(DISTINCT u.id) as assigned_user_ids,
+            GROUP_CONCAT(DISTINCT u.name) as assigned_user_names
         FROM campaigns c
         LEFT JOIN leads l ON c.id = l.campaign_id
-        GROUP BY c.id
+        LEFT JOIN campaign_users cu ON c.id = cu.campaign_id
+        LEFT JOIN users u ON cu.user_id = u.id
+        GROUP BY c.id, c.name, c.status, c.priority, c.start_date, c.end_date, c.lead_count
     `;
 
     db.query(query, (err, results) => {
@@ -378,9 +388,19 @@ router.get('/campaign-performance', authenticateToken, checkManagerAccess, (req,
             });
         }
 
+        // Process the results to format assigned users
+        const processedResults = results.map(campaign => ({
+            ...campaign,
+            assigned_users: campaign.assigned_user_ids ? 
+                campaign.assigned_user_ids.split(',').map((id, index) => ({
+                    id: parseInt(id),
+                    name: campaign.assigned_user_names.split(',')[index]
+                })) : []
+        }));
+
         res.json({
             success: true,
-            data: results
+            data: processedResults
         });
     });
 });
