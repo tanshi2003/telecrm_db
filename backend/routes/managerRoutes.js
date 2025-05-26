@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
-const { authenticateToken } = require('../middlewares/auth');
+const { authenticateToken } = require("../middleware/auth");
 
 // Middleware to check if user is a manager or admin
 const checkManagerAccess = (req, res, next) => {
@@ -607,4 +607,4 @@ router.get('/:managerId/team', authenticateToken, checkManagerAccess, (req, res)
     });
 });
 
-module.exports = router; 
+module.exports = router;

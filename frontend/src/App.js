@@ -87,16 +87,7 @@ function AppContent() {
             <Route path="/login" element={<Login />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/Updatelead" element={<Updatelead />} />
-            <Route path="/assign-leads" element={<AssignLeads />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/visit-tracking" element={<VisitTracking />} />
-            <Route path="/submit-report" element={<SubmitReport />} />
-            <Route path="/client-feedback" element={<ClientFeedback />} />
-            <Route path="/meeting-schedule" element={<MeetingSchedule />} />
             
-       
-
             {/* Admin/User Management Routes */}
             <Route path="/admin/users" element={<ManageUsers />} />
             <Route path="/admin/users/register" element={<AddUser />} />

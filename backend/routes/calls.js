@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const db = require('../config/db');
-const { authenticateToken } = require('../middlewares/auth');
+const { authenticateToken } = require("../middleware/auth");
 const ExotelConfig = require('../models/ExotelConfig');
 const xml2js = require('xml2js');
 

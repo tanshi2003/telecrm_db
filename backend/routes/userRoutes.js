@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/userController");
-const { authenticateToken } = require("../middlewares/auth");
-const roleMiddleware = require("../middlewares/role");
+const { authenticateToken } = require("../middleware/auth");
+const roleMiddleware = require("../middleware/checkRole");
 const User = require("../models/user");
 
 // Public routes
@@ -20,7 +20,7 @@ router.get("/managers", roleMiddleware(['admin']), userController.getManagers);
 
 // Admin only routes
 router.post("/register", roleMiddleware(['admin']), userController.registerUser);
-router.get("/", roleMiddleware(['admin']), userController.getUsers);
+router.get("/", roleMiddleware(['admin', 'manager']), userController.getUsers);
 
 // Routes with :id parameter
 router.get("/:id", roleMiddleware(['admin']), userController.getUserById);

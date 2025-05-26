@@ -1,17 +1,17 @@
 const express = require("express");
 const router = express.Router();
 const leadController = require("../controllers/leadController");
-const { authenticateToken } = require("../middlewares/auth");
-const roleMiddleware = require("../middlewares/role");
+const { authenticateToken } = require("../middleware/auth");
+const roleMiddleware = require("../middleware/checkRole");
 
 // Protected routes - require authentication
 router.use(authenticateToken);
 
 // 🆕 Create a new lead
-router.post("/", roleMiddleware(['admin', 'user', 'caller', 'field_employee']), leadController.createLead);
+router.post("/", roleMiddleware(['admin', 'user', 'caller', 'manager', 'field_employee']), leadController.createLead);
 
 // 📋 Get all leads
-router.get("/", roleMiddleware(['admin', 'user', 'caller', 'field_employee']), leadController.getLeads);
+router.get("/", roleMiddleware(['admin', 'user', 'caller', 'manager', 'field_employee']), leadController.getLeads);
 
 // 🔍 Get lead by ID
 router.get("/:id", roleMiddleware(['admin', 'user', 'caller', 'field_employee']), leadController.getLeadById);

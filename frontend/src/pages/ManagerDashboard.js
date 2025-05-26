@@ -124,17 +124,17 @@ const ManagerDashboard = () => {
             </div>
             <div className="flex gap-3">
               <button
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                onClick={() => navigate("/addlead")}
+              >
+                Create Lead
+              </button>
+              <button
                 className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50"
                 onClick={() => navigate("/manager/users")}
               >
                 <UserCog size={20} />
                 Manage Team
-              </button>
-              <button
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                onClick={() => navigate("/addlead")}
-              >
-                Create Lead
               </button>
             </div>
           </div>
