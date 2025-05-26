@@ -117,7 +117,14 @@ const Leads = () => {
 
       <div className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">Manage Leads</h1>
+        <h1 className="text-3xl font-bold text-gray-800">Manage Leads</h1>
+        <div className="flex gap-2">
+          <button
+            onClick={() => navigate("/Lead1")}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            + Add Lead
+          </button>
           <button
             onClick={() => navigate(-1)}
             className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
@@ -125,10 +132,13 @@ const Leads = () => {
             Back
           </button>
         </div>
+      </div>
         <p className="text-gray-600 mb-6">Add, update, or import leads easily.</p>
 
         {/* Cards for Add/Update/Import */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          {/* Remove the Add Lead card */}
+          {/* 
           <div className="bg-white p-6 rounded-lg shadow-md w-full min-h-[220px] flex flex-col justify-between">
             <div>
               <h4 className="font-semibold text-lg mb-2">Add Lead</h4>
@@ -141,7 +151,7 @@ const Leads = () => {
               + Add Lead
             </button>
           </div>
-
+          */}
           <div className="bg-white p-6 rounded-lg shadow-md w-full min-h-[220px] flex flex-col justify-between">
             <div>
               <h4 className="font-semibold text-lg mb-2">Update Lead</h4>
@@ -167,9 +177,26 @@ const Leads = () => {
               + Import Leads
             </button>
           </div>
+
+          {/* Assign Leads to a Manager Card */}
+          <div className="bg-white p-6 rounded-lg shadow-md w-full min-h-[220px] flex flex-col justify-between">
+            <div>
+              <h4 className="font-semibold text-lg mb-2">Assign Leads to a Manager</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                Assign selected leads to a manager for better tracking and follow-up.
+              </p>
+            </div>
+            <button
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={() => navigate("/assign-leads")}
+            >
+              Assign Leads
+            </button>
+          </div>
         </section>
 
-        {/* Filters */}
+        {/* Remove Filters section */}
+        {/*
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
           <h4 className="font-semibold text-lg mb-4">Filters</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -211,6 +238,7 @@ const Leads = () => {
             />
           </div>
         </div>
+        */}
 
         {/* Lead List */}
         <div className="bg-white p-6 rounded-lg shadow-md">
@@ -275,6 +303,19 @@ const Leads = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+export const AssignLeadsButton = () => {
+  const navigate = useNavigate();
+
+  return (
+    <button
+      onClick={() => navigate("/assign-leads")}
+      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+    >
+      Assign Leads
+    </button>
   );
 };
 
