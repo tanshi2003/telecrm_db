@@ -277,7 +277,7 @@ const Updatelead = () => {
                   <div className="border p-4 rounded shadow mb-4 relative">
                     {/* Top Right Icons */}
                     <div className="absolute top-2 right-2 flex space-x-3 text-gray-500">
-                      <button title="Notify" className="hover:text-black">🔔</button>
+                      {/* Removed bell icon */}
                       {/* 3-dot menu */}
                       <div className="relative">
                         <button
