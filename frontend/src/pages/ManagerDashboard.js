@@ -616,27 +616,57 @@ const ManagerDashboard = () => {
                   Team Performance
                 </h3>
                 <div className="mt-2 space-y-2">
-                  {teamPerformance.slice(0, 3).map((member) => (
-                    <div key={member.id} className="text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">{member.name}</span>
-                        <span className="font-medium">
-                          {member.conversion_rate}% conversion
-                        </span>
+                  {console.log('Team Performance Data:', teamPerformance)}
+                  {teamPerformance.slice(0, 3).map((member) => {
+                    console.log('Member Data:', member);
+                    
+                    // Simple score calculation
+                    const totalScore = Math.min(100, Math.max(0, 
+                      (member.total_leads_handled || 0) * 5 + 
+                      (member.total_campaigns_handled || 0) * 10
+                    ));
+
+                    return (
+                      <div key={member.id} className="text-sm">
+                        <div className="flex justify-between mb-2">
+                          <span className="text-gray-600 font-medium">{member.name}</span>
+                          <span className="font-medium">{totalScore}% Performance</span>
+                        </div>
+                        
+                        {/* Performance Progress Bar */}
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full ${
+                              totalScore >= 80 ? 'bg-green-600' :
+                              totalScore >= 60 ? 'bg-blue-600' :
+                              totalScore >= 40 ? 'bg-yellow-600' :
+                              'bg-red-600'
+                            }`}
+                            style={{ width: `${totalScore}%` }}
+                          />
+                        </div>
+
+                        {/* Metrics */}
+                        <div className="grid grid-cols-2 gap-4 mt-2 text-xs text-gray-500">
+                          <div>
+                            <span className="block">Total Leads</span>
+                            <span className="font-medium">{member.total_leads_handled || 0}</span>
+                          </div>
+                          <div>
+                            <span className="block">Total Campaigns</span>
+                            <span className="font-medium">
+                              {member.total_campaigns_handled || 0}
+                              {member.active_campaigns > 0 && 
+                                <span className="text-xs text-green-500 ml-1">
+                                  ({member.active_campaigns} active)
+                                </span>
+                              }
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                        <div
-                          className="bg-blue-600 h-1.5 rounded-full"
-                          style={{ width: `${member.conversion_rate}%` }}
-                        ></div>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        <span>Leads: {member.total_leads}</span>
-                        <span className="mx-2">|</span>
-                        <span>Converted: {member.converted_leads}</span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -658,17 +688,51 @@ const ManagerDashboard = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-600">{campaign.name}</span>
                         <span className="font-medium">
-                          {campaign.conversion_rate}% conversion
+                          Progress
                         </span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                        <div
-                          className="bg-green-600 h-1.5 rounded-full"
-                          style={{ width: `${campaign.conversion_rate}%` }}
-                        />
-                      </div>
+                      {(() => {
+                        const startDate = new Date(campaign.start_date);
+                        const endDate = new Date(campaign.end_date);
+                        const currentDate = new Date();
+                        
+                        const totalDuration = endDate - startDate;
+                        const elapsedDuration = currentDate - startDate;
+                        let progressPercentage = Math.floor((elapsedDuration / totalDuration) * 100);
+                        
+                        // Ensure progress is between 0 and 100
+                        progressPercentage = Math.max(0, Math.min(100, progressPercentage));
+                        
+                        // Determine color based on progress and status
+                        const getProgressColor = () => {
+                          if (campaign.status === 'completed') return 'bg-green-500';
+                          if (progressPercentage >= 90) return 'bg-red-500';
+                          if (progressPercentage >= 75) return 'bg-yellow-500';
+                          return 'bg-blue-500';
+                        };
+
+                        const progressColor = getProgressColor();
+
+                        return (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-grow h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full transition-all duration-500 ${progressColor}`}
+                                  style={{ width: `${progressPercentage}%` }}
+                                />
+                              </div>
+                              <span className="text-xs font-medium w-9">{progressPercentage}%</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-gray-500 mt-1">
+                              <span>{startDate.toLocaleDateString()}</span>
+                              <span>{endDate.toLocaleDateString()}</span>
+                            </div>
+                          </>
+                        );
+                      })()}
                       <div className="text-xs text-gray-500 mt-1">
-                        <span>Assigned to: {campaign.assigned_users} users</span>
+                        <span>Assigned to: {campaign.assigned_users?.length || 0} users</span>
                         <span className="mx-2">|</span>
                         <span>Total Leads: {campaign.total_leads}</span>
                       </div>
