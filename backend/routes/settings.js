@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middlewares/auth');
+const { authenticateToken } = require('../middleware/auth');
 const ExotelConfig = require('../models/ExotelConfig');
 const responseFormatter = require('../utils/responseFormatter');
 
@@ -67,4 +67,4 @@ router.post('/exotel', authenticateToken, async (req, res) => {
     }
 });
 
-module.exports = router; 
+module.exports = router;

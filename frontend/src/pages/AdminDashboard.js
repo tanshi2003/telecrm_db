@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
+import { FaUsers, FaBullhorn, FaClipboardList, FaChartLine } from "react-icons/fa"; // added icons
 
 const AdminDashboard = () => {
   const [user, setUser] = useState(null);
@@ -115,57 +116,67 @@ const AdminDashboard = () => {
           </div>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Users Management Tile */}
+          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <FaUsers className="mr-2" />
+              Users
+            </h2>
+            <p>Register, assign roles, deactivate/activate users, and manage employee profiles.</p>
+            <button
+              className="mt-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={() => handleNavigation("/admin/ManageUsers")}
+            >
+              Manage Users
+            </button>
+          </div>
 
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-  {/* Users Management */}
-  <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
-    <h2 className="text-xl font-semibold mb-4">Users</h2>
-    <p>Register, assign roles, deactivate/activate users, and manage employee profiles.</p>
-    <button
-      className="mt-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-      onClick={() => handleNavigation("/admin/ManageUsers")}
-    >
-      Manage Users
-    </button>
-  </div>
+          {/* Campaigns Tile */}
+          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <FaBullhorn className="mr-2" />
+              Campaigns
+            </h2>
+            <p>Create campaigns, assign users, track progress, and analyze performance.</p>
+            <button
+              className="mt-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={() => handleNavigation("/admin/campaigns1")}
+            >
+              Manage Campaigns
+            </button>
+          </div>
 
-  {/* Campaigns */}
-  <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
-    <h2 className="text-xl font-semibold mb-4">Campaigns</h2>
-    <p>Create campaigns, assign users, track progress, and analyze performance.</p>
-    <button
-      className="mt-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-      onClick={() => handleNavigation("/admin/campaigns1")}
-    >
-      Manage Campaigns
-    </button>
-  </div>
+          {/* Lead Overview Tile */}
+          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <FaClipboardList className="mr-2" />
+              Leads
+            </h2>
+            <p>Assign leads to users, filter by status, category, and campaign. Add or import leads.</p>
+            <button
+              className="mt-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={() => handleNavigation("/leads")}
+            >
+              View Leads
+            </button>
+          </div>
 
-  {/* Lead Overview */}
-  <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
-    <h2 className="text-xl font-semibold mb-4">Leads</h2>
-    <p>Assign leads to users, filter by status, category, and campaign. Add or import leads.</p>
-    <button
-      className="mt-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-      onClick={() => handleNavigation("/leads")}
-    >
-      View Leads
-    </button>
-  </div>
-
-  {/* Reports */}
-  <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
-    <h2 className="text-xl font-semibold mb-4">Reports</h2>
-    <p>Performance summaries by user, team, or campaign. Export data and download PDFs.</p>
-    <button
-      className="mt-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-      onClick={() => handleNavigation("/ReportsLeaderboard")}
-    >
-      View Reports
-    </button>
-  </div>
-</div>
-
+          {/* Reports Tile */}
+          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <FaChartLine className="mr-2" />
+              Reports
+            </h2>
+            <p>Performance summaries by user, team, or campaign. Export data and download PDFs.</p>
+            <button
+              className="mt-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={() => handleNavigation("/ReportsLeaderboard")}
+            >
+              View Reports
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

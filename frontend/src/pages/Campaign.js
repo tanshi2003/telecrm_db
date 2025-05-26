@@ -118,106 +118,49 @@ const Campaign = () => {
         <p className="text-gray-600 mb-6">Create, update, analyze, and manage campaigns.</p>
 
         {/* Campaign Management Cards */}
-   
-<section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-  {/* Card Example */}
-  <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
-    <h4 className="font-semibold text-lg mb-2">Create Campaign</h4>
-    <p className="text-sm text-gray-600 mb-4">
-      Launch a new campaign and set its parameters.
-    </p>
-    <button
-      className="mt-auto w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-      onClick={() => navigate("/admin/campaigns")}
-    >
-      + Create Campaign
-    </button>
-  </div>
-
-  <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
-    <h4 className="font-semibold text-lg mb-2">Update Campaign</h4>
-    <p className="text-sm text-gray-600 mb-4">
-      Modify campaign details such as name or timeline.
-    </p>
-    <button
-      className="mt-auto w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-      onClick={() => navigate(`/admin/UpdateCampaign/${campaigns.id}`)}
-    >
-      + Update Campaign
-    </button>
-  </div>
-
-  <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
-    <h4 className="font-semibold text-lg mb-2">Assign Users</h4>
-    <p className="text-sm text-gray-600 mb-4">
-      Allocate employees to campaigns.
-    </p>
-    <button
-      className="mt-auto w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-      onClick={() => navigate("/assignuser")}
-    >
-      + Assign Users
-    </button>
-  </div>
-
-  <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
-    <h4 className="font-semibold text-lg mb-2">Campaign Analytics</h4>
-    <p className="text-sm text-gray-600 mb-4">
-      View performance and insights.
-    </p>
-    <button
-      className="mt-auto w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-      onClick={() => navigate("/campaign-analytics")}
-    >
-      View Analytics
-    </button>
-  </div>
-</section>
-
-        {/* Filters */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h4 className="font-semibold text-lg mb-4">Filters</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <select
-              name="status"
-              value={filters.status}
-              onChange={handleFilterChange}
-              className="p-2 border rounded"
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          {/* Create Campaign Card */}
+          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
+            <h4 className="font-semibold text-lg mb-2">Create Campaign</h4>
+            <p className="text-sm text-gray-600 mb-4">
+              Launch a new campaign and set its parameters.
+            </p>
+            <button
+              className="mt-auto w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={() => navigate("/admin/campaigns")}
             >
-              <option value="">All Status</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-
-            <select
-              name="priority"
-              value={filters.priority}
-              onChange={handleFilterChange}
-              className="p-2 border rounded"
-            >
-              <option value="">All Priorities</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
-            </select>
-
-            <input
-              type="date"
-              name="dateRange.start"
-              value={filters.dateRange.start}
-              onChange={handleFilterChange}
-              className="p-2 border rounded"
-            />
-
-            <input
-              type="date"
-              name="dateRange.end"
-              value={filters.dateRange.end}
-              onChange={handleFilterChange}
-              className="p-2 border rounded"
-            />
+              + Create Campaign
+            </button>
           </div>
-        </div>
+
+          {/* Update Campaign Card */}
+          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
+            <h4 className="font-semibold text-lg mb-2">Update Campaign</h4>
+            <p className="text-sm text-gray-600 mb-4">
+              Modify campaign details such as name or timeline.
+            </p>
+            <button
+              className="mt-auto w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={() => navigate(`/admin/UpdateCampaign/${campaigns.id}`)}
+            >
+              + Update Campaign
+            </button>
+          </div>
+
+          {/* Assign Users Card */}
+          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
+            <h4 className="font-semibold text-lg mb-2">Assign Users</h4>
+            <p className="text-sm text-gray-600 mb-4">
+              Allocate employees to campaigns.
+            </p>
+            <button
+              className="mt-auto w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={() => navigate("/assignuser")}
+            >
+              + Assign Users
+            </button>
+          </div>
+        </section>
 
         {/* Campaign List Section */}
         <div className="mt-8 bg-white p-6 rounded-lg shadow-md">

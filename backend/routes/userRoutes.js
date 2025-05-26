@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/userController");
-const { authenticateToken } = require("../middlewares/auth");
-const roleMiddleware = require("../middlewares/role");
+const { authenticateToken } = require("../middleware/auth");
+const roleMiddleware = require("../middleware/checkRole");
 const User = require("../models/user");
 
 // Public routes
@@ -20,7 +20,7 @@ router.get("/managers", roleMiddleware(['admin']), userController.getManagers);
 
 // Admin only routes
 router.post("/register", roleMiddleware(['admin']), userController.registerUser);
-router.get("/", roleMiddleware(['admin']), userController.getUsers);
+router.get("/", roleMiddleware(['admin', 'manager']), userController.getUsers);
 
 // Routes with :id parameter
 router.get("/:id", roleMiddleware(['admin']), userController.getUserById);
@@ -38,8 +38,8 @@ router.put("/:id/role", roleMiddleware(['admin']), userController.updateUserRole
 router.put("/:id/assign-manager", roleMiddleware(['admin']), userController.assignManager);
 
 // User statistics
-router.get("/:id/stats", roleMiddleware(['admin']), userController.getUserStats);
-router.get("/:id/leads", roleMiddleware(['admin']), userController.getLeadsByUserId);
-router.get("/:id/campaigns", roleMiddleware(['admin']), userController.getCampaignsByUserId);
+router.get("/:id/stats", roleMiddleware(['admin', 'field_employee']), userController.getUserStats);
+router.get("/:id/leads", roleMiddleware(['admin', 'field_employee']), userController.getLeadsByUserId);
+router.get("/:id/campaigns", roleMiddleware(['admin', 'field_employee']), userController.getCampaignsByUserId);
 
 module.exports = router;

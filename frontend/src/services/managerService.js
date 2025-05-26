@@ -1,7 +1,5 @@
 import api from './api';
 
-const API_URL = 'http://localhost:5000/api/managers';
-
 // Get auth token from localStorage
 const getAuthHeader = () => {
   const token = localStorage.getItem('token');
@@ -130,4 +128,4 @@ export const getUnassignedLeads = async () => {
     } catch (error) {
         throw error.response?.data || error.message;
     }
-}; 
+};

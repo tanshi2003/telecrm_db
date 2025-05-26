@@ -73,6 +73,10 @@ const CallerDashboard = () => {
   const [socketError, setSocketError] = useState(null);
   // Add a ref to store the peer connection
   const peerConnectionRef = React.useRef(null);
+  const [callbook, setCallbook] = useState([]);
+  const [currentCallId, setCurrentCallId] = useState(null);
+  const [currentCallSid, setCurrentCallSid] = useState(null);
+  const [callDisposition, setCallDisposition] = useState('pending');
 
   // Add WebRTC configuration
   const configuration = {
@@ -641,35 +645,27 @@ const CallerDashboard = () => {
         error: null
       }));
 
-      // Get Exotel configuration
+      // Get token from localStorage
       const token = localStorage.getItem('token');
-      const configResponse = await axios.get('http://localhost:5000/api/exotel-config', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!configResponse.data.success) {
-        throw new Error('Failed to get Exotel configuration');
+      if (!token) {
+        throw new Error('No authentication token found');
       }
 
-      const { sid, token: exotelToken } = configResponse.data.data;
-
-      // End the call through Exotel API
-      await axios({
-        method: 'post',
-        url: `https://api.exotel.com/v1/Accounts/${sid}/Calls/${callId}.json`,
-        data: new URLSearchParams({ Status: 'completed' }),
-        auth: {
-          username: sid,
-          password: exotelToken
-        },
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json'
+      // End the call through our backend API
+      const response = await axios.post(
+        `http://localhost:5000/api/calls/${callId}/end`,
+        {},
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         }
-      });
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Failed to end call');
+      }
 
       // Reset all call state
       setCallStatus('idle');
@@ -812,166 +808,116 @@ const CallerDashboard = () => {
   };
 
   // Update the startCall function
-  const startCall = async (phoneNumber) => {
+  const startCall = async (phoneNumber, isManual = false, recipientId = null) => {
     try {
-      console.log('Starting call to:', phoneNumber);
-      
-      // Get token from localStorage
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('No authentication token found');
       }
 
-      // Get user data from localStorage
-      const userData = localStorage.getItem('user');
-      if (!userData) {
-        throw new Error('No user data found');
-      }
-
-      const user = JSON.parse(userData);
-      if (!user || !user.id) {
-        throw new Error('Invalid user data');
-      }
-
       // Clean the phone number
-      let cleanedNumber = phoneNumber.replace(/[^0-9]/g, '');
-      if (cleanedNumber.startsWith('91')) {
-        cleanedNumber = cleanedNumber.substring(2);
-      }
-      if (!cleanedNumber.startsWith('0')) {
-        cleanedNumber = '0' + cleanedNumber;
+      let cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+      if (!cleanNumber.startsWith('0')) {
+        cleanNumber = '0' + cleanNumber;
       }
 
-      // Set call status to dialing
       setCallStatus('dialing');
       setCallTimer(0);
-
-      // Get Exotel configuration
-      const configResponse = await axios.get('http://localhost:5000/api/exotel-config', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!configResponse.data.success) {
-        throw new Error('Failed to get Exotel configuration');
-      }
-
-      const { sid, token: exotelToken, phone_number: exotelNumber } = configResponse.data.data;
-
-      // Make the API call directly to Exotel
-      const formData = new URLSearchParams();
-      formData.append('From', exotelNumber);
-      formData.append('To', cleanedNumber);
-      formData.append('CallerId', exotelNumber);
-      formData.append('CallType', 'trans');
-      formData.append('TimeLimit', '300');
-      formData.append('Record', 'true');
-      formData.append('PlayDtmf', 'true');
-      formData.append('CallerName', 'TeleCRM');
-
-      console.log('Making Exotel API request with data:', {
-        url: `https://api.exotel.com/v1/Accounts/${sid}/Calls/connect`,
-        formData: Object.fromEntries(formData),
-        phoneNumber: {
-          original: phoneNumber,
-          formatted: cleanedNumber,
-          exotelNumber: exotelNumber
-        }
-      });
-
-      const response = await axios({
-        method: 'post',
-        url: `https://api.exotel.com/v1/Accounts/${sid}/Calls/connect`,
-        data: formData,
-        auth: {
-          username: sid,
-          password: exotelToken
-        },
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json'
-        }
-      });
-
-      console.log('Exotel API response:', response.data);
-
-      if (response.data.RestException) {
-        throw new Error(`Exotel API error: ${response.data.RestException.Message}`);
-      }
-
-      // Get the call SID from the response
-      let exotelCallSid = null;
-      if (response.data.Call && response.data.Call.Sid) {
-        exotelCallSid = response.data.Call.Sid;
-      } else if (response.data.Sid) {
-        exotelCallSid = response.data.Sid;
-      } else if (response.data.call_sid) {
-        exotelCallSid = response.data.call_sid;
-      } else if (response.data.callSid) {
-        exotelCallSid = response.data.callSid;
-      }
-
-      if (!exotelCallSid) {
-        throw new Error('No call SID received from Exotel');
-      }
-
-      setCallId(exotelCallSid);
-      console.log('Setting call ID:', exotelCallSid);
-
-      // Start the timer
-      const timer = setInterval(() => {
+      const timerInterval = setInterval(() => {
         setCallTimer(prev => prev + 1);
       }, 1000);
-      setTimerInterval(timer);
 
-      // Poll for call status
-      const pollInterval = setInterval(async () => {
-        try {
-          const statusResponse = await axios({
-            method: 'get',
-            url: `https://api.exotel.com/v1/Accounts/${sid}/Calls/${exotelCallSid}`,
-            auth: {
-              username: sid,
-              password: exotelToken
-            },
-            headers: {
-              'Accept': 'application/json'
-            }
-          });
+      // Use the main leads array for leadId lookup
+      let leadId = null;
+      if (!isManual && recipientId) {
+        const lead = leads.find(lead => lead.id === recipientId);
+        if (lead) {
+          leadId = lead.id;
+        }
+      }
+      // Fallback for from number
+      const fromNumber = user?.phone_number || user?.phone || '7817822675';
 
-          console.log('Call status response:', statusResponse.data);
+      // Debug log what is being sent to the backend
+      console.log(
+        'Calling backend with:',
+        'to:', cleanNumber,
+        'from:', fromNumber,
+        'leadId:', leadId,
+        'recipientId:', recipientId
+      );
 
-          if (statusResponse.data.Call && statusResponse.data.Call.Status) {
-            const status = statusResponse.data.Call.Status.toLowerCase();
-            if (status === 'completed') {
-              clearInterval(pollInterval);
-              setCallStatus('connected');
-            } else if (status === 'failed' || status === 'busy') {
-              clearInterval(pollInterval);
-              setCallStatus('failed');
-              setCallFeedback(statusResponse.data.Call.StatusMessage || 'Call failed');
-            }
+      const response = await axios.post(
+        'http://localhost:5000/api/calls/initiate',
+        {
+          to: cleanNumber,
+          from: fromNumber,
+          leadId: leadId
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
           }
-        } catch (error) {
-          console.error('Error polling call status:', error);
         }
-      }, 2000);
+      );
 
-      // Clear polling after 30 seconds if call hasn't connected
-      setTimeout(() => {
-        clearInterval(pollInterval);
-        if (callStatus === 'dialing') {
-          setCallStatus('failed');
-          setCallFeedback('Call timed out');
-        }
-      }, 30000);
+      if (response.data.success) {
+        const { dbCallId, exotelCallSid } = response.data.data;
+        setCurrentCallId(dbCallId);
+        setCurrentCallSid(exotelCallSid);
 
+        // Start polling for call status
+        const pollInterval = setInterval(async () => {
+          try {
+            const statusResponse = await axios.get(
+              `http://localhost:5000/api/calls/${dbCallId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`
+                }
+              }
+            );
+
+            if (statusResponse.data.success) {
+              const { status, disposition } = statusResponse.data.data;
+              setCallStatus(status);
+              setCallDisposition(disposition);
+
+              if (['completed', 'failed', 'busy', 'no-answer'].includes(status)) {
+                clearInterval(pollInterval);
+                clearInterval(timerInterval);
+                
+                // Update callbook if call was successful
+                if (status === 'completed' && !isManual) {
+                  setCallbook(prev => prev.map(call => 
+                    call.id === recipientId 
+                      ? { ...call, status: 'completed', disposition: disposition }
+                      : call
+                  ));
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error polling call status:', error);
+            clearInterval(pollInterval);
+            clearInterval(timerInterval);
+            setCallStatus('failed');
+          }
+        }, 2000);
+
+        // Stop polling after 30 seconds if call hasn't connected
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          if (callStatus === 'dialing') {
+            setCallStatus('failed');
+            clearInterval(timerInterval);
+          }
+        }, 30000);
+      }
     } catch (error) {
       console.error('Error starting call:', error);
       setCallStatus('failed');
-      setCallFeedback(error.message || 'Failed to start call');
+      clearInterval(timerInterval);
     }
   };
 
@@ -1149,14 +1095,16 @@ const CallerDashboard = () => {
             onClick={() => {
               if (callStatus === 'connected' || callStatus === 'dialing') {
                 handleCallEnd();
-              } else if (dialedNumber) {
-                startCall(dialedNumber);
+              } else if (dialedNumber && recipientId) {
+                startCall(dialedNumber, false, recipientId);
+              } else {
+                alert('Please select a lead from the callbook to make a call.');
               }
             }}
             className={`w-full mt-2 p-2 text-sm text-white rounded ${
               callStatus === 'connected' || callStatus === 'dialing'
                 ? 'bg-red-500 hover:bg-red-600'
-                : dialedNumber
+                : dialedNumber && recipientId
                 ? 'bg-green-500 hover:bg-green-600'
                 : 'bg-gray-300 cursor-not-allowed'
             }`}
@@ -1212,6 +1160,12 @@ const CallerDashboard = () => {
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
               Add Call
+            </button>
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={() => window.location.href = "/addlead"}
+            >
+              Create Lead
             </button>
           </div>
         </div>

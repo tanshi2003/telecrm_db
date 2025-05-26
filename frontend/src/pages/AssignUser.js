@@ -169,7 +169,11 @@ const AssignUser = () => {
       <Sidebar role={user?.role || "admin"} />
       <div className="ml-64 flex-grow">
         <Navbar />
-        <div className="flex h-[calc(100vh-4rem)] mt-16">
+        {/* BackButton at the top, like other pages */}
+        <div className="flex items-center justify-between mt-4 mb-2 px-6">
+          <BackButton />
+        </div>
+        <div className="flex h-[calc(100vh-4rem)] mt-4">
           {/* Campaign List */}
           <div className="w-1/3 bg-gray-50 p-4 overflow-y-auto border-r">
             <div className="flex items-center justify-between mb-4">
@@ -204,8 +208,8 @@ const AssignUser = () => {
 
           {/* Campaign Detail Panel */}
           <div className="w-2/3 p-6 bg-white overflow-y-auto relative">
-            {/* Single BackButton at top right */}
-            <div className="absolute top-4 right-6 z-10">
+            {/* BackButton at top right corner and always visible */}
+            <div className="absolute top-4 right-6 z-20">
               <BackButton />
             </div>
             {detailsLoading ? (
@@ -214,7 +218,7 @@ const AssignUser = () => {
               </div>
             ) : selectedCampaign ? (
               <>
-                <div className="space-y-2 relative border rounded p-4 shadow mb-4">
+                <div className="space-y-2 relative border rounded p-4 shadow mb-4 mt-10">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xl font-semibold text-gray-700">{selectedCampaign.name}</h3>
                   </div>
@@ -222,31 +226,32 @@ const AssignUser = () => {
                   <p><strong>Status:</strong> {selectedCampaign.status || 'Not set'}</p>
                   <p><strong>Priority:</strong> {selectedCampaign.priority || 'Not set'}</p>
                   <p><strong>Lead Count:</strong> {selectedCampaign.lead_count || selectedCampaign.leads?.length || 0}</p>
-                 <p> <strong>Start Date:</strong>{" "}
-    {selectedCampaign.start_date
-      ? new Date(selectedCampaign.start_date).toLocaleString("en-IN", {
-          year: "numeric",
-          month: "short",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        })
-      : "Not set"}
-  </p>
-  <p>
-    <strong>End Date:</strong>{" "}
-    {selectedCampaign.end_date
-      ? new Date(selectedCampaign.end_date).toLocaleString("en-IN", {
-          year: "numeric",
-          month: "short",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        })
-      : "Not set"}
-  </p>
+                  <p>
+                    <strong>Start Date:</strong>{" "}
+                    {selectedCampaign.start_date
+                      ? new Date(selectedCampaign.start_date).toLocaleString("en-IN", {
+                          year: "numeric",
+                          month: "short",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                      : "Not set"}
+                  </p>
+                  <p>
+                    <strong>End Date:</strong>{" "}
+                    {selectedCampaign.end_date
+                      ? new Date(selectedCampaign.end_date).toLocaleString("en-IN", {
+                          year: "numeric",
+                          month: "short",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                      : "Not set"}
+                  </p>
                   <p>
                     <strong>Users Assigned:</strong>{" "}
                     {Array.isArray(selectedCampaign.assigned_users) ? (

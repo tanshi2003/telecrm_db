@@ -1,13 +1,11 @@
 import React, { useEffect, useState, useContext, useRef } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { AuthContext } from "../context/AuthContext";
 import BackButton from "../components/BackButton";
 
 const UpdateCampaign = () => {
-  const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -127,7 +125,11 @@ const UpdateCampaign = () => {
       <Sidebar role={user?.role || "admin"} />
       <div className="ml-64 flex-grow">
         <Navbar />
-        <div className="flex h-[calc(100vh-4rem)] mt-16">
+        {/* BackButton at the top, like other pages */}
+        <div className="flex items-center justify-between mt-4 mb-2 px-6">
+          <BackButton />
+        </div>
+        <div className="flex h-[calc(100vh-4rem)] mt-4">
           {/* Campaign List */}
           <div className="w-1/3 bg-gray-50 p-4 overflow-y-auto border-r">
             <div className="flex items-center justify-between mb-4">
@@ -165,13 +167,13 @@ const UpdateCampaign = () => {
 
           {/* Campaign Detail Panel */}
           <div className="w-2/3 p-6 bg-white overflow-y-auto relative">
-            {/* Single BackButton at top right */}
-            <div className="absolute top-4 right-6 z-10">
+            {/* BackButton at top right corner and always visible */}
+            <div className="absolute top-4 right-6 z-20">
               <BackButton />
             </div>
             {selectedCampaign ? (
               isEditing ? (
-                <form onSubmit={handleEditFormSubmit} className="border p-4 rounded shadow mb-4 space-y-3">
+                <form onSubmit={handleEditFormSubmit} className="border p-4 rounded shadow mb-4 space-y-3 mt-10">
                   <h3 className="text-lg font-semibold text-purple-600 mb-2">Edit Campaign</h3>
                   {/* Name */}
                   <div>
@@ -269,7 +271,7 @@ const UpdateCampaign = () => {
                   </div>
                 </form>
               ) : (
-                <div className="space-y-2 relative border rounded p-4 shadow">
+                <div className="space-y-2 relative border rounded p-4 shadow mt-10">
                   <div className="flex justify-between items-start">
                     <h3 className="text-xl font-semibold text-gray-700">{selectedCampaign.name}</h3>
                     {/* Dropdown */}
@@ -304,33 +306,32 @@ const UpdateCampaign = () => {
                   <p><strong>Status:</strong> {selectedCampaign.status}</p>
                   <p><strong>Priority:</strong> {selectedCampaign.priority}</p>
                   <p><strong>Lead Count:</strong> {selectedCampaign.lead_count ?? selectedCampaign.leads?.length ?? "N/A"}</p>
-                 <p>
-  <strong>Start Date:</strong>{" "}
-  {selectedCampaign.start_date
-    ? new Date(selectedCampaign.start_date).toLocaleString("en-IN", {
-        year: "numeric",
-        month: "short",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      })
-    : "Not set"}
-</p>
-<p>
-  <strong>End Date:</strong>{" "}
-  {selectedCampaign.end_date
-    ? new Date(selectedCampaign.end_date).toLocaleString("en-IN", {
-        year: "numeric",
-        month: "short",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      })
-    : "Not set"}
-</p>
-
+                  <p>
+                    <strong>Start Date:</strong>{" "}
+                    {selectedCampaign.start_date
+                      ? new Date(selectedCampaign.start_date).toLocaleString("en-IN", {
+                          year: "numeric",
+                          month: "short",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                      : "Not set"}
+                  </p>
+                  <p>
+                    <strong>End Date:</strong>{" "}
+                    {selectedCampaign.end_date
+                      ? new Date(selectedCampaign.end_date).toLocaleString("en-IN", {
+                          year: "numeric",
+                          month: "short",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                      : "Not set"}
+                  </p>
                 </div>
               )
             ) : (

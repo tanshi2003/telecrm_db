@@ -25,18 +25,8 @@ const ManageUser = () => { // ✅ Capitalized component name
   const handleManageStatusclick = () => {
     navigate("/admin/users/manage-status");
   };
-const handleEmployeeProfileclick = () => {
-    navigate("/admin/users/user-profile");
-  } 
-    
   const handleAllUsersclick = () => {
     navigate("/admin/users/all-user");
-  };
-  const handleAccessLogsclick = () => {
-    navigate("/admin/users/access-logs");
-  };
-  const handleUpdateUserClick = () => {
-    navigate("/admin/users/update-user");
   };
   const handleAssignManagerClick = () => {
     navigate("/admin/users/assign-manager");
