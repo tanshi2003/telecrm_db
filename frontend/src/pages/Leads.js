@@ -6,7 +6,7 @@ import axios from "axios";
 const Leads = () => {
   const [user, setUser] = useState(null);
   const [leads, setLeads] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState([]); // added state for users
   const [filters, setFilters] = useState({
     status: "",
     category: "",
@@ -30,6 +30,7 @@ const Leads = () => {
     fetchLeadsAndUsers();
   }, [navigate]);
 
+  // Fetch leads and also users for mapping assignedTo
   const fetchLeadsAndUsers = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -45,18 +46,30 @@ const Leads = () => {
       } else {
         console.error("Failed to fetch leads:", response.data.message);
       }
+
+      // Fetch users
+      const usersResponse = await axios.get("http://localhost:5000/api/users", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUsers(usersResponse.data.data || []);
     } catch (error) {
-      console.error("Error fetching leads:", error);
+      console.error("Error fetching leads or users:", error);
       if (error.response?.status === 401) {
         navigate("/login");
       }
     }
   };
 
+  // Map assigned_to ID to user name using the fetched users
+  const getAssignedUserName = (userId) => {
+    const foundUser = users.find((u) => u.id === userId);
+    return foundUser ? foundUser.name : "N/A";
+  };
+
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     if (name.includes("dateRange")) {
-      const [_, key] = name.split(".");
+      const [key] = name.split(".");
       setFilters((prev) => ({
         ...prev,
         dateRange: {
@@ -69,12 +82,6 @@ const Leads = () => {
     }
   };
 
-  // Map assigned_to ID to user name
-  const getAssignedUserName = (userId) => {
-    const user = users.find((u) => u.id === userId);
-    return user ? user.name : "N/A";
-  };
-
   // Delete lead from frontend and database
   const handleDeleteLead = async (id) => {
     if (!window.confirm("Are you sure you want to delete this lead?")) return;
@@ -82,9 +89,7 @@ const Leads = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.delete(`http://localhost:5000/api/leads/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       setLeads((prevLeads) => prevLeads.filter((lead) => lead.id !== id));
@@ -244,25 +249,25 @@ const Leads = () => {
                     </p>
                   </div>
                   <div className="mt-3 flex gap-2 justify-center">
-  <button
-    onClick={() => navigate(`/viewlead/${lead.id}`, { state: { lead } })}
-    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-  >
-    View
-  </button>
-  <button
-    onClick={() => navigate(`/editlead/${lead.id}`, { state: { lead } })}
-    className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
-  >
-    Edit
-  </button>
-  <button
-    onClick={() => handleDeleteLead(lead.id)}
-    className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
-  >
-    Delete
-  </button>
-</div>
+                    <button
+                      onClick={() => navigate(`/viewlead/${lead.id}`, { state: { lead } })}
+                      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => navigate(`/editlead/${lead.id}`, { state: { lead } })}
+                      className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteLead(lead.id)}
+                      className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

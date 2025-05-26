@@ -76,4 +76,27 @@ const auth = (req, res, next) => {
   }
 };
 
-module.exports = auth; 
+module.exports = auth;
+
+// Test connection
+const testConnection = async () => {
+  try {
+    const response = await api.get('/');
+    console.log('Connection test response:', response.data);
+    return true;
+  } catch (error) {
+    console.error('Connection test failed:', error);
+    return false;
+  }
+};
+
+// Test socket connection
+const testSocketConnection = () => {
+  if (socket && socket.connected) {
+    console.log('Socket is connected');
+    return true;
+  } else {
+    console.log('Socket is not connected');
+    return false;
+  }
+}; 

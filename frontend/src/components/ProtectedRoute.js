@@ -1,13 +1,11 @@
-import React, { useContext, useEffect } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import React from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const ProtectedRoute = ({ allowedRoles, children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
   
-  useEffect(() => {
+  React.useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
     const currentRole = role?.toLowerCase();

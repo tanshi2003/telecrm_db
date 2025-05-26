@@ -54,7 +54,6 @@ const Meetings = () => {
   const [dateFilter, setDateFilter] = useState("");
   const [userRole, setUserRole] = useState("");
   const [userId, setUserId] = useState(null);
-  const navigate = useNavigate();
 
   // Fetch team members and meetings (replace with real API in production)
   useEffect(() => {

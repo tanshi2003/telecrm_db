@@ -43,9 +43,11 @@ import ViewTeam from "./pages/ViewTeam";
 import LeadAssignment from "./pages/LeadAssignment";
 import CampaignManagement from "./pages/CampaignManagement";
 import CreateCampaignWithUsers from "./pages/CreateCampaignWithUsers";
+import CampaignDetails from "./pages/CampaignDetails";
 import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Toaster } from 'react-hot-toast';
+import AddLead from "./pages/AddLead";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -354,6 +356,22 @@ function AppContent() {
               element={
                 <ProtectedRoute allowedRoles={["admin", "manager"]}>
                   <CreateCampaignWithUsers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/CampaignDetails"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager", "field_employee", "caller"]}>
+                  <CampaignDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/addlead"
+              element={
+                <ProtectedRoute allowedRoles={["manager", "caller", "field_employee", "user"]}>
+                  <AddLead />
                 </ProtectedRoute>
               }
             />

@@ -4,47 +4,43 @@ const axios = require('axios');
 const db = require('../config/db');
 const { authenticateToken } = require('../middlewares/auth');
 const ExotelConfig = require('../models/ExotelConfig');
-
-// Exotel credentials
-// Get these from your Exotel dashboard (https://my.exotel.com)
-// Go to Settings -> API Credentials
-const SID = 'telecrm3';  // Your Account SID
-const TOKEN = '65754531b300990367bffca4ac38f7d538126a8aa2fad9f7';  // Your API Token
-const EXOTEL_NUMBER = '07948518141';  // Your Exotel phone number
-
-// Example of correct format:
-// const SID = 'exotel123456789';
-// const TOKEN = '1234567890abcdef1234567890abcdef';
-// const EXOTEL_NUMBER = '07948518141';
+const xml2js = require('xml2js');
 
 // Initiate call
-router.post('/initiate', authenticateToken, async (req, res) => {
+router.post('/initiate', authenticateToken, (req, res) => {
   console.log('\n=== Starting New Call ===');
   let connection;
-  try {
-    const { to, from, leadId } = req.body;
-    const callerId = req.user.id; // Get caller ID from authenticated user
-    
-    // Get Exotel configuration from database
-    const [exotelConfig] = await db.query("SELECT * FROM exotel_config ORDER BY id DESC LIMIT 1");
-    if (!exotelConfig || exotelConfig.length === 0) {
-      throw new Error('Exotel configuration not found. Please configure Exotel settings first.');
+  let formattedNumber;
+  let callId;
+  
+  const { to, from, leadId } = req.body;
+  const callerId = req.user.id;
+  
+  // Validate required fields
+  if (!to) {
+    return res.status(400).json({ success: false, message: 'Phone number (to) is required' });
+  }
+  if (!callerId) {
+    return res.status(400).json({ success: false, message: 'Caller ID is required' });
+  }
+  if (!leadId) {
+    return res.status(400).json({ success: false, message: 'leadId is required' });
+  }
+  
+  db.query("SELECT * FROM exotel_config ORDER BY id DESC LIMIT 1", (err, exotelConfig) => {
+    if (err) {
+      console.error('Error in initial setup:', err);
+      return res.status(500).json({ success: false, message: err.message });
     }
-
+    if (!exotelConfig || exotelConfig.length === 0) {
+      return res.status(500).json({ success: false, message: 'Exotel configuration not found.' });
+    }
     const { sid: SID, token: TOKEN, phone_number: EXOTEL_NUMBER } = exotelConfig[0];
     
     // Debug log the incoming request
     console.log('DEBUG - Request body:', req.body);
     console.log('DEBUG - User:', req.user);
     console.log('DEBUG - Exotel Config:', { SID, EXOTEL_NUMBER });
-    
-    // Validate required fields
-    if (!to) {
-      throw new Error('Phone number (to) is required');
-    }
-    if (!callerId) {
-      throw new Error('Caller ID is required');
-    }
     
     console.log('1. Call Request Details:', {
       to,
@@ -54,355 +50,203 @@ router.post('/initiate', authenticateToken, async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
-    // Start transaction
-    connection = await db.getConnection();
-    await connection.beginTransaction();
-
-    let finalLeadId = leadId;
-
-    // If no leadId provided, check if lead exists with this phone number
-    if (!finalLeadId) {
-      console.log('2. Checking for existing lead...');
-      const [existingLead] = await connection.query(
-        'SELECT id FROM leads WHERE phone_no = ?',
-        [to]
-      );
-
-      if (existingLead && existingLead.length > 0) {
-        finalLeadId = existingLead[0].id;
-        console.log('2.1 Found existing lead with ID:', finalLeadId);
-      } else {
-        console.log('2.1 No existing lead found, creating new lead...');
-        // Create a new lead record
-        try {
-          // Get caller's admin_id from users table
-          const [caller] = await connection.query(
-            'SELECT manager_id FROM users WHERE id = ?',
-            [callerId]
-          );
-          
-          console.log('2.2 Caller details:', caller);
-
-          const adminId = caller?.[0]?.manager_id || callerId;
-          console.log('2.3 Using admin ID:', adminId);
-          
-          // Create a new lead record
-          const [result] = await connection.query(
-            `INSERT INTO leads (
-              title, 
-              name, 
-              phone_no, 
-              status, 
-              lead_category,
-              assigned_to,
-              admin_id,
-              created_at
-            ) VALUES (?, ?, ?, 'New', 'Fresh Lead', ?, ?, NOW())`,
-            [
-              `Call to ${to}`,  // title
-              `Unknown Lead - ${to}`,  // name
-              to,  // phone_no
-              callerId,  // assigned_to
-              adminId  // admin_id
-            ]
-          );
-          
-          finalLeadId = result.insertId;
-          console.log('2.4 New lead created with ID:', finalLeadId);
-
-          if (!finalLeadId) {
-            throw new Error('Failed to create lead record - no ID returned');
-          }
-        } catch (leadError) {
-          console.error('Failed to create lead:', leadError);
-          throw new Error('Failed to create lead record: ' + leadError.message);
+    db.getConnection((err, conn) => {
+      if (err) {
+        console.error('Error getting connection:', err);
+        return res.status(500).json({ success: false, message: err.message });
+      }
+      connection = conn;
+      conn.beginTransaction(err => {
+        if (err) {
+          connection.release();
+          return res.status(500).json({ success: false, message: err.message });
         }
-      }
-    }
 
-    // Verify we have a valid lead ID
-    if (!finalLeadId) {
-      throw new Error('No valid lead ID available');
-    }
-
-    // Verify the lead exists
-    const [leadCheck] = await connection.query(
-      'SELECT id FROM leads WHERE id = ?',
-      [finalLeadId]
-    );
-
-    if (!leadCheck || leadCheck.length === 0) {
-      throw new Error(`Lead with ID ${finalLeadId} not found`);
-    }
-
-    // Format the phone number for Exotel
-    let formattedNumber = to.replace(/[^0-9]/g, ''); // Remove all non-numeric characters
-    if (formattedNumber.startsWith('91')) {
-      formattedNumber = formattedNumber.substring(2);
-    }
-    if (!formattedNumber.startsWith('0')) {
-      formattedNumber = '0' + formattedNumber;
-    }
-    
-    console.log('3. Phone Number Formatting:', {
-      original: to,
-      formatted: formattedNumber
-    });
-
-    // Create call record in database
-    console.log('4. Creating call record in database...');
-    try {
-      console.log('4.1 Inserting call record with:', {
-        callerId,
-        finalLeadId,
-        timestamp: new Date().toISOString()
-      });
-
-      // Double check lead_id is not null
-      if (!finalLeadId) {
-        throw new Error('Lead ID is null when creating call record');
-      }
-
-      const [callResult] = await connection.query(
-        `INSERT INTO calls 
-         (caller_id, lead_id, start_time, status, call_type, disposition)
-         VALUES (?, ?, NOW(), 'missed', 'outbound', 'pending')`,
-        [callerId, finalLeadId]
-      );
-      
-      const callId = callResult.insertId;
-      console.log('4.2 Call record created with ID:', callId);
-
-      // Exotel API endpoint - using the correct format
-      const url = `https://api.exotel.com/v1/Accounts/${SID}/Calls/connect`;
-      
-      // Create form data as Exotel expects
-      const formData = new URLSearchParams();
-      formData.append('From', EXOTEL_NUMBER);
-      formData.append('To', formattedNumber);
-      formData.append('CallerId', EXOTEL_NUMBER);
-      formData.append('CallType', 'trans');
-      formData.append('TimeLimit', '300');
-      formData.append('Record', 'true');
-      formData.append('PlayDtmf', 'true');
-      formData.append('CallerName', 'TeleCRM');
-
-      console.log('5.1 Making Exotel API request with data:', {
-        url,
-        formData: Object.fromEntries(formData),
-        auth: {
-          username: SID,
-          password: '********' // Masked for security
-        },
-        phoneNumber: {
+        // Format the phone number for Exotel
+        formattedNumber = to.replace(/[^0-9]/g, '');
+        // Remove any existing country code
+        if (formattedNumber.startsWith('91')) {
+          formattedNumber = formattedNumber.substring(2);
+        }
+        // Remove leading 0 if present
+        if (formattedNumber.startsWith('0')) {
+          formattedNumber = formattedNumber.substring(1);
+        }
+        // Add country code
+        formattedNumber = '91' + formattedNumber;
+        
+        // Format the from number
+        let formattedFrom = from.replace(/[^0-9]/g, '');
+        if (formattedFrom.startsWith('91')) {
+          formattedFrom = formattedFrom.substring(2);
+        }
+        if (formattedFrom.startsWith('0')) {
+          formattedFrom = formattedFrom.substring(1);
+        }
+        formattedFrom = '91' + formattedFrom;
+        
+        console.log('3. Phone Number Formatting:', {
           original: to,
           formatted: formattedNumber,
-          exotelNumber: EXOTEL_NUMBER
-        }
+          from: {
+            original: from,
+            formatted: formattedFrom
+          }
+        });
+
+        // Create call record in database
+        console.log('4. Creating call record in database...');
+        connection.query(
+          `INSERT INTO calls (caller_id, lead_id, start_time, status, call_type, disposition)
+           VALUES (?, ?, NOW(), 'initiated', 'outbound', 'pending')`,
+          [callerId, leadId],
+          (err, result) => {
+            if (err) {
+              return connection.rollback(() => {
+                connection.release();
+                res.status(500).json({ success: false, message: err.message });
+              });
+            }
+            callId = result.insertId;
+            console.log('4.2 Call record created with ID:', callId);
+
+            // Exotel API endpoint
+            const url = `https://api.exotel.com/v1/Accounts/${SID}/Calls/connect`;
+            const formData = new URLSearchParams();
+            formData.append('From', formattedFrom);
+            formData.append('To', formattedNumber);
+            formData.append('CallerId', EXOTEL_NUMBER);
+            formData.append('CallType', 'trans');
+            formData.append('TimeLimit', '300');
+            formData.append('Record', 'true');
+            formData.append('PlayDtmf', 'true');
+            formData.append('CallerName', 'TeleCRM');
+            formData.append('StatusCallback', 'http://localhost:5000/api/calls/status');
+            formData.append('StatusCallbackMethod', 'POST');
+            formData.append('StatusCallbackEvent', 'initiated,ringing,answered,completed');
+            formData.append('AgentNumber', formattedFrom);
+
+            console.log('5.1 Making Exotel API request with data:', {
+              url,
+              formData: Object.fromEntries(formData),
+              auth: {
+                username: SID,
+                password: TOKEN
+              },
+              phoneNumber: {
+                original: to,
+                formatted: formattedNumber,
+                from: {
+                  original: from,
+                  formatted: formattedFrom
+                },
+                exotelNumber: EXOTEL_NUMBER
+              }
+            });
+
+            // Create Basic Auth header
+            const auth = Buffer.from(`${SID}:${TOKEN}`).toString('base64');
+
+            axios({
+              method: 'post',
+              url: url,
+              data: formData,
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json, application/xml, text/xml, */*',
+                'Authorization': `Basic ${auth}`
+              },
+              responseType: 'text',
+              validateStatus: function (status) {
+                return status >= 200 && status < 500;
+              }
+            }).then(response => {
+              console.log('Exotel API Response:', {
+                status: response.status,
+                statusText: response.statusText,
+                headers: response.headers,
+                data: response.data
+              });
+              
+              // Parse XML response from Exotel
+              require('xml2js').parseString(response.data, (err, parsedXml) => {
+                if (err) {
+                  console.error('Error parsing Exotel response:', err);
+                  return connection.rollback(() => {
+                    connection.release();
+                    res.status(500).json({ success: false, message: 'Failed to parse Exotel response' });
+                  });
+                }
+                console.log('Parsed Exotel XML:', JSON.stringify(parsedXml, null, 2));
+                
+                let exotelCallSid = null;
+                if (parsedXml && parsedXml.TwilioResponse && parsedXml.TwilioResponse.Call && parsedXml.TwilioResponse.Call[0].Sid) {
+                  exotelCallSid = parsedXml.TwilioResponse.Call[0].Sid[0];
+                }
+                if (!exotelCallSid) {
+                  console.warn('No Exotel Call SID in response, using temporary ID');
+                  exotelCallSid = `temp_${Date.now()}_${callId}`;
+                }
+                console.log('6.2 Final call SID:', exotelCallSid);
+
+                // Update call record with Exotel call SID
+                connection.query(
+                  `UPDATE calls SET exotel_call_sid = ?, status = 'initiated', start_time = NOW(), call_type = 'outbound', disposition = 'in-progress' WHERE id = ?`,
+                  [exotelCallSid, callId],
+                  (err) => {
+                    if (err) {
+                      return connection.rollback(() => {
+                        connection.release();
+                        res.status(500).json({ success: false, message: err.message });
+                      });
+                    }
+                    connection.commit(err => {
+                      if (err) {
+                        connection.release();
+                        return res.status(500).json({ success: false, message: err.message });
+                      }
+                      connection.release();
+                      console.log('=== Call Initiated Successfully ===\n');
+                      // Get the call details from database
+                      db.query(
+                        `SELECT id, exotel_call_sid, start_time, status, call_type, disposition FROM calls WHERE id = ?`,
+                        [callId],
+                        (err, callDetails) => {
+                          if (err || !callDetails[0]) {
+                            return res.status(500).json({ success: false, message: 'Failed to retrieve call details' });
+                          }
+                          res.status(200).json({
+                            success: true,
+                            data: {
+                              dbCallId: callId,
+                              exotelCallSid: exotelCallSid,
+                              message: 'Call initiated successfully',
+                              callDetails: {
+                                startTime: callDetails[0].start_time,
+                                duration: 0,
+                                status: callDetails[0].status,
+                                callType: callDetails[0].call_type,
+                                disposition: callDetails[0].disposition
+                              }
+                            }
+                          });
+                        }
+                      );
+                    });
+                  }
+                );
+              });
+            }).catch(error => {
+              connection.rollback(() => {
+                connection.release();
+                res.status(500).json({ success: false, message: error.message });
+              });
+            });
+          }
+        );
       });
-
-      try {
-        // Make request to Exotel with proper error handling
-        console.log('5.2 Sending request to Exotel...');
-        const response = await axios({
-          method: 'post',
-          url: url,
-          data: formData,
-          auth: {
-            username: SID,
-            password: TOKEN
-          },
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'application/json'
-          },
-          validateStatus: function (status) {
-            return status >= 200 && status < 500; // Accept all responses for better error handling
-          }
-        });
-
-        // Log the complete response for debugging
-        console.log('6. Complete Exotel API Response:', {
-          status: response.status,
-          statusText: response.statusText,
-          data: response.data,
-          timestamp: new Date().toISOString()
-        });
-
-        // Check for Exotel error response
-        if (response.data.RestException) {
-          console.error('Exotel API error:', response.data.RestException);
-          throw new Error(`Exotel API error: ${response.data.RestException.Message}`);
-        }
-
-        // Get the call SID from the response
-        let exotelCallSid = null;
-        
-        // Try different possible locations for the call SID
-        if (response.data.Call && response.data.Call.Sid) {
-          exotelCallSid = response.data.Call.Sid;
-          console.log('Found call SID in Call.Sid:', exotelCallSid);
-        } else if (response.data.Sid) {
-          exotelCallSid = response.data.Sid;
-          console.log('Found call SID in Sid:', exotelCallSid);
-        } else if (response.data.call_sid) {
-          exotelCallSid = response.data.call_sid;
-          console.log('Found call SID in call_sid:', exotelCallSid);
-        } else if (response.data.callSid) {
-          exotelCallSid = response.data.callSid;
-          console.log('Found call SID in callSid:', exotelCallSid);
-        }
-
-        console.log('6.2 Final call SID:', exotelCallSid);
-        
-        if (!exotelCallSid) {
-          // If no call SID in response, generate a temporary one
-          exotelCallSid = `temp_${Date.now()}_${callId}`;
-          console.log('Generated temporary call SID:', exotelCallSid);
-        }
-
-        // Update call record with Exotel call SID and additional details
-        console.log('7. Updating call record with Exotel SID:', exotelCallSid);
-        await connection.query(
-          `UPDATE calls 
-           SET exotel_call_sid = ?, 
-               status = 'initiated',
-               start_time = NOW(),
-               call_type = 'outbound',
-               disposition = 'in-progress'
-           WHERE id = ?`,
-          [exotelCallSid, callId]
-        );
-        console.log('7.1 Call record updated successfully');
-
-        // Commit transaction
-        await connection.commit();
-        console.log('=== Call Initiated Successfully ===\n');
-
-        // Get the call details from database
-        console.log('8. Fetching call details for ID:', callId);
-        const [callDetails] = await connection.query(
-          `SELECT 
-            id,
-            exotel_call_sid,
-            start_time,
-            status,
-            call_type,
-            disposition
-           FROM calls 
-           WHERE id = ?`,
-          [callId]
-        );
-
-        console.log('8.1 Call details from database:', {
-          callDetails: callDetails[0],
-          hasCallDetails: !!callDetails[0],
-          callId: callId,
-          exotelSid: exotelCallSid
-        });
-
-        if (!callDetails || !callDetails[0]) {
-          console.error('No call details found for ID:', callId);
-          throw new Error('Failed to retrieve call details');
-        }
-
-        // Create the complete response
-        const responseData = {
-          dbCallId: callId,
-          exotelCallSid: exotelCallSid,
-          exotelConfig: {
-            sid: SID,
-            phoneNumber: EXOTEL_NUMBER
-          },
-          message: 'Call initiated successfully',
-          callDetails: {
-            startTime: callDetails[0].start_time,
-            duration: 0,
-            status: callDetails[0].status,
-            callType: callDetails[0].call_type,
-            disposition: callDetails[0].disposition
-          }
-        };
-
-        console.log('9. Response data being sent:', responseData);
-
-        // Send response directly
-        res.status(200).json({
-          success: true,
-          data: responseData
-        });
-      } catch (error) {
-        console.error('Exotel API call failed:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          headers: error.response?.headers,
-          config: {
-            url: error.config?.url,
-            method: error.config?.method,
-            headers: error.config?.headers,
-            data: error.config?.data
-          }
-        });
-
-        // Rollback transaction
-        if (connection) {
-          await connection.rollback();
-        }
-
-        // Update call status to failed
-        await connection.query(
-          `UPDATE calls 
-           SET status = 'failed',
-               disposition = 'failed',
-               end_time = NOW()
-           WHERE id = ?`,
-          [callId]
-        );
-
-        throw new Error(`Exotel API call failed: ${error.message}`);
-      }
-    } catch (dbError) {
-      console.error('Database operation failed:', dbError);
-      throw new Error('Failed to create or update call record: ' + dbError.message);
-    }
-  } catch (error) {
-    // Rollback transaction if it exists
-    if (connection) {
-      try {
-        await connection.rollback();
-      } catch (rollbackError) {
-        console.error('Failed to rollback transaction:', rollbackError);
-      }
-    }
-
-    console.error('\n=== Call Initiation Failed ===');
-    console.error('Error Details:', {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-      headers: error.response?.headers,
-      config: {
-        url: error.config?.url,
-        method: error.config?.method,
-        headers: error.config?.headers,
-        data: error.config?.data
-      },
-      timestamp: new Date().toISOString()
     });
-    console.error('=== End Error Log ===\n');
-    
-    res.status(500).json({ 
-      success: false, 
-      message: error.message,
-      details: error.response?.data || 'No additional details available'
-    });
-  } finally {
-    // Release connection back to pool
-    if (connection) {
-      connection.release();
-    }
-  }
+  });
 });
 
 // End call
@@ -491,39 +335,17 @@ router.post('/end', async (req, res) => {
 });
 
 // Call status webhook
-router.post('/status', async (req, res) => {
-  console.log('\n=== Call Status Update ===');
-  try {
-    const callStatus = req.body.Status;
-    const callSid = req.body.CallSid;
-    console.log('1. Status Update:', {
-      callSid,
-      status: callStatus,
-      timestamp: new Date().toISOString()
-    });
-
-    // Update call status in database
-    console.log('2. Updating call status in database...');
-    await db.query(
-      `UPDATE calls 
-       SET status = ?,
-           disposition = ?
-       WHERE exotel_call_sid = ?`,
-      [callStatus, callStatus, callSid]
-    );
-    console.log('   Call status updated successfully');
-    console.log('=== Status Update Complete ===\n');
-
-    res.sendStatus(200);
-  } catch (error) {
-    console.error('\n=== Status Update Failed ===');
-    console.error('Error Details:', {
-      message: error.message,
-      timestamp: new Date().toISOString()
-    });
-    console.error('=== End Error Log ===\n');
-    res.sendStatus(500);
-  }
+router.post('/status', (req, res) => {
+  const callStatus = req.body.Status;
+  const callSid = req.body.CallSid;
+  db.query(
+    `UPDATE calls SET status = ?, disposition = ? WHERE exotel_call_sid = ?`,
+    [callStatus, callStatus, callSid],
+    (err) => {
+      if (err) return res.sendStatus(500);
+      res.sendStatus(200);
+    }
+  );
 });
 
 // Get all calls
@@ -554,37 +376,42 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Get call by ID
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, (req, res) => {
   try {
     console.log('\n=== Getting Call by ID ===');
     const callId = req.params.id;
-    
+
     // First check if the call exists
-    const [calls] = await db.query('SELECT * FROM calls WHERE id = ?', [callId]);
-    
-    if (!calls || calls.length === 0) {
-      console.log(`Call with ID ${callId} not found`);
-      return res.status(404).json({
-        success: false,
-        message: 'Call not found'
+    db.query('SELECT * FROM calls WHERE id = ?', [callId], (err, calls) => {
+      if (err) {
+        console.error('Error fetching call:', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Error fetching call',
+          error: err.message
+        });
+      }
+      if (!calls || calls.length === 0) {
+        console.log(`Call with ID ${callId} not found`);
+        return res.status(404).json({
+          success: false,
+          message: 'Call not found'
+        });
+      }
+      const call = calls[0];
+      // Check if user has access to this call
+      if (req.user.role !== 'admin' && req.user.role !== 'manager' && call.caller_id !== req.user.id) {
+        console.log('Access denied for user:', req.user.id);
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+      }
+      console.log(`Found call with ID ${callId}`);
+      res.json({
+        success: true,
+        data: call
       });
-    }
-
-    const call = calls[0];
-    
-    // Check if user has access to this call
-    if (req.user.role !== 'admin' && req.user.role !== 'manager' && call.caller_id !== req.user.id) {
-      console.log('Access denied for user:', req.user.id);
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
-    }
-
-    console.log(`Found call with ID ${callId}`);
-    res.json({
-      success: true,
-      data: call
     });
   } catch (error) {
     console.error('Error fetching call:', error);
