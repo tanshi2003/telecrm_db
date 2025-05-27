@@ -188,25 +188,24 @@ const CampaignManagement = () => {
     setActiveFilter(filterType);
   };
 
-  if (loading) return (
-    <div className="flex min-h-screen">
-      <Sidebar user={user} />
-      <div className="flex-grow bg-gray-100 ml-64">
-        <Navbar />
-        <div className="flex justify-center items-center h-[calc(100vh-64px)]">
-          Loading...
-        </div>
-      </div>
-    </div>
-  );
-
+  // if (loading) return (
+  //   <div className="flex min-h-screen">
+  //     <Sidebar user={user} />
+  //     <div className="flex-grow bg-gray-100 ml-64">
+  //       <Navbar />
+  //       <div className="flex justify-center items-center h-[calc(100vh-64px)]">
+  //         Loading...
+  //       </div>
+  //     </div>
+  //   </div>
+  // );
   if (error) return (
     <div className="flex min-h-screen">
       <Sidebar user={user} />
       <div className="flex-grow bg-gray-100 ml-64">
         <Navbar />
-        <div className="text-red-500 text-center mt-4 p-4">
-          {error}
+        <div className={`text-center mt-4 p-4 ${error.type === 'success' ? 'text-green-500' : 'text-red-500'}`}>
+          {error.message}
         </div>
       </div>
     </div>
@@ -232,18 +231,25 @@ const CampaignManagement = () => {
         </div>
         <div className="pt-16">
           <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <div>
+            <div className="flex justify-between items-center mb-6">              <div>
                 <h1 className="text-2xl font-bold text-gray-800">Campaign Management</h1>
                 <p className="text-gray-600 mt-2">Manage and track your campaigns</p>
               </div>
-              <button
-                onClick={() => navigate('/create-campaign-with-users')}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <PlusCircle size={20} />
-                Create Campaign
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => navigate('/create-campaign-with-users')}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <PlusCircle size={20} />
+                  Create Campaign
+                </button>
+                <button
+                  onClick={() => navigate(-1)}
+                  className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
+                >
+                  Back
+                </button>
+              </div>
             </div>
 
             {/* Quick Stats */}

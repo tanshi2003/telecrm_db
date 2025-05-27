@@ -17,28 +17,29 @@ export const getDashboardStats = async () => {
 // Get team performance
 export const getTeamPerformance = async () => {
     try {
-        const response = await api.get('/api/managers/team-performance');
+        const response = await api.get('/api/managers/team-performance', getAuthHeader());
         console.log('Team Performance API Response:', response.data);
         
-        // Ensure we have an array of team members
-        if (!response.data || !response.data.data || !Array.isArray(response.data.data)) {
+        if (!response.data?.success || !Array.isArray(response.data.data)) {
             console.error('Invalid team performance data format:', response.data);
-            return { data: [] };
+            throw new Error('Invalid data format received from server');
         }
 
-        // Ensure each member has the required fields
-        const processedData = response.data.data.map(member => ({
-            id: member.id || 0,
-            name: member.name || 'Unknown',
-            total_leads_handled: parseInt(member.total_leads_handled) || 0,
-            total_campaigns_handled: parseInt(member.total_campaigns_handled) || 0,
-            active_campaigns: parseInt(member.active_campaigns) || 0
-        }));
-
-        return { data: processedData };
+        return {
+            success: true,
+            data: response.data.data.map(member => ({
+                id: member.id || 0,
+                name: member.name || 'Unknown',
+                total_leads_handled: parseInt(member.total_leads_handled) || 0,
+                total_campaigns_handled: parseInt(member.total_campaigns_handled) || 0,
+                conversions: parseInt(member.conversions) || 0,
+                conversion_rate: parseFloat(member.conversion_rate) || 0,
+                active_campaigns: parseInt(member.active_campaigns) || 0
+            }))
+        };
     } catch (error) {
         console.error('Error fetching team performance:', error);
-        return { data: [] };
+        throw error.response?.data || error;
     }
 };
 

@@ -17,10 +17,13 @@ exports.createLead = (req, res) => {
         title, description, status, lead_category,
         name, phone_no, address = "", assigned_to = null,
         admin_id, campaign_id = null, notes = "", manager_id = null
-    } = req.body;
-
-    if (!title || !status || !name || !phone_no || !admin_id) {
-        return res.status(400).json(responseFormatter(false, "Missing required fields"));
+    } = req.body;    if (!title || !status || !name || !phone_no) {
+        return res.status(400).json(responseFormatter(false, "Missing required fields: title, status, name, and phone number are required"));
+    }
+    
+    // For manager role, admin_id is not required
+    if (!admin_id && !manager_id) {
+        return res.status(400).json(responseFormatter(false, "Either admin_id or manager_id is required"));
     }
 
     if (!VALID_STATUSES.includes(status)) {
@@ -147,60 +150,172 @@ exports.getLeads = (req, res) => {
 // 📌 Get a lead by ID
 exports.getLeadById = (req, res) => {
     const { id } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
 
-    db.query(
-        `SELECT Leads.*, Users.name AS assigned_to_name 
-         FROM Leads 
-         LEFT JOIN Users ON Leads.assigned_to = Users.id 
-         WHERE Leads.id = ?`,
-        [id],
-        (err, lead) => {
-            if (err) {
-                return res.status(500).json(responseFormatter(false, "Server error", err.message));
-            }
+    // Build query based on user role
+    let query = `SELECT Leads.*, Users.name AS assigned_to_name 
+                 FROM Leads 
+                 LEFT JOIN Users ON Leads.assigned_to = Users.id 
+                 WHERE Leads.id = ?`;
+    let params = [id];
 
-            if (lead.length === 0) {
-                return res.status(404).json(responseFormatter(false, "Lead not found"));
-            }
-
-            res.json(responseFormatter(true, "Lead retrieved", lead[0]));
-        }
-    );
-};
-
-// 📌 Update a lead's status and notes
-exports.updateLead = (req, res) => {
-    const { id } = req.params;
-    const { status, notes } = req.body;
-
-    if (!status && !notes) {
-        return res.status(400).json(responseFormatter(false, "Status or notes required"));
+    // For managers, only show leads assigned to their team members
+    if (userRole === 'manager') {
+        query += ` AND (Leads.assigned_to IN (SELECT id FROM Users WHERE manager_id = ?) OR Leads.assigned_to IS NULL)`;
+        params.push(userId);
+    }
+    // For callers, only show their assigned leads or unassigned leads
+    else if (userRole === 'caller') {
+        query += ` AND (Leads.assigned_to = ? OR Leads.assigned_to IS NULL)`;
+        params.push(userId);
     }
 
-    const fields = [];
-    const values = [];
-    if (status) {
-        fields.push("status = ?");
-        values.push(status);
-    }
-    if (notes !== undefined) {
-        fields.push("notes = ?");
-        values.push(notes);
-    }
-    values.push(id);
-
-    const query = `UPDATE leads SET ${fields.join(", ")} WHERE id = ?`;
-    db.query(query, values, (err, result) => {
+    db.query(query, params, (err, lead) => {
         if (err) {
-            console.error("Error updating lead:", err);
-            return res.status(500).json(responseFormatter(false, "Database error", err.message));
+            return res.status(500).json(responseFormatter(false, "Server error", err.message));
         }
-        if (result.affectedRows === 0) {
-            return res.status(404).json(responseFormatter(false, "Lead not found"));
+
+        if (lead.length === 0) {
+            return res.status(403).json(responseFormatter(false, "Access denied. Insufficient privileges."));
         }
-        res.json(responseFormatter(true, "Lead updated successfully"));
+
+        res.json(responseFormatter(true, "Lead retrieved", lead[0]));
     });
 };
+
+// 📌 Update a lead
+exports.updateLead = (req, res) => {
+    const { id } = req.params;
+    const { name, phone_no, lead_category, status, address, notes, assigned_to, campaign_id } = req.body;
+    const updated_at = new Date();
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    // Validate required fields
+    if (!name || !phone_no || !status) {
+        return res.status(400).json(responseFormatter(false, "Name, phone number, and status are required"));
+    }
+
+    // Validate status
+    if (!VALID_STATUSES.includes(status)) {
+        return res.status(400).json(responseFormatter(false, `Invalid status: ${status}`));
+    }    // Validate category if provided
+    if (lead_category && !VALID_LEAD_CATEGORIES.includes(lead_category)) {
+        return res.status(400).json(responseFormatter(false, `Invalid lead category: ${lead_category}`));
+    }
+
+        // First check if the user has permission to update this lead
+    let accessCheckQuery = "SELECT Leads.*, Users.manager_id FROM Leads LEFT JOIN Users ON Leads.assigned_to = Users.id WHERE Leads.id = ?";
+    db.query(accessCheckQuery, [id], (err, leads) => {
+        if (err) {
+            return res.status(500).json(responseFormatter(false, "Database error", err.message));
+        }
+
+        if (leads.length === 0) {
+            return res.status(404).json(responseFormatter(false, "Lead not found"));
+        }
+
+        const lead = leads[0];
+
+        // Check role-based permissions
+        if (userRole === 'manager') {
+            // Managers can only update leads assigned to their team members
+            if (lead.assigned_to && lead.manager_id !== userId) {
+                return res.status(403).json(responseFormatter(false, "Access denied. You can only update leads assigned to your team."));
+            }
+        } else if (userRole === 'caller') {
+            // Callers can only update their assigned leads
+            if (lead.assigned_to !== userId) {
+                return res.status(403).json(responseFormatter(false, "Access denied. You can only update your assigned leads."));
+            }
+        }
+
+        // If user is a manager and assigned_to is provided, verify the assigned user belongs to their team
+        if (userRole === 'manager' && assigned_to) {
+            db.query("SELECT id FROM Users WHERE id = ? AND manager_id = ?", [assigned_to, userId], (err, userResult) => {
+                if (err) {
+                    return res.status(500).json(responseFormatter(false, "Database error", err.message));
+                }
+
+                if (userResult.length === 0) {
+                    return res.status(400).json(responseFormatter(false, "Assigned user must be from your team"));
+                }
+                proceedWithUpdate();
+            });
+        } else {
+            proceedWithUpdate();
+        }
+    });
+
+    function proceedWithUpdate() {
+        db.query("SELECT * FROM Leads WHERE id = ?", [id], (err, leads) => {
+            if (err) {
+                return res.status(500).json(responseFormatter(false, "Database error", err.message));
+            }
+            if (leads.length === 0) {
+                return res.status(404).json(responseFormatter(false, "Lead not found"));
+            }
+        
+            db.query(
+                `UPDATE Leads 
+                 SET name = ?, phone_no = ?, lead_category = ?, status = ?, 
+                     address = ?, notes = ?, assigned_to = ?, campaign_id = ?, 
+                     updated_at = ? 
+                 WHERE id = ?`,
+                [name, phone_no, lead_category, status, address, notes, assigned_to, campaign_id, updated_at, id],
+                (err, result) => {
+                if (err) {
+                    return res.status(500).json(responseFormatter(false, "Database error", err.message));
+                }
+                
+                // Fetch and return the updated lead along with team members if user is a manager
+                if (userRole === 'manager') {
+                    db.query(
+                        `SELECT l.*, u.name as assigned_to_name FROM Leads l 
+                         LEFT JOIN Users u ON l.assigned_to = u.id 
+                         WHERE l.id = ?`,
+                        [id],
+                        (err, updatedLead) => {
+                            if (err) {
+                                return res.status(500).json(responseFormatter(false, "Error fetching updated lead", err.message));
+                            }
+                            
+                            // Fetch team members for this manager
+                            db.query(
+                                "SELECT id, name FROM Users WHERE manager_id = ?",
+                                [userId],
+                                (err, teamMembers) => {
+                                    if (err) {
+                                        return res.status(500).json(responseFormatter(false, "Error fetching team members", err.message));
+                                    }
+                                    res.json(responseFormatter(true, "Lead updated successfully", {
+                                        lead: updatedLead[0],
+                                        teamMembers: teamMembers
+                                    }));
+                                }
+                            );
+                        }
+                    );
+                } else {
+                    // For non-manager users, just return the updated lead
+                    db.query(
+                        `SELECT l.*, u.name as assigned_to_name FROM Leads l 
+                         LEFT JOIN Users u ON l.assigned_to = u.id 
+                         WHERE l.id = ?`,
+                        [id],
+                        (err, updatedLead) => {
+                            if (err) {
+                                return res.status(500).json(responseFormatter(false, "Error fetching updated lead", err.message));
+                            }                            res.json(responseFormatter(true, "Lead updated successfully", updatedLead[0]));
+                        }
+                    );
+                }
+            }
+        );
+        });
+    }
+}
 
 // 📌 Delete a lead
 exports.deleteLead = (req, res) => {
@@ -387,4 +502,23 @@ exports.assignUserToLead = (req, res) => {
             res.json(responseFormatter(true, "User assigned to lead successfully"));
         }
     );
+};
+
+// Get unassigned leads (for managers)
+exports.getUnassignedLeads = (req, res) => {
+    const managerId = req.user.id;
+    const query = `
+        SELECT l.*, u.name as assigned_to_name 
+        FROM Leads l 
+        LEFT JOIN Users u ON l.assigned_to = u.id 
+        WHERE l.assigned_to IS NULL 
+        OR l.assigned_to IN (SELECT id FROM Users WHERE manager_id = ?)
+        ORDER BY l.created_at DESC`;
+
+    db.query(query, [managerId], (err, leads) => {
+        if (err) {
+            return res.status(500).json(responseFormatter(false, "Database error", err.message));
+        }
+        res.json(responseFormatter(true, "Unassigned leads retrieved successfully", leads));
+    });
 };

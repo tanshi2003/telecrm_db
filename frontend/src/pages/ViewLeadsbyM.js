@@ -3,7 +3,7 @@ import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const Leads = () => {
+const ViewLeads = () => {
   const [user, setUser] = useState(null);
   const [leads, setLeads] = useState([]);
   const [users, setUsers] = useState([]); 
@@ -120,12 +120,6 @@ const Leads = () => {
         <h1 className="text-3xl font-bold text-gray-800">Manage Leads</h1>
         <div className="flex gap-2">
           <button
-            onClick={() => navigate("/Lead1")}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            + Add Lead
-          </button>
-          <button
             onClick={() => navigate(-1)}
             className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
           >
@@ -134,111 +128,6 @@ const Leads = () => {
         </div>
       </div>
         <p className="text-gray-600 mb-6">Add, update, or import leads easily.</p>
-
-        {/* Cards for Add/Update/Import */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          {/* Remove the Add Lead card */}
-          {/* 
-          <div className="bg-white p-6 rounded-lg shadow-md w-full min-h-[220px] flex flex-col justify-between">
-            <div>
-              <h4 className="font-semibold text-lg mb-2">Add Lead</h4>
-              <p className="text-sm text-gray-600 mb-4">Create new leads and connect with potential customers.</p>
-            </div>
-            <button
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              onClick={() => navigate("/Lead1")}
-            >
-              + Add Lead
-            </button>
-          </div>
-          */}
-          <div className="bg-white p-6 rounded-lg shadow-md w-full min-h-[220px] flex flex-col justify-between">
-            <div>
-              <h4 className="font-semibold text-lg mb-2">Update Lead</h4>
-              <p className="text-sm text-gray-600 mb-4">Modify existing lead details and track progress.</p>
-            </div>
-            <button
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              onClick={() => navigate("/Updatelead")}
-            >
-              + Update Lead
-            </button>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md w-full min-h-[220px] flex flex-col justify-between">
-            <div>
-              <h4 className="font-semibold text-lg mb-2">Excel Upload</h4>
-              <p className="text-sm text-gray-600 mb-4">Import leads in bulk using an Excel file.</p>
-            </div>
-            <button
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              onClick={() => navigate("/Excelupload")}
-            >
-              + Import Leads
-            </button>
-          </div>
-
-          {/* Assign Leads to a Manager Card */}
-          <div className="bg-white p-6 rounded-lg shadow-md w-full min-h-[220px] flex flex-col justify-between">
-            <div>
-              <h4 className="font-semibold text-lg mb-2">Assign Leads to a Manager</h4>
-              <p className="text-sm text-gray-600 mb-4">
-                Assign selected leads to a manager for better tracking and follow-up.
-              </p>
-            </div>
-            <button
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              onClick={() => navigate("/assign-leads")}
-            >
-              Assign Leads
-            </button>
-          </div>
-        </section>
-
-        {/* Remove Filters section */}
-        {/*
-        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h4 className="font-semibold text-lg mb-4">Filters</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <select
-              name="status"
-              value={filters.status}
-              onChange={handleFilterChange}
-              className="p-2 border rounded"
-            >
-              <option value="">All Statuses</option>
-              <option value="New">New</option>
-              <option value="Contacted">Contacted</option>
-              <option value="Converted">Converted</option>
-            </select>
-            <select
-              name="category"
-              value={filters.category}
-              onChange={handleFilterChange}
-              className="p-2 border rounded"
-            >
-              <option value="">All Categories</option>
-              <option value="Cold Lead">Cold Lead</option>
-              <option value="Warm Lead">Warm Lead</option>
-              <option value="Hot Lead">Hot Lead</option>
-            </select>
-            <input
-              type="date"
-              name="dateRange.start"
-              value={filters.dateRange.start}
-              onChange={handleFilterChange}
-              className="p-2 border rounded"
-            />
-            <input
-              type="date"
-              name="dateRange.end"
-              value={filters.dateRange.end}
-              onChange={handleFilterChange}
-              className="p-2 border rounded"
-            />
-          </div>
-        </div>
-        */}
 
         {/* Lead List */}
         <div className="bg-white p-6 rounded-lg shadow-md">
@@ -319,4 +208,4 @@ export const AssignLeadsButton = () => {
   );
 };
 
-export default Leads;
+export default ViewLeads;

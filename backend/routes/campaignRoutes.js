@@ -10,6 +10,9 @@ router.use(authenticateToken);
 // Get all campaigns
 router.get("/", roleMiddleware(["admin", "manager"]), campaignController.getCampaigns);
 
+// Get campaigns for a specific manager
+router.get("/manager/:id", roleMiddleware(["manager"]), campaignController.getCampaignsByManagerId);
+
 // Get campaigns for a caller (specific route)
 router.get("/user/:id/campaigns", roleMiddleware(["admin", "manager", "caller"]), campaignController.getCampaignsByUserId);
 

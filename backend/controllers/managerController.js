@@ -215,9 +215,39 @@ exports.getCampaignsForManager = async (req, res) => {
   }
 };
 
+// Get users by manager ID
+const getUsersByManagerId = (req, res) => {
+    const managerId = req.params.id;
+
+    const query = `
+        SELECT id, name, email, role, status
+        FROM users
+        WHERE manager_id = ? AND role = 'caller'
+        ORDER BY name
+    `;
+
+    db.query(query, [managerId], (err, users) => {
+        if (err) {
+            console.error('Error fetching users for manager:', err);
+            return res.status(500).json({
+                success: false,
+                message: "Error fetching users",
+                error: err.message
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Users fetched successfully",
+            data: users
+        });
+    });
+};
+
 module.exports = {
   getDashboardStats,
   updateUserStatus,
   getUsers,
-  assignLead
-}; 
+  assignLead,
+  getUsersByManagerId
+};

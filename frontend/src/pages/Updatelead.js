@@ -50,7 +50,15 @@ const Updatelead = () => {
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:5000/api/users", {
+        const storedUser = JSON.parse(localStorage.getItem("user"));
+        let endpoint = "http://localhost:5000/api/users";
+        
+        // If user is a manager, only fetch their team members
+        if (storedUser?.role === "manager") {
+          endpoint = `http://localhost:5000/api/users?managerId=${storedUser.id}`;
+        }
+
+        const response = await axios.get(endpoint, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data) {

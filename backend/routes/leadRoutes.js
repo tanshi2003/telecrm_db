@@ -17,7 +17,7 @@ router.get("/", roleMiddleware(['admin', 'user', 'caller', 'manager', 'field_emp
 router.get("/:id", roleMiddleware(['admin', 'user', 'caller', 'field_employee']), leadController.getLeadById);
 
 // ✏️ Update a lead
-router.put("/:id", roleMiddleware(['admin', 'user', 'caller', 'field_employee']), leadController.updateLead);
+router.put("/:id", roleMiddleware(['admin', 'user', 'caller', 'field_employee', 'manager']), leadController.updateLead);
 
 // ❌ Delete a lead (Admins only)
 router.delete("/:id", roleMiddleware(['admin']), leadController.deleteLead);

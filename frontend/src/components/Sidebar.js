@@ -84,6 +84,23 @@ const Sidebar = ({ user }) => {
     }
     setShowAddLeadOptions((prev) => !prev);
   };
+  const handleAddLeadsHover = () => {
+ if (addLeadsBtnRef.current) {
+   const rect = addLeadsBtnRef.current.getBoundingClientRect();
+   const sidebarWidth = isExpanded ? 64 : 20;
+   setDropdownCoords({
+     top: rect.top + window.scrollY + 7,
+     left: rect.left + sidebarWidth + 90,
+   });
+ }
+ setShowAddLeadOptions(true);
+};
+
+
+const handleAddLeadsLeave = () => {
+ setShowAddLeadOptions(false);
+};
+
 
   const handleCampaignClick = () => {
     if (campaignBtnRef.current) {
@@ -195,9 +212,7 @@ const Sidebar = ({ user }) => {
       case 'manager':
         return '/manager-dashboard';
       case 'caller':
-        return '/caller-dashboard';
-      case 'field_employee': // added for field employees
-        return '/field_employee-dashboard';
+        return '/caller';
       default:
         return '/';
     }
@@ -208,13 +223,21 @@ const Sidebar = ({ user }) => {
     navigate(path);
   };
 
+  const navigateLead=()  => {
+     setShowAddLeadOptions(false); 
+   navigate('/Lead1');
+  }
+
   return (
     <>
+      
       <div
         className={`fixed top-16 left-0 bg-white border-r shadow-lg transition-all duration-300 ease-in-out flex flex-col ${
           isExpanded ? "w-64" : "w-20"
         } h-[calc(100vh-64px)] overflow-y-auto z-40`}
-      >
+      >       
+
+       
         {/* Top section */}
         <div className="flex items-center justify-between p-3 border-b border-gray-200">
           {isExpanded && (
@@ -222,6 +245,7 @@ const Sidebar = ({ user }) => {
               Welcome, {localUser?.name || "User"}
             </p>
           )}
+   
           <button
             onClick={toggleSidebar}
             className="text-gray-600 hover:text-black"
@@ -229,9 +253,11 @@ const Sidebar = ({ user }) => {
             {isExpanded ? <ChevronLeft /> : <Menu />}
           </button>
         </div>
-
+ 
+    
         {/* Sidebar Menu Items */}
         <div className="flex-1 py-4">
+    
           {[
             { 
               icon: LayoutDashboard, 
@@ -326,7 +352,7 @@ const Sidebar = ({ user }) => {
             </div>
           ))}
         </div>
-
+    
         {/* Profile Section */}
         <div className="p-3 border-t border-gray-200 bg-gray-50 relative">
           <div
@@ -364,6 +390,7 @@ const Sidebar = ({ user }) => {
           )}
         </div>
       </div>
+   
 
     {/* Add Leads Dropdown */}
 {showAddLeadOptions && (
@@ -371,29 +398,24 @@ const Sidebar = ({ user }) => {
     className="fixed bg-white border rounded shadow-lg z-50 w-56 p-2"
     style={{
       top: `${dropdownCoords.top}px`,
-      left: `${dropdownCoords.left}px`,
+      left: `${dropdownCoords.left}px`
     }}
+    onMouseEnter={handleAddLeadsHover}
+    onMouseLeave={handleAddLeadsLeave}
   >
     {/* Arrow on the left */}
     <div
       className="absolute -left-2 top-4 w-4 h-4 bg-white border-l border-t transform rotate-45 z-40"
     ></div>
-    
     <div className="text-gray-800 text-sm font-semibold mb-2">
       Add Leads
     </div>
-
-    {/* Add Single Lead */}
-    <Link
-      to="/Lead1"
-      className="flex items-center gap-2 px-3 py-2 hover:bg-blue-100 rounded cursor-pointer"
-      onClick={() => setShowAddLeadOptions(false)}
-    >
-      <UserPlus size={16} className="text-blue-500" />
-      <span className="text-sm text-gray-800">Add Single Lead</span>
-    </Link>
-
-    {/* Add From Excel */}
+    <div className="cursor-pointer" onClick={navigateLead}>
+      <div className="flex items-center gap-2 z-1000 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer">
+        <UserPlus size={16} className="text-blue-500" />
+        Add single lead
+      </div>
+    </div>
     <Link
       to="/excelupload"
       className="flex items-center gap-2 px-3 py-2 hover:bg-blue-100 rounded cursor-pointer"
@@ -405,6 +427,8 @@ const Sidebar = ({ user }) => {
   </div>
 )}
 
+{/* )} */}
+
 
       {/* Campaigns Dropdown */}
       {showCampaignOptions && (
@@ -412,7 +436,7 @@ const Sidebar = ({ user }) => {
           className="fixed bg-white border rounded shadow-lg z-50 w-56 p-2"
           style={{
             top: `${dropdownCoords.top}px`,
-            left: `${dropdownCoords.left}px`,
+            left: `${dropdownCoords.left}px`
           }}
         >
           {/* Arrow on the left */}
@@ -452,7 +476,7 @@ const Sidebar = ({ user }) => {
           className="fixed bg-white border rounded shadow-lg z-50 w-56 p-2"
           style={{
             top: `${dropdownCoords.top}px`,
-            left: `${dropdownCoords.left}px`,
+            left: `${dropdownCoords.left}px`
           }}
         >
           {/* Arrow on the left */}
@@ -492,7 +516,7 @@ const Sidebar = ({ user }) => {
           className="fixed bg-white border rounded shadow-lg z-50 w-56 p-2"
           style={{
             top: `${dropdownCoords.top}px`,
-            left: `${dropdownCoords.left}px`,
+            left: `${dropdownCoords.left}px`
           }}
         >
           {/* Arrow on the left */}

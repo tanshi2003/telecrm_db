@@ -84,18 +84,18 @@ const LeadAssignment = () => {
       {user && <Sidebar user={user} />}
 
       {/* Main Content */}
-      <div className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
-        {/* Header with Back Button */}
-        <div className="mb-6">
+      <div className="flex-grow bg-gray-100 p-6 ml-64 mt-16">        {/* Header with Back Button */}
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Lead Assignment</h1>
+            <p className="text-gray-600">Assign unassigned leads to your team members</p>
+          </div>
           <button
-            onClick={() => navigate('/manager-dashboard')}
-            className="flex items-center text-gray-600 hover:text-gray-800 mb-4"
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
           >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to Dashboard
+            Back
           </button>
-          <h1 className="text-2xl font-bold text-gray-800">Lead Assignment</h1>
-          <p className="text-gray-600">Assign unassigned leads to your team members</p>
         </div>
 
         {/* Alerts */}

@@ -14,7 +14,7 @@ import {
   UserCog,
   MapPin,
   Clock,
-  Filter,
+  FileText
 } from "lucide-react";
 import {
   getDashboardStats,
@@ -818,11 +818,9 @@ const ManagerDashboard = () => {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Quick Actions</h2>
             <div className="flex items-center gap-2">
-              <Filter className="text-gray-500" size={20} />
-              <span className="text-sm text-gray-500">Filter Actions</span>
+              
             </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          </div>          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <button
               onClick={() => navigate("/lead-assignment")}
               className="flex items-center justify-center p-4 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
@@ -836,6 +834,13 @@ const ManagerDashboard = () => {
             >
               <Briefcase className="w-5 h-5 mr-2" />
               <span>Team Management</span>
+            </button>
+            <button
+              onClick={() => navigate("/viewleads")}
+              className="flex items-center justify-center p-4 bg-yellow-50 text-yellow-600 rounded-lg hover:bg-yellow-100 transition-colors"
+            >
+              <FileText className="w-5 h-5 mr-2" />
+              <span>Manage Leads</span>
             </button>
             <button
               onClick={() => navigate("/manager/campaigns")}

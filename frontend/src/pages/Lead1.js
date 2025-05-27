@@ -75,17 +75,23 @@ const Lead1 = () => {
             headers: { Authorization: `Bearer ${token}` },
           });
           setCampaigns(campRes.data?.data || []);
-        } else if (role === "manager") {
-          // Manager: fetch only users assigned to this manager
+        } else if (role === "manager") {          // Manager: fetch only users assigned to this manager
           const usersRes = await axios.get(`http://localhost:5000/api/managers/${storedUser.id}/users`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           setUsers(usersRes.data?.data || []);
-          // Manager: fetch all campaigns assigned to or created by this manager
-          const campRes = await axios.get(`http://localhost:5000/api/users/${storedUser.id}/campaigns`, {
+          
+          // Manager: fetch only campaigns where they are the manager
+          const campRes = await axios.get(`http://localhost:5000/api/campaigns/manager/${storedUser.id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
-          setCampaigns(campRes.data?.data || []);
+          // Only set campaigns if we got a successful response with an array
+          if (campRes.data?.success && Array.isArray(campRes.data.data)) {
+            setCampaigns(campRes.data.data);
+          } else {
+            console.warn("Invalid campaign data received:", campRes.data);
+            setCampaigns([]);
+          }
         }
       } catch (error) {
         console.error("Error fetching manager's users/campaigns:", error.response?.data || error.message);
@@ -118,11 +124,16 @@ const Lead1 = () => {
       const response = await axios.get("http://localhost:5000/api/campaigns", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if(response.data?.data){
+      // Only set campaigns if we got a successful response with an array
+      if (response.data?.success && Array.isArray(response.data.data)) {
         setCampaigns(response.data.data);
+      } else {
+        console.warn("Invalid campaign data received:", response.data);
+        setCampaigns([]);
       }
     } catch (error) {
       console.error("Error fetching campaigns:", error.response?.data || error.message);
+      setCampaigns([]); // Set empty array on error
     }
   };
 
@@ -335,16 +346,13 @@ const Lead1 = () => {
 
           <div>
             <label className="block font-semibold">Campaign Name</label>
-            {(role === "admin" || role === "manager") ? (
-              <select
+            {(role === "admin" || role === "manager") ? (              <select
                 value={leadData.campaign_id || ""}
                 onChange={(e) => setLeadData({...leadData, campaign_id: e.target.value})}
                 className="w-full p-2 rounded border shadow bg-white"
               >
                 <option value="">Select Campaign</option>
-                {campaigns
-                  .filter(c => role === "admin" || role === "manager"|| c.manager_id === storedUser.id || (Array.isArray(c.assigned_users) && c.assigned_users.some(u => u.id === storedUser.id)))
-                  .map((campaign) => (
+                {campaigns.map((campaign) => (
                     <option key={campaign.id} value={campaign.name}>
                       {campaign.name}
                     </option>
