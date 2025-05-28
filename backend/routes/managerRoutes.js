@@ -451,4 +451,86 @@ router.get('/team-performance', authenticateToken, checkManagerAccess, async (re
 // Get users assigned to a manager
 router.get('/:id/users', authenticateToken, checkManagerAccess, managerController.getUsersByManagerId);
 
+// Get manager's team members
+router.get('/:managerId/team', authenticateToken, checkManagerAccess, async (req, res) => {
+    const managerId = req.params.managerId;
+    
+    // Ensure the manager can only access their own team
+    if (req.user.role === 'manager' && req.user.id !== parseInt(managerId)) {
+        return res.status(403).json({
+            success: false,
+            message: 'Access denied. You can only view your own team members.'
+        });
+    }
+
+    const query = `
+        SELECT 
+            u.id,
+            u.name,
+            u.email,
+            u.role,
+            u.status,
+            u.manager_id,
+            u.created_at
+        FROM users u
+        WHERE u.manager_id = ?
+        AND u.status = 'active'
+        ORDER BY u.name ASC
+    `;
+
+    try {
+        const [teamMembers] = await db.query(query, [managerId]);
+        res.json({
+            success: true,
+            data: teamMembers
+        });
+    } catch (err) {
+        console.error('Database error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching team members'
+        });
+    }
+});
+
+// Get team members for a specific manager
+router.get('/:managerId/team-members', authenticateToken, checkManagerAccess, async (req, res) => {
+    const managerId = req.params.managerId;
+    
+    // Ensure managers can only access their own team members
+    if (req.user.role === 'manager' && req.user.id !== parseInt(managerId)) {
+        return res.status(403).json({
+            success: false,
+            message: 'Access denied. You can only view your own team members.'
+        });
+    }
+
+    const query = `
+        SELECT 
+            u.id,
+            u.name,
+            u.email,
+            u.role,
+            u.status
+        FROM users u
+        WHERE u.manager_id = ?
+        AND u.status = 'active'
+        ORDER BY u.name ASC
+    `;
+
+    try {
+        const [teamMembers] = await db.query(query, [managerId]);
+        res.json({
+            success: true,
+            data: teamMembers
+        });
+    } catch (err) {
+        console.error('Database error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching team members'
+        });
+    }
+});
+
 module.exports = router;

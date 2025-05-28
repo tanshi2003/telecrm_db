@@ -117,44 +117,47 @@ exports.loginUser = (req, res) => {
     });
 };
 
-// Get all users
-exports.getUsers = (req, res) => {
-    const { role, unassigned } = req.query;
+// Get all users or filtered by manager ID
+exports.getUsers = async (req, res) => {
+  try {
+    const { managerId } = req.query;
     let query = `
-        SELECT 
-            u.id, u.name, u.email, u.phone_no, u.role, u.status, u.manager_id, u.location,
-            v.total_leads, v.campaigns_handled, v.total_working_hours
-        FROM Users u
-        LEFT JOIN user_stats_view v ON u.id = v.id
-        WHERE 1=1
+      SELECT u.*, 
+             COALESCE(m.name, '') as manager_name 
+      FROM Users u 
+      LEFT JOIN Users m ON u.manager_id = m.id
+      WHERE 1=1
     `;
-    
-    const params = [];
+    const queryParams = [];
 
-    if (role) {
-        query += ` AND u.role = ?`;
-        params.push(role);
+    // If managerId is provided, only show users assigned to that manager
+    if (managerId) {
+      query += ` AND u.manager_id = ?`;
+      queryParams.push(managerId);
     }
 
-    if (unassigned === 'true') {
-        query += ` AND u.manager_id IS NULL`;
+    // If user is a manager, only show their team members
+    if (req.user.role === 'manager') {
+      query += ` AND u.manager_id = ?`;
+      queryParams.push(req.user.id);
     }
 
-    db.query(query, params, (err, results) => {
-        if (err) {
-            console.error("Error fetching users:", err);
-            return res.status(500).json({
-                success: false,
-                message: "Database error",
-                error: err.message
-            });
-        }
-        res.json({
-            success: true,
-            data: results,
-            message: "Users fetched successfully"
-        });
+    query += ` ORDER BY u.name ASC`;
+
+    const [users] = await db.query(query, queryParams);
+
+    res.json({
+      success: true,
+      data: users
     });
+  } catch (error) {
+    console.error('Error in getUsers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch users',
+      error: error.message
+    });
+  }
 };
 
 // Get user by ID
