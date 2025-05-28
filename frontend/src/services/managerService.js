@@ -16,13 +16,37 @@ export const getDashboardStats = async () => {
 
 // Get team performance
 export const getTeamPerformance = async () => {
-    const response = await api.get('/api/managers/team-performance');
-    return response.data;
+    try {
+        const response = await api.get('/api/managers/team-performance');
+        console.log('Team Performance API Response:', response.data);
+        
+        // Ensure we have an array of team members
+        if (!response.data || !response.data.data || !Array.isArray(response.data.data)) {
+            console.error('Invalid team performance data format:', response.data);
+            return { data: [] };
+        }
+
+        // Ensure each member has the required fields
+        const processedData = response.data.data.map(member => ({
+            id: member.id || 0,
+            name: member.name || 'Unknown',
+            total_leads_handled: parseInt(member.total_leads_handled) || 0,
+            total_campaigns_handled: parseInt(member.total_campaigns_handled) || 0,
+            active_campaigns: parseInt(member.active_campaigns) || 0
+        }));
+
+        return { data: processedData };
+    } catch (error) {
+        console.error('Error fetching team performance:', error);
+        return { data: [] };
+    }
 };
 
 // Get campaign performance
 export const getCampaignPerformance = async () => {
-    const response = await api.get('/api/managers/campaign-performance');
+    const user = JSON.parse(localStorage.getItem('user'));
+    const managerId = user.id;
+    const response = await api.get(`/api/campaigns/user/${managerId}/campaigns`);
     return response.data;
 };
 
@@ -48,9 +72,14 @@ export const assignUsersToTeam = async (manager_id, user_ids) => {
     return response.data;
 };
 
-// Assign leads to caller
-export const assignLeads = async (caller_id, lead_ids) => {
-    const response = await api.post('/api/managers/assign-leads', { caller_id, lead_ids });
+// Assign leads to team member
+export const assignLeads = async (selectedMember, selectedLeads) => {
+    // Ensure selectedLeads is an array
+    const leadsArray = Array.isArray(selectedLeads) ? selectedLeads : [selectedLeads];
+    const response = await api.post('/api/managers/assign-leads', { 
+        selectedMember, 
+        selectedLeads: leadsArray 
+    }, getAuthHeader());
     return response.data;
 };
 

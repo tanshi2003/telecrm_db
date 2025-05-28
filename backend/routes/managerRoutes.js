@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const { authenticateToken } = require("../middleware/auth");
+const managerController = require('../controllers/managerController');
 
 // Middleware to check if user is a manager or admin
 const checkManagerAccess = (req, res, next) => {
@@ -248,7 +249,78 @@ router.post('/assign-users', authenticateToken, checkManagerAccess, (req, res) =
     });
 });
 
+// Assign leads to team members
+router.post('/assign-leads', authenticateToken, checkManagerAccess, async (req, res) => {
+    const { selectedMember, selectedLeads } = req.body;
+    
+    if (!selectedMember || !selectedLeads || !Array.isArray(selectedLeads) || selectedLeads.length === 0) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid request parameters'
+        });
+    }
+
+    try {
+        // Verify the user belongs to this manager's team
+        const verifyQuery = `
+            SELECT id FROM users 
+            WHERE id = ? AND manager_id = ? AND role IN ('caller', 'field_employee')
+        `;
+        db.query(verifyQuery, [selectedMember, req.user.id], (err, userResult) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Error verifying team member'
+                });
+            }
+
+            if (userResult.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Selected user is not part of your team'
+                });
+            }            // Update all selected leads
+            const placeholders = selectedLeads.map(() => '?').join(',');
+            const updateQuery = `
+                UPDATE leads 
+                SET assigned_to = ?,
+                    updated_at = NOW() 
+                WHERE id IN (${placeholders}) 
+                AND (assigned_to IS NULL 
+                    OR assigned_to IN (
+                        SELECT id FROM users WHERE manager_id = ?
+                    )
+                )
+            `;
+
+            db.query(updateQuery, [selectedMember, ...selectedLeads, req.user.id], (err, result) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Error assigning leads'
+                    });
+                }
+
+                res.json({
+                    success: true,
+                    message: `Successfully assigned ${result.affectedRows} leads`
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Error in lead assignment:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+});
+
 // Get dashboard statistics
+// Get unassigned leads for a manager
+router.get('/unassigned-leads', authenticateToken, checkManagerAccess, managerController.getUnassignedLeads);
 router.get('/dashboard-stats', authenticateToken, checkManagerAccess, (req, res) => {
     const queries = {
         totalTeamMembers: `
@@ -322,289 +394,61 @@ router.get('/dashboard-stats', authenticateToken, checkManagerAccess, (req, res)
 });
 
 // Get team performance
-router.get('/team-performance', authenticateToken, checkManagerAccess, (req, res) => {
-    const query = `
-        SELECT 
-            u.id,
-            u.name,
-            COUNT(c.id) as total_calls,
-            COUNT(CASE WHEN c.status = 'completed' THEN 1 END) as completed_calls,
-            COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) as conversions,
-            ROUND(AVG(c.duration)) as avg_call_duration
-        FROM users u
-        LEFT JOIN calls c ON u.id = c.caller_id
-        LEFT JOIN leads l ON c.lead_id = l.id
-        WHERE u.role = 'caller'
-        GROUP BY u.id
-    `;
-
-    db.query(query, (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).json({
-                success: false,
-                message: 'Error fetching team performance'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: results
-        });
-    });
-});
-
-// Get campaign performance
-router.get('/campaign-performance', authenticateToken, checkManagerAccess, (req, res) => {
-    const query = `
-        SELECT 
-            c.id,
-            c.name,
-            c.status,
-            COUNT(l.id) as total_leads,
-            COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) as converted_leads,
-            ROUND((COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) / COUNT(l.id)) * 100, 2) as conversion_rate
-        FROM campaigns c
-        LEFT JOIN leads l ON c.id = l.campaign_id
-        GROUP BY c.id
-    `;
-
-    db.query(query, (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).json({
-                success: false,
-                message: 'Error fetching campaign performance'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: results
-        });
-    });
-});
-
-// Assign leads to callers
-router.post('/assign-leads', authenticateToken, checkManagerAccess, (req, res) => {
-    const { caller_id, lead_ids } = req.body;
-
-    if (!caller_id || !lead_ids || !Array.isArray(lead_ids) || lead_ids.length === 0) {
-        return res.status(400).json({
-            success: false,
-            message: 'Invalid request parameters'
-        });
-    }
-
-    // First verify the caller exists and is active
-    db.query(
-        'SELECT u.id, u.status, u.manager_id FROM users u WHERE u.id = ? AND u.role = "caller"',
-        [caller_id],
-        (err, users) => {
-            if (err) {
-                console.error('Database error:', err);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Database error'
-                });
-            }
-
-            if (users.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Caller not found'
-                });
-            }
-
-            const caller = users[0];
-
-            if (caller.status !== 'active') {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Caller is not active'
-                });
-            }
-
-            // If manager is assigning leads, verify the caller is in their team
-            if (req.user.role === 'manager' && caller.manager_id !== req.user.id) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'Cannot assign leads to caller from another team'
-                });
-            }
-
-            // Verify leads exist and are unassigned or assigned to this manager's team
-            const leadsQuery = req.user.role === 'manager'
-                ? 'SELECT id, assigned_to FROM leads WHERE id IN (?) AND (assigned_to IS NULL OR assigned_to IN (SELECT id FROM users WHERE manager_id = ?))'
-                : 'SELECT id, assigned_to FROM leads WHERE id IN (?)';
-            const leadsParams = req.user.role === 'manager' ? [lead_ids, req.user.id] : [lead_ids];
-
-            db.query(leadsQuery, leadsParams, (err, leads) => {
-                if (err) {
-                    console.error('Database error:', err);
-                    return res.status(500).json({
-                        success: false,
-                        message: 'Database error'
-                    });
-                }
-
-                if (leads.length !== lead_ids.length) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'Some leads are invalid or not accessible'
-                    });
-                }
-
-                // Update leads
-                const updateQuery = 'UPDATE leads SET assigned_to = ? WHERE id IN (?)';
-                db.query(updateQuery, [caller_id, lead_ids], (err) => {
-                    if (err) {
-                        console.error('Database error:', err);
-                        return res.status(500).json({
-                            success: false,
-                            message: 'Error assigning leads'
-                        });
-                    }
-
-                    // Update user's total leads count
-                    db.query(
-                        'UPDATE users SET total_leads = total_leads + ? WHERE id = ?',
-                        [lead_ids.length, caller_id],
-                        (err) => {
-                            if (err) {
-                                console.error('Database error:', err);
-                                // Don't return error as leads are already assigned
-                            }
-
-                            res.json({
-                                success: true,
-                                message: 'Leads assigned successfully'
-                            });
-                        }
-                    );
-                });
-            });
-        }
-    );
-});
-
-// Get unassigned leads
-router.get('/unassigned-leads', authenticateToken, checkManagerAccess, (req, res) => {
-    const query = 'SELECT * FROM leads WHERE assigned_to IS NULL';
-    
-    db.query(query, (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).json({
-                success: false,
-                message: 'Error fetching unassigned leads'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: results
-        });
-    });
-});
-
-// Get active callers
-router.get('/active-callers', authenticateToken, checkManagerAccess, (req, res) => {
-    const query = `
-        SELECT 
-            u.id,
-            u.name,
-            u.email,
-            COUNT(l.id) as assigned_leads
-        FROM users u
-        LEFT JOIN leads l ON u.id = l.assigned_to
-        WHERE u.role = 'caller' AND u.status = 'active'
-        GROUP BY u.id
-    `;
-
-    db.query(query, (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).json({
-                success: false,
-                message: 'Error fetching active callers'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: results
-        });
-    });
-});
-
-// Get manager's team members
-router.get('/:managerId/team', authenticateToken, checkManagerAccess, (req, res) => {
-    const { managerId } = req.params;
-    
-    console.log('Fetching team for manager:', managerId);
-    console.log('Request user:', req.user);
-    
-    // If manager role, can only access their own team
-    if (req.user.role === 'manager' && req.user.id !== parseInt(managerId)) {
-        console.log('Access denied: Manager trying to access another team');
-        return res.status(403).json({
-            success: false,
-            message: 'Access denied. You can only view your own team.'
-        });
-    }
-
-    // First verify the manager exists
-    db.query('SELECT id, role FROM users WHERE id = ? AND role = "manager"', [managerId], (err, managers) => {
-        if (err) {
-            console.error('Error checking manager:', err);
-            return res.status(500).json({
-                success: false,
-                message: 'Error verifying manager'
-            });
-        }
-
-        if (managers.length === 0) {
-            console.log('Manager not found:', managerId);
-            return res.status(404).json({
-                success: false,
-                message: 'Manager not found'
-            });
-        }
-
+router.get('/team-performance', authenticateToken, checkManagerAccess, async (req, res) => {
+    try {
         const query = `
             SELECT 
                 u.id,
                 u.name,
-                u.email,
-                u.role,
-                u.status
+                COUNT(DISTINCT l.id) as total_leads_handled,
+                (
+                    SELECT COUNT(DISTINCT c.id) 
+                    FROM campaigns c
+                    WHERE c.manager_id = u.manager_id
+                ) as total_campaigns_handled,
+                COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) as conversions,
+                ROUND((COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) * 100.0 / NULLIF(COUNT(DISTINCT l.id), 0)), 2) as conversion_rate,
+                (
+                    SELECT COUNT(DISTINCT c.id) 
+                    FROM campaigns c
+                    WHERE c.manager_id = u.manager_id AND c.status = 'active'
+                ) as active_campaigns
             FROM users u
-            WHERE u.manager_id = ?
-            AND u.role IN ('caller', 'field_employee')
-            AND u.status = 'active'
-            ORDER BY u.name
-        `;
+            LEFT JOIN leads l ON l.assigned_to = u.id
+            WHERE u.manager_id = ? AND u.role IN ('caller', 'field_employee')
+            GROUP BY u.id, u.name
+            ORDER BY total_leads_handled DESC`;
 
-        console.log('Executing query:', query, 'with managerId:', managerId);
-
-        db.query(query, [managerId], (err, results) => {
-            if (err) {
-                console.error('Database error:', err);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Error fetching team members'
-                });
-            }
-
-            console.log('Query results:', results);
-
-            res.json({
-                success: true,
-                data: results
+        const results = await new Promise((resolve, reject) => {
+            db.query(query, [req.user.id], (err, results) => {
+                if (err) reject(err);
+                else resolve(results);
             });
         });
-    });
+
+        res.json({
+            success: true,
+            data: results.map(member => ({
+                id: member.id,
+                name: member.name,
+                total_leads_handled: parseInt(member.total_leads_handled) || 0,
+                total_campaigns_handled: parseInt(member.total_campaigns_handled) || 0,
+                conversions: parseInt(member.conversions) || 0,
+                conversion_rate: parseFloat(member.conversion_rate) || 0,
+                active_campaigns: parseInt(member.active_campaigns) || 0
+            }))
+        });
+    } catch (error) {
+        console.error('Error in team performance endpoint:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching team performance metrics',
+            error: error.message
+        });
+    }
 });
+
+// Get users assigned to a manager
+router.get('/:id/users', authenticateToken, checkManagerAccess, managerController.getUsersByManagerId);
 
 module.exports = router;

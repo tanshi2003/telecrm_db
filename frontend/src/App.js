@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import CallerDashboard from "./pages/CallerDashboard";
 import Leads from "./pages/Leads";
+import ViewLeads from "./pages/ViewLeadsbyM";
 import Lead1 from "./pages/Lead1";
 import Excelupload from "./pages/Excelupload"; 
 import Viewlead from "./pages/Viewlead";
@@ -24,8 +25,8 @@ import UpdateCampaign from "./pages/UpdateCampaign";
 import ManageCampaigns from "./pages/ManageCampaigns";
 import Campaign from "./pages/Campaign";
 import ManageUsers from "./pages/ManageUser";
-import SearchPage from "./pages/Search";
-import FiltersPage from "./pages/Filters"; // Use the page version
+import Search from "./pages/Search";  // Make sure path matches your file structure
+import { Filters } from "./components/Filters";  // Make sure path matches your file structure
 import AddUser from "./pages/Register";
 import AllUsers from "./pages/AllUsers";
 import AccessLogs from "./pages/AccessLogs";
@@ -171,6 +172,14 @@ function AppContent() {
               }
             />
             <Route
+              path="/viewleads"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <ViewLeads />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/campaigns"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
@@ -279,8 +288,22 @@ function AppContent() {
               }
             />
             {/* 🆕 Search Route */}
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/filters" element={<FiltersPage />} />
+            <Route 
+              path="/search" 
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager", "caller", "field_employee"]}>
+                  <Search />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/filters" 
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager", "caller", "field_employee"]}>
+                  <Filters />
+                </ProtectedRoute>
+              } 
+            />
             <Route
               path="/admin/users/assign-manager"
               element={

@@ -12,6 +12,7 @@ const campaignController = {
 
         const user = req.user;
         const admin_id = user.role === 'admin' ? user.id : null;
+        const manager_id = user.role === 'manager' ? user.id : null;
 
         if (!name || !description || !status || !priority || !start_date) {
             return res.status(400).json(responseFormatter(false, "All required fields must be provided"));
@@ -19,13 +20,13 @@ const campaignController = {
 
         const campaignQuery = `
             INSERT INTO campaigns 
-            (name, description, status, lead_count, priority, start_date, end_date, created_at, updated_at, admin_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?)
+            (name, description, status, lead_count, priority, start_date, end_date, created_at, updated_at, admin_id, manager_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)
         `;
 
         db.query(
             campaignQuery,
-            [name, description, status, leads.length, priority, start_date, end_date || null, admin_id],
+            [name, description, status, leads.length, priority, start_date, end_date || null, admin_id, manager_id],
             (err, campaignResult) => {
                 if (err) {
                     console.error("Error inserting campaign:", err);
@@ -496,6 +497,46 @@ const campaignController = {
             }));
 
             console.log("Processed campaign results:", processedResults);
+            res.json(responseFormatter(true, "Campaigns fetched successfully", processedResults));
+        });
+    },    // Get campaigns by manager ID
+    getCampaignsByManagerId: (req, res) => {
+        const managerId = req.params.id;
+        
+        // Query to get both created and assigned campaigns
+        const query = `
+            SELECT c.*, 
+                   COUNT(DISTINCT l.id) as lead_count,
+                   GROUP_CONCAT(DISTINCT u.id) as assigned_user_ids,
+                   GROUP_CONCAT(DISTINCT u.name) as assigned_user_names
+            FROM campaigns c
+            LEFT JOIN leads l ON c.id = l.campaign_id
+            LEFT JOIN campaign_users cu ON c.id = cu.campaign_id
+            LEFT JOIN users u ON cu.user_id = u.id
+            WHERE c.manager_id = ? OR c.id IN (
+                SELECT campaign_id 
+                FROM campaign_users 
+                WHERE user_id = ?
+            )
+            GROUP BY c.id
+        `;
+
+        db.query(query, [managerId, managerId], (err, results) => {
+            if (err) {
+                console.error("Error fetching manager's campaigns:", err);
+                return res.status(500).json(responseFormatter(false, "Database error", err.message));
+            }
+
+            // Process the results to format assigned users
+            const processedResults = results.map(campaign => ({
+                ...campaign,
+                assigned_users: campaign.assigned_user_ids ? 
+                    campaign.assigned_user_ids.split(',').map((id, index) => ({
+                        id: parseInt(id),
+                        name: campaign.assigned_user_names.split(',')[index]
+                    })) : []
+            }));
+
             res.json(responseFormatter(true, "Campaigns fetched successfully", processedResults));
         });
     },
