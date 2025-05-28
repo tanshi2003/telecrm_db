@@ -76,9 +76,9 @@ const AssignUser = () => {
     });
   }, [selectedCampaign]);
 
-  // Only show users with role 'caller' or 'field_employee'
+  // Only show users with role 'caller', 'field_employee', or 'manager'
   const assignableUsers = users.filter(
-    (u) => u.role === "caller" || u.role === "field_employee"
+    (u) => u.role === "caller" || u.role === "field_employee" || u.role === "manager"
   );
 
   // Handle checkbox change for multiple users
@@ -288,7 +288,14 @@ const AssignUser = () => {
                                 onChange={handleAssignFormChange}
                                 className="accent-blue-600"
                               />
-                              <span>{u.name}</span>
+                              <span>
+                                {u.name}
+                                {u.role === "manager" && (
+                                  <span className="ml-2 px-2 py-0.5 bg-yellow-200 text-yellow-800 text-xs rounded">
+                                    Manager
+                                  </span>
+                                )}
+                              </span>
                             </label>
                           ))}
                         </div>

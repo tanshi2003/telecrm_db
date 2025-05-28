@@ -859,7 +859,7 @@ const CallerDashboard = () => {
             Authorization: `Bearer ${token}`
           }
         }
-      });
+      );
 
       console.log('Call API Response:', response.data); // Debug log
 
