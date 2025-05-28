@@ -44,10 +44,13 @@ export const getTeamPerformance = async () => {
 
 // Get campaign performance
 export const getCampaignPerformance = async () => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const managerId = user.id;
-    const response = await api.get(`/api/campaigns/user/${managerId}/campaigns`);
-    return response.data;
+    try {
+        const response = await api.get('/api/campaigns', getAuthHeader());
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching campaign performance:', error);
+        throw error;
+    }
 };
 
 // Get unassigned users

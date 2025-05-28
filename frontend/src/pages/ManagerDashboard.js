@@ -488,7 +488,7 @@ const ManagerDashboard = () => {
               {campaignStats.length === 0 ? (
                 <div className="text-gray-500">No campaigns found.</div>
               ) : (
-                <div className={gridClass}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {campaignStats.map((campaign) => (
                     <div
                       key={campaign.id}
@@ -503,7 +503,7 @@ const ManagerDashboard = () => {
                         </div>
                         <span
                           className={`px-2 py-1 text-xs rounded-full ${
-                            isActiveCampaign(campaign)
+                            campaign.status === 'Active'
                               ? "bg-green-100 text-green-800"
                               : "bg-gray-100 text-gray-800"
                           }`}
@@ -514,15 +514,15 @@ const ManagerDashboard = () => {
                       <div className="space-y-1 text-xs text-gray-600">
                         <div className="flex items-center">
                           <Users className="w-4 h-4 mr-2" />
-                          Assigned Users: {campaign.assigned_users}
+                          Assigned Users: {campaign.assigned_users?.length || 0}
                         </div>
                         <div className="flex items-center">
                           <Target className="w-4 h-4 mr-2" />
-                          Total Leads: {campaign.total_leads}
+                          Total Leads: {campaign.total_leads || 0}
                         </div>
                         <div className="flex items-center">
                           <BarChart2 className="w-4 h-4 mr-2" />
-                          Conversion Rate: {campaign.conversion_rate}%
+                          Conversion Rate: {campaign.conversion_rate || 0}%
                         </div>
                         <div className="flex items-center">
                           <Calendar className="w-4 h-4 mr-2" />
@@ -557,12 +557,12 @@ const ManagerDashboard = () => {
                   &times;
                 </button>
               </div>
-              {campaignStats.filter(isActiveCampaign).length === 0 ? (
+              {campaignStats.filter(c => c.status?.toLowerCase() === 'active').length === 0 ? (
                 <div className="text-gray-500">No active campaigns found.</div>
               ) : (
-                <div className={gridClass}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {campaignStats
-                    .filter(isActiveCampaign)
+                    .filter(c => c.status?.toLowerCase() === 'active')
                     .map((campaign) => (
                       <div
                         key={campaign.id}
@@ -579,25 +579,22 @@ const ManagerDashboard = () => {
                             {campaign.status}
                           </span>
                         </div>
-                        <div className="space-y-1 text-xs text-gray-600">
+                        <div className="space-y-2 text-sm text-gray-600">
                           <div className="flex items-center">
                             <Users className="w-4 h-4 mr-2" />
-                            Assigned Users: {campaign.assigned_users}
+                            Assigned Users: {campaign.assigned_users?.length || 0}
                           </div>
                           <div className="flex items-center">
                             <Target className="w-4 h-4 mr-2" />
-                            Total Leads: {campaign.total_leads}
+                            Total Leads: {campaign.total_leads || 0}
                           </div>
                           <div className="flex items-center">
                             <BarChart2 className="w-4 h-4 mr-2" />
-                            Conversion Rate: {campaign.conversion_rate}%
+                            Conversion Rate: {campaign.conversion_rate || 0}%
                           </div>
                           <div className="flex items-center">
                             <Calendar className="w-4 h-4 mr-2" />
-                            Created:{" "}
-                            {campaign.created_at
-                              ? new Date(campaign.created_at).toLocaleDateString()
-                              : "-"}
+                            Created: {campaign.created_at ? new Date(campaign.created_at).toLocaleDateString() : "-"}
                           </div>
                         </div>
                       </div>
@@ -621,57 +618,65 @@ const ManagerDashboard = () => {
                   Team Performance
                 </h3>
                 <div className="mt-2 space-y-2">
-                  {console.log('Team Performance Data:', teamPerformance)}
-                  {teamPerformance.slice(0, 3).map((member) => {
-                    console.log('Member Data:', member);
-                    
-                    // Simple score calculation
-                    const totalScore = Math.min(100, Math.max(0, 
-                      (member.total_leads_handled || 0) * 5 + 
-                      (member.total_campaigns_handled || 0) * 10
-                    ));
+                  {teamPerformance && teamPerformance.length > 0 ? (
+                    teamPerformance.slice(0, 3).map((member) => {
+                      // Simple score calculation based on leads and campaigns
+                      const totalScore = Math.min(100, Math.max(0, 
+                        (member.total_leads_handled || 0) * 5 + 
+                        (member.total_campaigns_handled || 0) * 10 +
+                        (member.conversion_rate || 0)
+                      ));
 
-                    return (
-                      <div key={member.id} className="text-sm">
-                        <div className="flex justify-between mb-2">
-                          <span className="text-gray-600 font-medium">{member.name}</span>
-                          <span className="font-medium">{totalScore}% Performance</span>
-                        </div>
-                        
-                        {/* Performance Progress Bar */}
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full ${
-                              totalScore >= 80 ? 'bg-green-600' :
-                              totalScore >= 60 ? 'bg-blue-600' :
-                              totalScore >= 40 ? 'bg-yellow-600' :
-                              'bg-red-600'
-                            }`}
-                            style={{ width: `${totalScore}%` }}
-                          />
-                        </div>
+                      return (
+                        <div key={member.id} className="text-sm">
+                          <div className="flex justify-between mb-2">
+                            <span className="text-gray-600 font-medium">{member.name}</span>
+                            <span className="font-medium">{Math.round(totalScore)}% Performance</span>
+                          </div>
+                          
+                          {/* Performance Progress Bar */}
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full ${
+                                totalScore >= 80 ? 'bg-green-600' :
+                                totalScore >= 60 ? 'bg-blue-600' :
+                                totalScore >= 40 ? 'bg-yellow-600' :
+                                'bg-red-600'
+                              }`}
+                              style={{ width: `${totalScore}%` }}
+                            />
+                          </div>
 
-                        {/* Metrics */}
-                        <div className="grid grid-cols-2 gap-4 mt-2 text-xs text-gray-500">
-                          <div>
-                            <span className="block">Total Leads</span>
-                            <span className="font-medium">{member.total_leads_handled || 0}</span>
-                          </div>
-                          <div>
-                            <span className="block">Total Campaigns</span>
-                            <span className="font-medium">
-                              {member.total_campaigns_handled || 0}
-                              {member.active_campaigns > 0 && 
-                                <span className="text-xs text-green-500 ml-1">
-                                  ({member.active_campaigns} active)
-                                </span>
-                              }
-                            </span>
+                          {/* Metrics */}
+                          <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-gray-500">
+                            <div>
+                              <span className="block">Total Leads</span>
+                              <span className="font-medium">{member.total_leads_handled || 0}</span>
+                            </div>
+                            <div>
+                              <span className="block">Campaigns</span>
+                              <span className="font-medium">
+                                {member.total_campaigns_handled || 0}
+                                {member.active_campaigns > 0 && (
+                                  <span className="text-xs text-green-500 ml-1">
+                                    ({member.active_campaigns} active)
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="block">Conversion</span>
+                              <span className="font-medium">
+                                {member.conversion_rate?.toFixed(1) || '0'}%
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  ) : (
+                    <div className="text-gray-500">No team performance data available</div>
+                  )}
                 </div>
               </div>
             </div>

@@ -52,7 +52,7 @@ const CampaignManagement = () => {
       const managerId = storedUser.id.toString().trim();
 
       const response = await axios.get(
-        `http://localhost:5000/api/campaigns/user/${managerId}/campaigns`,
+        `http://localhost:5000/api/campaigns/manager/${managerId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -81,7 +81,7 @@ const CampaignManagement = () => {
       const token = localStorage.getItem('token');
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const response = await axios.get(
-        'http://localhost:5000/api/campaigns',
+        `http://localhost:5000/api/campaigns/manager/${storedUser.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (response.data.success && Array.isArray(response.data.data)) {
