@@ -18,37 +18,43 @@ export const getDashboardStats = async () => {
 export const getTeamPerformance = async () => {
     try {
         const response = await api.get('/api/managers/team-performance', getAuthHeader());
-        console.log('Team Performance API Response:', response.data);
         
-        if (!response.data?.success || !Array.isArray(response.data.data)) {
-            console.error('Invalid team performance data format:', response.data);
-            throw new Error('Invalid data format received from server');
-        }
+        const mappedData = response.data.data.map(member => ({
+            id: member.id || 0,
+            name: member.name || 'Unknown',
+            total_leads_handled: parseInt(member.total_leads_handled) || 0,
+            total_campaigns_handled: parseInt(member.total_campaigns_handled) || 0,
+            conversions: parseInt(member.conversions) || 0,
+            conversion_rate: parseFloat(member.conversion_rate) || 0,
+            active_campaigns: parseInt(member.active_campaigns) || 0
+        }));
+
+        console.log('Mapped team performance data:', mappedData);
 
         return {
             success: true,
-            data: response.data.data.map(member => ({
-                id: member.id || 0,
-                name: member.name || 'Unknown',
-                total_leads_handled: parseInt(member.total_leads_handled) || 0,
-                total_campaigns_handled: parseInt(member.total_campaigns_handled) || 0,
-                conversions: parseInt(member.conversions) || 0,
-                conversion_rate: parseFloat(member.conversion_rate) || 0,
-                active_campaigns: parseInt(member.active_campaigns) || 0
-            }))
+            data: mappedData
         };
     } catch (error) {
         console.error('Error fetching team performance:', error);
+        console.error('Error details:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status
+        });
         throw error.response?.data || error;
     }
 };
 
 // Get campaign performance
 export const getCampaignPerformance = async () => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const managerId = user.id;
-    const response = await api.get(`/api/campaigns/user/${managerId}/campaigns`);
-    return response.data;
+    try {
+        const response = await api.get('/api/campaigns', getAuthHeader());
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching campaign performance:', error);
+        throw error;
+    }
 };
 
 // Get unassigned users
