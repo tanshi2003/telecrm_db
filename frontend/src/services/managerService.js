@@ -17,29 +17,28 @@ export const getDashboardStats = async () => {
 // Get team performance
 export const getTeamPerformance = async () => {
     try {
-        const response = await api.get('/api/managers/team-performance', getAuthHeader());
+        const response = await api.get('/api/managers/team-performance');
         console.log('Team Performance API Response:', response.data);
         
-        if (!response.data?.success || !Array.isArray(response.data.data)) {
+        // Ensure we have an array of team members
+        if (!response.data || !response.data.data || !Array.isArray(response.data.data)) {
             console.error('Invalid team performance data format:', response.data);
-            throw new Error('Invalid data format received from server');
+            return { data: [] };
         }
 
-        return {
-            success: true,
-            data: response.data.data.map(member => ({
-                id: member.id || 0,
-                name: member.name || 'Unknown',
-                total_leads_handled: parseInt(member.total_leads_handled) || 0,
-                total_campaigns_handled: parseInt(member.total_campaigns_handled) || 0,
-                conversions: parseInt(member.conversions) || 0,
-                conversion_rate: parseFloat(member.conversion_rate) || 0,
-                active_campaigns: parseInt(member.active_campaigns) || 0
-            }))
-        };
+        // Ensure each member has the required fields
+        const processedData = response.data.data.map(member => ({
+            id: member.id || 0,
+            name: member.name || 'Unknown',
+            total_leads_handled: parseInt(member.total_leads_handled) || 0,
+            total_campaigns_handled: parseInt(member.total_campaigns_handled) || 0,
+            active_campaigns: parseInt(member.active_campaigns) || 0
+        }));
+
+        return { data: processedData };
     } catch (error) {
         console.error('Error fetching team performance:', error);
-        throw error.response?.data || error;
+        return { data: [] };
     }
 };
 
@@ -73,9 +72,14 @@ export const assignUsersToTeam = async (manager_id, user_ids) => {
     return response.data;
 };
 
-// Assign leads to caller
-export const assignLeads = async (caller_id, lead_ids) => {
-    const response = await api.post('/api/managers/assign-leads', { caller_id, lead_ids });
+// Assign leads to team member
+export const assignLeads = async (selectedMember, selectedLeads) => {
+    // Ensure selectedLeads is an array
+    const leadsArray = Array.isArray(selectedLeads) ? selectedLeads : [selectedLeads];
+    const response = await api.post('/api/managers/assign-leads', { 
+        selectedMember, 
+        selectedLeads: leadsArray 
+    }, getAuthHeader());
     return response.data;
 };
 

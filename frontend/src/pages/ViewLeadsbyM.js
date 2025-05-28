@@ -1,23 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const ViewLeads = () => {
-  const [user, setUser] = useState(null);
+const ViewLeads = () => {  const [user, setUser] = useState(null);
   const [leads, setLeads] = useState([]);
-  const [users, setUsers] = useState([]); 
-  const [filters, setFilters] = useState({
-    status: "",
-    category: "",
-    assignedTo: "",
-    campaign: "",
-    dateRange: { start: "", end: "" },
-  });
+  const [users, setUsers] = useState([]);
   const navigate = useNavigate();
   
-  // Define fetchLeadsAndUsers before using it
-  const fetchLeadsAndUsers = async () => {
+  // Define fetchLeadsAndUsers with useCallback
+  const fetchLeadsAndUsers = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get("http://localhost:5000/api/leads", {
@@ -44,7 +36,7 @@ const ViewLeads = () => {
         navigate("/login");
       }
     }
-  };
+  }, [navigate]);
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
@@ -58,7 +50,7 @@ const ViewLeads = () => {
 
     setUser(storedUser);
     fetchLeadsAndUsers();
-  }, [navigate]);
+  }, [navigate, fetchLeadsAndUsers]);
 
   // Map assigned_to ID to user name using the fetched users
   const getAssignedUserName = (userId) => {
@@ -66,21 +58,6 @@ const ViewLeads = () => {
     return foundUser ? foundUser.name : "N/A";
   };
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    if (name.includes("dateRange")) {
-      const [key] = name.split(".");
-      setFilters((prev) => ({
-        ...prev,
-        dateRange: {
-          ...prev.dateRange,
-          [key]: value,
-        },
-      }));
-    } else {
-      setFilters((prev) => ({ ...prev, [name]: value }));
-    }
-  };
 
   // Delete lead from frontend and database
   const handleDeleteLead = async (id) => {
@@ -88,28 +65,31 @@ const ViewLeads = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/api/leads/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      if (!token) {
+        alert("Authentication token missing. Please log in again.");
+        navigate("/login");
+        return;
+      }
+
+      const response = await axios.delete(`http://localhost:5000/api/leads/${id}`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
-      setLeads((prevLeads) => prevLeads.filter((lead) => lead.id !== id));
-      console.log("Lead deleted successfully.");
+      if (response.data.success) {
+        setLeads((prevLeads) => prevLeads.filter((lead) => lead.id !== id));
+        alert("Lead deleted successfully");
+      } else {
+        throw new Error(response.data.message || "Failed to delete lead");
+      }
     } catch (error) {
       alert("Failed to delete lead.");
       console.error("Failed to delete lead:", error.response?.data || error.message);
     }
   };
-
-  const filteredLeads = leads.filter((lead) => {
-    return (
-      (!filters.status || lead.status === filters.status) &&
-      (!filters.category || lead.lead_category === filters.category) &&
-      (!filters.assignedTo || lead.assigned_to === filters.assignedTo) &&
-      (!filters.campaign || lead.campaign_id === filters.campaign) &&
-      (!filters.dateRange.start || new Date(lead.created_at) >= new Date(filters.dateRange.start)) &&
-      (!filters.dateRange.end || new Date(lead.created_at) <= new Date(filters.dateRange.end))
-    );
-  });
+  const filteredLeads = leads;
 
   return (
     <div className="flex min-h-screen overflow-hidden">

@@ -184,10 +184,9 @@ const assignLead = async (req, res) => {
     });
   }
 };
-//getCampaignsForManager.js
-
-exports.getCampaignsForManager = async (req, res) => {
-  const managerId = req.user.id; // JWT se nikalo ya req.params se aaya ho toh waisa
+// Get campaigns for manager
+const getCampaignsForManager = async (req, res) => {
+  const managerId = req.user.id;
 
   try {
     const [createdCampaigns] = await db.query(
@@ -244,10 +243,65 @@ const getUsersByManagerId = (req, res) => {
     });
 };
 
+// Get unassigned leads for a manager
+const getUnassignedLeads = (req, res) => {
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({
+            success: false,
+            message: 'Unauthorized access'
+        });
+    }
+
+    const managerId = req.user.id;
+    console.log('Fetching unassigned leads for manager:', managerId);
+    const query = `
+        SELECT 
+            l.id,
+            l.name,
+            l.phone_no,
+            l.status,
+            l.created_at,
+            l.title,
+            l.lead_category,
+            l.notes,
+            l.address,
+            u.name as assigned_to_name,
+            u.id as assigned_to
+        FROM leads l 
+        LEFT JOIN users u ON l.assigned_to = u.id 
+        WHERE l.assigned_to IS NULL 
+        OR l.assigned_to IN (
+            SELECT id FROM users 
+            WHERE manager_id = ?
+        )
+        ORDER BY l.created_at DESC
+    `;
+
+    db.query(query, [managerId], (err, leads) => {
+        if (err) {
+            console.error('Error fetching unassigned leads:', err);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to fetch unassigned leads',
+                error: err.message
+            });
+        }
+
+        console.log(`Found ${leads ? leads.length : 0} unassigned leads for manager ${managerId}`);
+        
+        res.json({
+            success: true,
+            data: leads || []
+        });
+    });
+};
+
 module.exports = {
   getDashboardStats,
   updateUserStatus,
   getUsers,
   assignLead,
-  getUsersByManagerId
+  getUsersByManagerId,
+  getUnassignedLeads,
+  getCampaignsForManager
 };

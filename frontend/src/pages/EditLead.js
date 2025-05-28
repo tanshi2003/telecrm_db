@@ -11,7 +11,8 @@ const EditLead = () => {
   const navigate = useNavigate();
   const [lead, setLead] = useState(state?.lead || null);
   const [user, setUser] = useState(null);
-  const [users, setUsers] = useState([]); // <-- Add this
+  const [users, setUsers] = useState([]); 
+  const [isTeamLead, setIsTeamLead] = useState(false); // Add this state
 
   // Fetch user from localStorage
   useEffect(() => {
@@ -79,6 +80,8 @@ const EditLead = () => {
 
           if (response.data) {
             setLead(response.data);
+            // Check if lead belongs to manager's team
+            setIsTeamLead(checkIfTeamLead(response.data, user));
           } else {
             console.error("Unexpected API response format:", response.data);
           }
@@ -90,6 +93,14 @@ const EditLead = () => {
       fetchLead();
     }
   }, [id, lead]);      const handleUpdateLead = async (updatedLead) => {
+    // Add warning for manager trying to update non-team lead
+    if (user?.role === 'manager' && !isTeamLead) {
+      const continueAnyway = window.confirm(
+        'Warning: This lead is not assigned to your team. You may not have permission to update it. Do you want to continue anyway?'
+      );
+      if (!continueAnyway) return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       const storedUser = JSON.parse(localStorage.getItem("user"));
@@ -109,14 +120,24 @@ const EditLead = () => {
         setLead(response.data.data.lead);
       } else if (response.data.success) {
         setLead(response.data.data);
-      }
-
-      alert("Lead updated successfully!");
-      navigate("/leads");
+      }      alert("Lead updated successfully!");
+      navigate(-1);
     } catch (error) {
       console.error("Failed to update lead:", error.response?.data || error.message);
       alert("Failed to update lead: " + (error.response?.data?.message || error.message));
     }
+  };
+
+  // Helper function to check if lead belongs to manager's team
+  const checkIfTeamLead = (leadData, currentUser) => {
+    if (!leadData || !currentUser) return false;
+    if (currentUser.role !== 'manager') return true;
+    
+    // Check if lead is unassigned (can be claimed by manager)
+    if (!leadData.assigned_to) return true;
+    
+    // Check if lead is assigned to one of manager's team members
+    return users.some(user => user.id === leadData.assigned_to);
   };
 
   return (
@@ -132,7 +153,18 @@ const EditLead = () => {
         {/* Edit Lead Form */}
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold">Edit Lead</h1>
+            <div>
+              <h1 className="text-2xl font-bold">Edit Lead</h1>
+              {user?.role === 'manager' && (
+                <div className={`mt-2 text-sm px-3 py-1 rounded-full inline-block ${
+                  isTeamLead 
+                    ? 'bg-green-100 text-green-800 border border-green-200' 
+                    : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                }`}>
+                  {isTeamLead ? '🟢 Your Team\'s Lead' : '⚠️ Not Your Team\'s Lead'}
+                </div>
+              )}
+            </div>
             <BackButton />
           </div>
           {lead ? (

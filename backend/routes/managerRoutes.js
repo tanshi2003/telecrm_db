@@ -249,36 +249,78 @@ router.post('/assign-users', authenticateToken, checkManagerAccess, (req, res) =
     });
 });
 
-// Get dashboard statistics
-// Get unassigned leads for a manager
-router.get('/unassigned-leads', authenticateToken, checkManagerAccess, (req, res) => {
-    const managerId = req.user.id;
-    const query = `
-        SELECT l.*, u.name as assigned_to_name 
-        FROM Leads l 
-        LEFT JOIN Users u ON l.assigned_to = u.id 
-        WHERE l.assigned_to IS NULL 
-        OR l.assigned_to IN (SELECT id FROM Users WHERE manager_id = ?)
-        ORDER BY l.created_at DESC
-    `;
-
-    db.query(query, [managerId], (err, leads) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).json({
-                success: false,
-                message: 'Error fetching unassigned leads',
-                error: err.message
-            });
-        }
-
-        res.json({
-            success: true,
-            data: leads
+// Assign leads to team members
+router.post('/assign-leads', authenticateToken, checkManagerAccess, async (req, res) => {
+    const { selectedMember, selectedLeads } = req.body;
+    
+    if (!selectedMember || !selectedLeads || !Array.isArray(selectedLeads) || selectedLeads.length === 0) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid request parameters'
         });
-    });
+    }
+
+    try {
+        // Verify the user belongs to this manager's team
+        const verifyQuery = `
+            SELECT id FROM users 
+            WHERE id = ? AND manager_id = ? AND role IN ('caller', 'field_employee')
+        `;
+        db.query(verifyQuery, [selectedMember, req.user.id], (err, userResult) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Error verifying team member'
+                });
+            }
+
+            if (userResult.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Selected user is not part of your team'
+                });
+            }            // Update all selected leads
+            const placeholders = selectedLeads.map(() => '?').join(',');
+            const updateQuery = `
+                UPDATE leads 
+                SET assigned_to = ?,
+                    updated_at = NOW() 
+                WHERE id IN (${placeholders}) 
+                AND (assigned_to IS NULL 
+                    OR assigned_to IN (
+                        SELECT id FROM users WHERE manager_id = ?
+                    )
+                )
+            `;
+
+            db.query(updateQuery, [selectedMember, ...selectedLeads, req.user.id], (err, result) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Error assigning leads'
+                    });
+                }
+
+                res.json({
+                    success: true,
+                    message: `Successfully assigned ${result.affectedRows} leads`
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Error in lead assignment:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
 });
 
+// Get dashboard statistics
+// Get unassigned leads for a manager
+router.get('/unassigned-leads', authenticateToken, checkManagerAccess, managerController.getUnassignedLeads);
 router.get('/dashboard-stats', authenticateToken, checkManagerAccess, (req, res) => {
     const queries = {
         totalTeamMembers: `

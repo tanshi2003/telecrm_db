@@ -20,7 +20,7 @@ router.get("/:id", roleMiddleware(['admin', 'user', 'caller', 'field_employee'])
 router.put("/:id", roleMiddleware(['admin', 'user', 'caller', 'field_employee', 'manager']), leadController.updateLead);
 
 // ❌ Delete a lead (Admins only)
-router.delete("/:id", roleMiddleware(['admin']), leadController.deleteLead);
+router.delete("/:id", roleMiddleware(['admin', 'manager']), leadController.deleteLead);
 
 // New route for getting user lead counts
 router.get("/user/:userId/lead-counts", leadController.getUserLeadCounts);

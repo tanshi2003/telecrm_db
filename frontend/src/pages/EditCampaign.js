@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import { AuthContext } from "../context/AuthContext";
+import BackButton from "../components/BackButton";
 
 const EditCampaign = () => {
   const { id } = useParams(); // Get the campaign ID from the URL
@@ -131,7 +132,12 @@ const EditCampaign = () => {
       <Sidebar role={user?.role || "admin"} />
       <div className="ml-64 flex-grow">
         <Navbar />
-        <div className="flex h-[calc(100vh-4rem)] mt-16">
+        {/* Add BackButton and title */}
+        <div className="flex justify-between items-center p-4 mt-16 mb-2">
+          <h1 className="text-2xl font-bold text-gray-800">Edit Campaign</h1>
+          <BackButton />
+        </div>
+        <div className="flex h-[calc(100vh-8rem)]">
           {/* Campaign List */}
           <div className="w-1/3 bg-gray-50 p-4 overflow-y-auto border-r">
             <h2 className="text-xl font-bold mb-4">Campaigns</h2>
