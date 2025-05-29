@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // added
+import { useNavigate, Outlet } from "react-router-dom"; // added Outlet
 import { FaUser, FaTasks, FaBullhorn, FaChartLine } from "react-icons/fa"; // added icons
 import Sidebar from "../components/Sidebar";
 
@@ -327,6 +327,7 @@ const FieldDashboard = () => {
           
         </div>
         {/* Remove separate update panel outside the grid */}
+        <Outlet /> {/* Render nested routes here */}
       </div>
     </div>
   );
