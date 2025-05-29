@@ -212,7 +212,9 @@ const handleAddLeadsLeave = () => {
       case 'manager':
         return '/manager-dashboard';
       case 'caller':
-        return '/caller';
+        return '/caller-dashboard';
+      case 'field_employee':
+        return '/field_employee-dashboard'; // <-- Added field dashboard path
       default:
         return '/';
     }
