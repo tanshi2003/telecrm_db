@@ -23,28 +23,26 @@ const EditLead = () => {
       console.error("Unauthorized access.");
     }
   }, []);
-
   // Fetch users for Assigned To dropdown
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem("token");
         const storedUser = JSON.parse(localStorage.getItem("user"));
-        const userRole = storedUser?.role;
-
         let endpoint = "http://localhost:5000/api/users";
-        if (userRole === "manager") {
-          // For managers, filter users to only show their team members
-          endpoint = `http://localhost:5000/api/users?managerId=${storedUser.id}`;
+        
+        // If user is a manager, only fetch their team members
+        if (storedUser?.role === "manager") {
+          endpoint = `http://localhost:5000/api/managers/${storedUser.id}/team-members`;
         }
-
+        
         const response = await axios.get(endpoint, {
           headers: { Authorization: `Bearer ${token}` }
         });
-
+        
         if (response.data?.data) {
-          if (userRole === "manager") {
-            // For managers, use all returned users since they're already filtered to their team
+          // For managers, team members are already filtered by the backend
+          if (storedUser?.role === "manager") {
             setUsers(response.data.data);
           } else {
             // For other roles, filter to show only caller and field_employee
@@ -248,8 +246,7 @@ const EditLead = () => {
                   value={lead.assigned_to || ""}
                   onChange={(e) => setLead({ ...lead, assigned_to: e.target.value })}
                   className="w-full p-2 border rounded"
-                >
-                  <option value="">Select User</option>
+                >                  <option value="">Select User</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name}

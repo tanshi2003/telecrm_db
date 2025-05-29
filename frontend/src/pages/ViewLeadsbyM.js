@@ -2,34 +2,59 @@ import React, { useEffect, useState, useCallback } from "react";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Plus } from "lucide-react";
 
-const ViewLeads = () => {  const [user, setUser] = useState(null);
+const ViewLeads = () => {
+  const [user, setUser] = useState(null);
   const [leads, setLeads] = useState([]);
   const [users, setUsers] = useState([]);
   const navigate = useNavigate();
   
-  // Define fetchLeadsAndUsers with useCallback
+  // Update fetchLeadsAndUsers function
   const fetchLeadsAndUsers = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/leads", {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      
+      if (!token || !storedUser) {
+        navigate("/login");
+        return;
+      }
+
+      // Get leads for manager
+      const response = await axios.get(`http://localhost:5000/api/leads`, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
+        },
+        params: {
+          managerId: storedUser.id,
+          role: 'manager'  // Add role parameter
         }
       });
 
-      if (response.data.success) {
+      if (response.data?.success) {
+        // No need to filter here as backend will send only relevant leads
         setLeads(response.data.data);
+        
+        // Log the leads data for debugging
+        console.log("Fetched leads:", response.data.data);
       } else {
         console.error("Failed to fetch leads:", response.data.message);
       }
 
-      // Fetch users
-      const usersResponse = await axios.get("http://localhost:5000/api/users", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUsers(usersResponse.data.data || []);
+      // Fetch team members
+      const usersResponse = await axios.get(
+        `http://localhost:5000/api/managers/${storedUser.id}/team-members`, 
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (usersResponse.data?.success) {
+        setUsers(usersResponse.data.data);
+      }
+
     } catch (error) {
       console.error("Error fetching leads or users:", error);
       if (error.response?.status === 401) {
@@ -97,16 +122,23 @@ const ViewLeads = () => {  const [user, setUser] = useState(null);
 
       <div className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
         <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Manage Leads</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={() => navigate(-1)}
-            className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
-          >
-            Back
-          </button>
+          <h1 className="text-3xl font-bold text-gray-800">Manage Leads</h1>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate("/Lead1")}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Plus size={20} />
+              Create Lead
+            </button>
+            <button
+              onClick={() => navigate(-1)}
+              className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
+            >
+              Back
+            </button>
+          </div>
         </div>
-      </div>
         <p className="text-gray-600 mb-6">Add, update, or import leads easily.</p>
 
         {/* Lead List */}

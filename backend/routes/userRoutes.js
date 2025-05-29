@@ -20,7 +20,7 @@ router.get("/managers", roleMiddleware(['admin']), userController.getManagers);
 
 // Admin only routes
 router.post("/register", roleMiddleware(['admin']), userController.registerUser);
-router.get("/", roleMiddleware(['admin', 'manager']), userController.getUsers);
+router.get("/", roleMiddleware(['admin', 'manager', 'caller', 'field_employee']), userController.getUsers);
 
 // Routes with :id parameter
 router.get("/:id", roleMiddleware(['admin']), userController.getUserById);
@@ -36,6 +36,7 @@ router.put("/:id/role", roleMiddleware(['admin']), userController.updateUserRole
 
 // Manager assignment
 router.put("/:id/assign-manager", roleMiddleware(['admin']), userController.assignManager);
+router.put("/:id/remove-manager", roleMiddleware(['admin']), userController.removeManager);
 
 // User statistics
 router.get("/:id/stats", roleMiddleware(['admin', 'field_employee']), userController.getUserStats);

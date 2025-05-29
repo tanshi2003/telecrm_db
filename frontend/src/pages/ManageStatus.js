@@ -14,7 +14,7 @@ const statusOptions = [
 
 const ManageStatus = () => {
   const [users, setUsers] = useState([]);
-  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null); // Only one user for radio
   const [bulkStatus, setBulkStatus] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -45,91 +45,46 @@ const ManageStatus = () => {
   };
 
   const handleUserSelect = (id) => {
-    setSelectedUsers((prev) =>
-      prev.includes(id) ? prev.filter((uid) => uid !== id) : [...prev, id]
-    );
-  };
-
-  const handleSelectAll = (e) => {
-    setSelectedUsers(e.target.checked ? users.map((u) => u.id) : []);
+    setSelectedUser(id);
   };
 
   const handleApplyStatus = async () => {
-    if (!bulkStatus || selectedUsers.length === 0) {
-      toast.error("Please select users and a status.");
+    if (!bulkStatus || !selectedUser) {
+      toast.error("Please select a user and a status.");
       return;
     }
 
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      
-      // If only one user is selected, use the single user endpoint
-      if (selectedUsers.length === 1) {
-        const userId = selectedUsers[0];
-        const response = await axios.put(
-          `http://localhost:5000/api/users/${userId}/status`,
-          {
-            status: bulkStatus.value
-          },
-          {
-            headers: { 
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
+      const userId = selectedUser;
+      const response = await axios.put(
+        `http://localhost:5000/api/users/${userId}/status`,
+        {
+          status: bulkStatus.value
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
-        );
-
-        if (response.data.success) {
-          toast.success(`✅ Successfully updated user status to ${bulkStatus.label}`);
-          setSuccessMsg(`Successfully updated user status to ${bulkStatus.label}`); // <-- Add this
-          setTimeout(() => setSuccessMsg(""), 3000); // <-- Add this
-          setSelectedUsers([]);
-          setBulkStatus(null);
-          setShowConfirm(false);
-          await fetchUsers();
-        } else {
-          toast.error(response.data.message || "Failed to update user status.");
         }
+      );
+
+      if (response.data.success) {
+        toast.success(`✅ Successfully updated user status to ${bulkStatus.label}`);
+        setSuccessMsg(`Successfully updated user status to ${bulkStatus.label}`); // <-- Add this
+        setTimeout(() => setSuccessMsg(""), 3000); // <-- Add this
+        setSelectedUser(null);
+        setBulkStatus(null);
+        setShowConfirm(false);
+        await fetchUsers();
       } else {
-        // Use bulk update endpoint for multiple users
-        const response = await axios.put(
-          "http://localhost:5000/api/users/bulk-status",
-          {
-            userIds: selectedUsers,
-            status: bulkStatus.value
-          },
-          {
-            headers: { 
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-
-        if (response.data.success) {
-          const data = response.data.data || {};
-          const modifiedCount = data.modifiedCount || 0;
-          
-          // Show success message
-          toast.success(`✅ Successfully updated ${modifiedCount} user(s) to ${bulkStatus.label}`);
-          setSuccessMsg(`Successfully updated ${modifiedCount} user(s) to ${bulkStatus.label}`); // <-- Add this
-          setTimeout(() => setSuccessMsg(""), 3000); // <-- Add this
-          
-          // Reset state
-          setSelectedUsers([]);
-          setBulkStatus(null);
-          setShowConfirm(false);
-          
-          // Refresh the users list
-          await fetchUsers();
-        } else {
-          toast.error(response.data.message || "Failed to update user statuses.");
-        }
+        toast.error(response.data.message || "Failed to update user status.");
       }
     } catch (error) {
-      console.error("Error updating status(es):", error);
-      toast.error(error.response?.data?.message || "Server error updating status(es).");
+      console.error("Error updating status:", error);
+      toast.error(error.response?.data?.message || "Server error updating status.");
     } finally {
       setLoading(false);
     }
@@ -164,9 +119,9 @@ const ManageStatus = () => {
             />
             <button
               onClick={() => setShowConfirm(true)}
-              disabled={!bulkStatus || selectedUsers.length === 0}
+              disabled={!bulkStatus || !selectedUser}
               className={`px-4 py-2 rounded text-white text-sm transition ${
-                !bulkStatus || selectedUsers.length === 0
+                !bulkStatus || !selectedUser
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700"
               }`}
@@ -180,11 +135,7 @@ const ManageStatus = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
-                    <input
-                      type="checkbox"
-                      checked={selectedUsers.length === users.length}
-                      onChange={handleSelectAll}
-                    />
+                    {/* No select all for radio */}
                   </th>
                   <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">User</th>
                   <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Email</th>
@@ -210,8 +161,9 @@ const ManageStatus = () => {
                     <tr key={user.id} className="hover:bg-gray-50 transition">
                       <td className="px-4 py-2">
                         <input
-                          type="checkbox"
-                          checked={selectedUsers.includes(user.id)}
+                          type="radio"
+                          name="userSelect"
+                          checked={selectedUser === user.id}
                           onChange={() => handleUserSelect(user.id)}
                         />
                       </td>
@@ -244,10 +196,10 @@ const ManageStatus = () => {
       {showConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-[90%] max-w-md">
-            <h3 className="text-xl font-bold mb-4">Confirm Bulk Status Change</h3>
+            <h3 className="text-xl font-bold mb-4">Confirm Status Change</h3>
             <p>
               Are you sure you want to change status of{" "}
-              <strong>{selectedUsers.length}</strong> user(s) to{" "}
+              <strong>1</strong> user to{" "}
               <strong>{bulkStatus?.label}</strong>?
             </p>
             <div className="flex justify-end mt-6 space-x-4">

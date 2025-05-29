@@ -42,12 +42,58 @@ export const getTeamPerformance = async () => {
     }
 };
 
-// Get campaign performance
-export const getCampaignPerformance = async () => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const managerId = user.id;
-    const response = await api.get(`/api/campaigns/user/${managerId}/campaigns`);
-    return response.data;
+// Get campaign performance for specific manager
+export const getCampaignPerformance = async (managerId) => {
+    try {
+        if (!managerId) {
+            const user = JSON.parse(localStorage.getItem('user'));
+            managerId = user?.id;
+        }
+
+        if (!managerId) {
+            console.error('No manager ID available');
+            return { data: [] };
+        }
+
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `http://localhost:5000/api/campaigns/manager/${managerId}`,
+            {
+                headers: { 
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        const responseData = await response.json();
+        console.log('Raw API Response:', responseData); // Debug log
+
+        // Map the data to match dashboard expectations
+        const processedData = responseData.data?.map(campaign => ({
+            id: campaign.id,
+            name: campaign.name,
+            status: campaign.status,
+            total_leads: campaign.lead_count || 0,
+            assigned_users: campaign.assigned_users || [],
+            team_size: (campaign.assigned_users || []).length,
+            assigned_user_names: campaign.assigned_user_names,
+            assigned_user_ids: campaign.assigned_user_ids,
+            description: campaign.description,
+            priority: campaign.priority,
+            start_date: campaign.start_date,
+            end_date: campaign.end_date,
+            created_at: campaign.created_at,
+            conversion_rate: 0 // Add if available from API
+        })) || [];
+
+        console.log('Processed Campaign Data:', processedData); // Debug log
+
+        return { success: true, data: processedData };
+    } catch (error) {
+        console.error('Error fetching campaign performance:', error);
+        return { success: false, data: [], error: error.message };
+    }
 };
 
 // Get unassigned users
@@ -86,13 +132,13 @@ export const assignLeads = async (selectedMember, selectedLeads) => {
 // Get users under manager
 export const getUsers = async () => {
   try {
-    const response = await api.get('/api/managers/teams', getAuthHeader());
-    // The teams endpoint returns data in a different format, so we need to extract the team members
-    const managerId = JSON.parse(localStorage.getItem('user')).id;
-    const managerTeam = response.data.data.find(team => team.manager_id === managerId);
+    const user = JSON.parse(localStorage.getItem('user'));
+    const managerId = user.id;
+    // Use the dedicated team-members endpoint
+    const response = await api.get(`/api/managers/${managerId}/team-members`, getAuthHeader());
     return {
       success: true,
-      data: managerTeam ? managerTeam.team_members : []
+      data: response.data.data || []
     };
   } catch (error) {
     throw error.response?.data || error.message;

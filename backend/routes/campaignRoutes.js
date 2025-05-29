@@ -1,3 +1,5 @@
+// Import database connection at the top
+const db = require('../config/db').promise(); // Add .promise()
 const express = require("express");
 const router = express.Router();
 const campaignController = require("../controllers/campaignController");
@@ -35,5 +37,8 @@ router.post("/:id/assign-users", roleMiddleware(["admin", "manager"]), campaignC
 
 // Remove users from campaign
 router.delete("/:id/remove-users", roleMiddleware(["admin", "manager"]), campaignController.removeUsersFromCampaign);
+
+// Unassign users from campaign (new route)
+router.post('/unassign', roleMiddleware(["admin", "manager"]), campaignController.unassignUserFromCampaign);
 
 module.exports = router;

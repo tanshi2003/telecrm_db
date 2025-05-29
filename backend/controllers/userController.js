@@ -117,44 +117,75 @@ exports.loginUser = (req, res) => {
     });
 };
 
-// Get all users
-exports.getUsers = (req, res) => {
-    const { role, unassigned } = req.query;
+// Get all users or filtered by manager ID
+exports.getUsers = async (req, res) => {
+  try {
+    const { managerId } = req.query;
     let query = `
-        SELECT 
-            u.id, u.name, u.email, u.phone_no, u.role, u.status, u.manager_id, u.location,
-            v.total_leads, v.campaigns_handled, v.total_working_hours
-        FROM Users u
-        LEFT JOIN user_stats_view v ON u.id = v.id
-        WHERE 1=1
+      SELECT 
+        u.id,
+        u.name,
+        u.email,
+        u.phone_no,
+        u.role,
+        u.status,
+        u.manager_id,
+        u.location,
+        u.created_at,
+        u.updated_at,
+        COALESCE(m.name, '') as manager_name
+      FROM Users u 
+      LEFT JOIN Users m ON u.manager_id = m.id
+      WHERE 1=1
     `;
-    
-    const params = [];
+    const queryParams = [];
 
-    if (role) {
-        query += ` AND u.role = ?`;
-        params.push(role);
+    // If managerId is provided, only show users assigned to that manager
+    if (managerId) {
+      query += ` AND u.manager_id = ?`;
+      queryParams.push(managerId);
     }
 
-    if (unassigned === 'true') {
-        query += ` AND u.manager_id IS NULL`;
+    // If user is a manager, only show their team members
+    if (req.user && req.user.role === 'manager') {
+      query += ` AND u.manager_id = ?`;
+      queryParams.push(req.user.id);
     }
 
-    db.query(query, params, (err, results) => {
-        if (err) {
-            console.error("Error fetching users:", err);
-            return res.status(500).json({
-                success: false,
-                message: "Database error",
-                error: err.message
-            });
-        }
-        res.json({
-            success: true,
-            data: results,
-            message: "Users fetched successfully"
+    // Exclude sensitive information
+    query += ` AND u.role != 'admin'`;
+
+    query += ` ORDER BY u.name ASC`;
+
+    db.query(query, queryParams, (err, users) => {
+      if (err) {
+        console.error('Error in getUsers:', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to fetch users',
+          error: err.message
         });
+      }
+
+      // Remove sensitive fields
+      const safeUsers = users.map(user => {
+        const { password, token, reset_token, reset_token_expiry, ...safeUser } = user;
+        return safeUser;
+      });
+
+      res.json({
+        success: true,
+        data: safeUsers
+      });
     });
+  } catch (error) {
+    console.error('Unexpected error in getUsers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
 };
 
 // Get user by ID
@@ -356,6 +387,7 @@ exports.updateUserRole = (req, res) => {
         db.query("SELECT * FROM Users WHERE id = ?", [id], (err, rows) => {
             if (err) return res.status(500).json({ message: "Error fetching updated user", error: err });
             res.status(200).json({
+                success: true,
                 message: "User role updated successfully",
                 updatedUser: rows[0]
             });
@@ -381,8 +413,20 @@ exports.deleteUser = (req, res) => {
 // Assign or reassign manager to a user
 exports.assignManager = (req, res) => {
     const { id } = req.params; // user id
-    const { manager_id } = req.body;
+    const { manager_id, remove } = req.body;
 
+    // If remove flag is true, allow null manager_id
+    if (remove) {
+        db.query("UPDATE Users SET manager_id = NULL WHERE id = ?", [id], (err, result) => {
+            if (err) return res.status(500).json({ message: "Error removing manager", error: err });
+            if (result.affectedRows === 0) return res.status(404).json({ message: "User not found" });
+
+            res.status(200).json({ success: true, message: "Manager removed successfully" });
+        });
+        return;
+    }
+
+    // Regular assignment logic
     if (!manager_id) {
         return res.status(400).json({ message: "Manager ID is required" });
     }
@@ -460,7 +504,6 @@ exports.updateBulkStatus = (req, res) => {
     });
   });
 };
-
 
 
 
@@ -656,4 +699,82 @@ exports.getUnassignedUsers = (req, res) => {
     });
 };
 
-module.exports = exports;
+const assignManager = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { manager_id, force_remove } = req.body;
+
+        // Handle removal case
+        if (force_remove === true) {
+            const query = "UPDATE Users SET manager_id = NULL WHERE id = ?";
+            const [result] = await db.query(query, [id]);
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ message: "User not found" });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "User removed from team successfully"
+            });
+        }
+
+        // Regular assignment requires manager_id
+        if (!manager_id && manager_id !== 0) {
+            return res.status(400).json({ message: "Manager ID is required" });
+        }
+
+        // Proceed with normal assignment...
+        const query = "UPDATE Users SET manager_id = ? WHERE id = ?";
+        const [result] = await db.query(query, [manager_id, id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Manager assigned successfully"
+        });
+
+    } catch (error) {
+        console.error('Error in assignManager:', error);
+        res.status(500).json({
+            message: "Failed to update manager assignment",
+            error: error.message
+        });
+    }
+};
+
+// Add new endpoint for removing manager
+exports.removeManager = (req, res) => {
+    const { id } = req.params;
+    
+    // Using callback style query
+    db.query(
+        "UPDATE Users SET manager_id = NULL WHERE id = ?",
+        [id],
+        (error, result) => {
+            if (error) {
+                console.error('Error in removeManager:', error);
+                return res.status(500).json({
+                    success: false,
+                    message: "Failed to remove manager",
+                    error: error.message
+                });
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User not found"
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                message: "Manager removed successfully"
+            });
+        }
+    );
+};

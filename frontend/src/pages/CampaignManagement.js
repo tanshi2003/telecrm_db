@@ -1,21 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, Users, BarChart2, FileText, X, Calendar, Target, Mail, Phone } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const CampaignManagement = () => {
-  const [campaigns, setCampaigns] = useState([]);
-  const [allCampaigns, setAllCampaigns] = useState([]); // For system-wide stats
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [employees, setEmployees] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [allCampaigns, setAllCampaigns] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [viewCampaign, setViewCampaign] = useState(null);
   const [user, setUser] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
   const [showColorInfo, setShowColorInfo] = useState(null); // Store campaign ID for showing color info // 'all', 'active', 'leads'
+  const [showAllCampaignsModal, setShowAllCampaignsModal] = useState(false);
+  const [showActiveCampaignsModal, setShowActiveCampaignsModal] = useState(false);
+  const [showLeadsModal, setShowLeadsModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,50 +43,46 @@ const CampaignManagement = () => {
     console.log('All campaigns:', allCampaigns);
   }, [allCampaigns]);
 
-  const fetchCampaigns = async () => {
+  const fetchCampaigns = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const storedUser = JSON.parse(localStorage.getItem('user'));
+      const user = JSON.parse(localStorage.getItem('user'));
       
-      if (!token || !storedUser) {
-        setLoading(false);
-        return;
+      if (!token || !user) {
+        throw new Error('Authentication required');
       }
-
-      const managerId = storedUser.id.toString().trim();
 
       const response = await axios.get(
-        `http://localhost:5000/api/campaigns/user/${managerId}/campaigns`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        `http://localhost:5000/api/campaigns/manager/${user.id}`,
+        { 
+          headers: { Authorization: `Bearer ${token}` }
+        }
       );
 
-      if (response.data.success && response.data.data) {
-        const campaignsData = Array.isArray(response.data.data) ? response.data.data : [response.data.data];
-        const campaignsWithMetrics = campaignsData.map(campaign => ({
+      if (response.data.success) {
+        const campaignsData = response.data.data.map(campaign => ({
           ...campaign,
           total_leads: campaign.lead_count || 0,
-          conversion_rate: campaign.conversion_rate || 0,
           assigned_users: campaign.assigned_users || []
         }));
-
-        setCampaigns(campaignsWithMetrics);
-      } else {
-        setCampaigns([]);
+        setCampaigns(campaignsData);
+        setAllCampaigns(campaignsData);
       }
     } catch (error) {
-      setCampaigns([]);
+      console.error('Error fetching campaigns:', error);
+      toast.error('Failed to fetch campaigns');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const fetchAllCampaigns = async () => {
     try {
       const token = localStorage.getItem('token');
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const response = await axios.get(
-        'http://localhost:5000/api/campaigns',
+        `http://localhost:5000/api/campaigns/manager/${storedUser.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (response.data.success && Array.isArray(response.data.data)) {
@@ -164,6 +165,37 @@ const CampaignManagement = () => {
       setLoading(false);
       // Clear any error/success message after 3 seconds
       setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  const handleUnassignUser = async (campaignId, userId) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.post(
+        'http://localhost:5000/api/campaigns/unassign',
+        {
+          campaign_id: campaignId,
+          user_id: userId
+        },
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
+      );
+
+      if (response.data.success) {
+        await fetchCampaigns();
+        toast.success('User unassigned successfully');
+      }
+    } catch (error) {
+      console.error('Unassign error:', error);
+      toast.error(error.response?.data?.message || 'Failed to unassign user');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -256,7 +288,7 @@ const CampaignManagement = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div 
                 className={`bg-white rounded-lg p-4 border-l-4 border-blue-500 cursor-pointer transition-all duration-200 ${activeFilter === 'all' ? 'shadow-lg scale-105' : 'hover:shadow-md'}`}
-                onClick={() => handleCardClick('all')}
+                onClick={() => setShowAllCampaignsModal(true)}
               >
                 <div className="flex items-center gap-2">
                   <BarChart2 className="text-blue-500" size={20} />
@@ -268,7 +300,7 @@ const CampaignManagement = () => {
               </div>
               <div 
                 className={`bg-white rounded-lg p-4 border-l-4 border-green-500 cursor-pointer transition-all duration-200 ${activeFilter === 'active' ? 'shadow-lg scale-105' : 'hover:shadow-md'}`}
-                onClick={() => handleCardClick('active')}
+                onClick={() => setShowActiveCampaignsModal(true)}
               >
                 <div className="flex items-center gap-2">
                   <Users className="text-green-500" size={20} />
@@ -280,7 +312,7 @@ const CampaignManagement = () => {
               </div>
               <div 
                 className={`bg-white rounded-lg p-4 border-l-4 border-yellow-500 cursor-pointer transition-all duration-200 ${activeFilter === 'leads' ? 'shadow-lg scale-105' : 'hover:shadow-md'}`}
-                onClick={() => handleCardClick('leads')}
+                onClick={() => setShowLeadsModal(true)}
               >
                 <div className="flex items-center gap-2">
                   <FileText className="text-yellow-500" size={20} />
@@ -475,35 +507,110 @@ const CampaignManagement = () => {
         {/* Assign Employees Modal */}
         {selectedCampaign && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96">
-              <h2 className="text-xl font-semibold mb-4">Assign Employees</h2>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {Array.isArray(employees) && employees.map(employee => (
-                  <div
-                    key={employee.id}
-                    className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
-                  >
-                    <div>
-                      <p className="font-medium">{employee.name}</p>
-                      <p className="text-sm text-gray-500">{employee.role}</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        handleAssignUsers(selectedCampaign, [employee.id]);
-                        // Close modal after assignment
-                        setSelectedCampaign(null);
-                      }}
-                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
-                    >
-                      Assign
-                    </button>
-                  </div>
-                ))}
+            <div className="bg-white rounded-lg p-6 w-[500px] max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Manage Team Members</h2>
+                <button
+                  onClick={() => setSelectedCampaign(null)}
+                  className="text-gray-500 hover:text-gray-800 text-2xl"
+                >
+                  &times;
+                </button>
               </div>
-              <div className="flex gap-2 mt-4">
-              <button
-                onClick={() => setSelectedCampaign(null)}
-                  className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors"
+
+              {/* Currently Assigned Users Section */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Currently Assigned</h3>
+                <div className="space-y-2 mb-4">
+                  {campaigns
+                    .find(c => c.id === selectedCampaign)
+                    ?.assigned_users?.map(user => (
+                      <div 
+                        key={user.id}
+                        className="flex items-center justify-between p-2 bg-blue-50 rounded"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                            <span className="text-blue-600 font-medium">{user.name[0]}</span>
+                          </div>
+                          <div>
+                            <p className="font-medium">{user.name}</p>
+                            <p className="text-xs text-gray-500">{user.role || 'Team Member'}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleUnassignUser(selectedCampaign, user.id)}
+                          className="px-2 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
+                        >
+                          Unassign
+                        </button>
+                      </div>
+                    ))}
+                  {!campaigns.find(c => c.id === selectedCampaign)?.assigned_users?.length && (
+                    <p className="text-sm text-gray-500">No users currently assigned</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Available Users Section */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Available Team Members</h3>
+                <div className="space-y-2">
+                  {employees
+                    .filter(emp => !campaigns
+                      .find(c => c.id === selectedCampaign)
+                      ?.assigned_users
+                      ?.some(u => u.id === emp.id)
+                    )
+                    .map(employee => (
+                      <div
+                        key={employee.id}
+                        className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                            <span className="text-gray-600 font-medium">{employee.name[0]}</span>
+                          </div>
+                          <div>
+                            <p className="font-medium">{employee.name}</p>
+                            <p className="text-xs text-gray-500">{employee.role}</p>
+                          </div>
+                        </div>
+                        {employee.current_campaign && (
+                          <div className="text-xs text-gray-500 mr-2">
+                            Currently in: {employee.current_campaign}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => {
+                            if (employee.current_campaign) {
+                              if (window.confirm(`Switch ${employee.name} from ${employee.current_campaign} to this campaign?`)) {
+                                handleAssignUsers(selectedCampaign, [employee.id]);
+                              }
+                            } else {
+                              handleAssignUsers(selectedCampaign, [employee.id]);
+                            }
+                          }}
+                          className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                        >
+                          {employee.current_campaign ? 'Switch' : 'Assign'}
+                        </button>
+                      </div>
+                    ))}
+                  {!employees.filter(emp => !campaigns
+                    .find(c => c.id === selectedCampaign)
+                    ?.assigned_users
+                    ?.some(u => u.id === emp.id)
+                  ).length && (
+                    <p className="text-sm text-gray-500">No available team members</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setSelectedCampaign(null)}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors"
                 >
                   Close
                 </button>
@@ -659,6 +766,144 @@ const CampaignManagement = () => {
               >
                 Close
               </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* All Campaigns Modal */}
+        {showAllCampaignsModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto mt-12">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">All Campaigns</h2>
+                <button
+                  onClick={() => setShowAllCampaignsModal(false)}
+                  className="text-gray-500 hover:text-gray-800 text-2xl"
+                >
+                  &times;
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {allCampaigns.map(campaign => (
+                  <div key={campaign.id} className="border rounded-lg p-4 hover:shadow-md">
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-medium">{campaign.name}</h4>
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        campaign.status?.toLowerCase() === 'active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {campaign.status}
+                      </span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center">
+                        <Users className="w-4 h-4 mr-2" />
+                        <span>Users: {campaign.assigned_users?.length || 0}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Target className="w-4 h-4 mr-2" />
+                        <span>Leads: {campaign.total_leads || 0}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <BarChart2 className="w-4 h-4 mr-2" />
+                        <span>Conversion: {campaign.conversion_rate || 0}%</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Active Campaigns Modal */}
+        {showActiveCampaignsModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto mt-12">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Active Campaigns</h2>
+                <button
+                  onClick={() => setShowActiveCampaignsModal(false)}
+                  className="text-gray-500 hover:text-gray-800 text-2xl"
+                >
+                  &times;
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {allCampaigns
+                  .filter(c => String(c.status).toLowerCase() === 'active')
+                  .map(campaign => (
+                    <div key={campaign.id} className="border rounded-lg p-4 hover:shadow-md">
+                      {/* Same content as All Campaigns card */}
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-medium">{campaign.name}</h4>
+                        <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                          {campaign.status}
+                        </span>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center">
+                          <Users className="w-4 h-4 mr-2" />
+                          <span>Users: {campaign.assigned_users?.length || 0}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Target className="w-4 h-4 mr-2" />
+                          <span>Leads: {campaign.total_leads || 0}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <BarChart2 className="w-4 h-4 mr-2" />
+                          <span>Conversion: {campaign.conversion_rate || 0}%</span>
+                        </div>
+                      </div>
+                    </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Leads Modal */}
+        {showLeadsModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto mt-12">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Campaign Leads Overview</h2>
+                <button
+                  onClick={() => setShowLeadsModal(false)}
+                  className="text-gray-500 hover:text-gray-800 text-2xl"
+                >
+                  &times;
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {allCampaigns
+                  .filter(c => c.total_leads > 0)
+                  .map(campaign => (
+                    <div key={campaign.id} className="border rounded-lg p-4 hover:shadow-md">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-medium">{campaign.name}</h4>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          campaign.status?.toLowerCase() === 'active' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {campaign.status}
+                        </span>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center">
+                          <Target className="w-4 h-4 mr-2" />
+                          <span>Total Leads: {campaign.total_leads || 0}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <BarChart2 className="w-4 h-4 mr-2" />
+                          <span>Conversion Rate: {campaign.conversion_rate || 0}%</span>
+                        </div>
+                      </div>
+                    </div>
+                ))}
               </div>
             </div>
           </div>

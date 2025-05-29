@@ -13,8 +13,8 @@ import {
   Target,
   UserCog,
   MapPin,
-  Clock,
-  FileText
+  FileText,
+  Plus
 } from "lucide-react";
 import {
   getDashboardStats,
@@ -78,6 +78,10 @@ const ManagerDashboard = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    console.log('Campaign Stats:', campaignStats); // Add this debug log
+  }, [campaignStats]);
+
   // Helper to calculate stats for a team
   const calculateTeamStats = (team) => {
     const totalMembers = team.team_members.length;
@@ -90,11 +94,6 @@ const ManagerDashboard = () => {
     }, {});
     return { totalMembers, activeMembers, roles };
   };
-
-  // Helper for filtering active campaigns robustly
-  const isActiveCampaign = (c) =>
-    (typeof c.status === "string" && c.status.toLowerCase() === "active") ||
-    c.is_active === true;
 
   if (loading)
     return (
@@ -124,9 +123,10 @@ const ManagerDashboard = () => {
             </div>
             <div className="flex gap-3">
               <button
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
                 onClick={() => navigate("/Lead1")}
               >
+                <Plus size={20} />
                 Create Lead
               </button>
               <button
@@ -488,7 +488,7 @@ const ManagerDashboard = () => {
               {campaignStats.length === 0 ? (
                 <div className="text-gray-500">No campaigns found.</div>
               ) : (
-                <div className={gridClass}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {campaignStats.map((campaign) => (
                     <div
                       key={campaign.id}
@@ -503,7 +503,7 @@ const ManagerDashboard = () => {
                         </div>
                         <span
                           className={`px-2 py-1 text-xs rounded-full ${
-                            isActiveCampaign(campaign)
+                            campaign.status === 'Active'
                               ? "bg-green-100 text-green-800"
                               : "bg-gray-100 text-gray-800"
                           }`}
@@ -514,15 +514,15 @@ const ManagerDashboard = () => {
                       <div className="space-y-1 text-xs text-gray-600">
                         <div className="flex items-center">
                           <Users className="w-4 h-4 mr-2" />
-                          Assigned Users: {campaign.assigned_users}
+                          Assigned Users: {campaign.assigned_users?.length || 0}
                         </div>
                         <div className="flex items-center">
                           <Target className="w-4 h-4 mr-2" />
-                          Total Leads: {campaign.total_leads}
+                          Total Leads: {campaign.total_leads || 0}
                         </div>
                         <div className="flex items-center">
                           <BarChart2 className="w-4 h-4 mr-2" />
-                          Conversion Rate: {campaign.conversion_rate}%
+                          Conversion Rate: {campaign.conversion_rate || 0}%
                         </div>
                         <div className="flex items-center">
                           <Calendar className="w-4 h-4 mr-2" />
@@ -557,12 +557,12 @@ const ManagerDashboard = () => {
                   &times;
                 </button>
               </div>
-              {campaignStats.filter(isActiveCampaign).length === 0 ? (
+              {campaignStats.filter(c => c.status?.toLowerCase() === 'active').length === 0 ? (
                 <div className="text-gray-500">No active campaigns found.</div>
               ) : (
-                <div className={gridClass}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {campaignStats
-                    .filter(isActiveCampaign)
+                    .filter(c => c.status?.toLowerCase() === 'active')
                     .map((campaign) => (
                       <div
                         key={campaign.id}
@@ -579,25 +579,22 @@ const ManagerDashboard = () => {
                             {campaign.status}
                           </span>
                         </div>
-                        <div className="space-y-1 text-xs text-gray-600">
+                        <div className="space-y-2 text-sm text-gray-600">
                           <div className="flex items-center">
                             <Users className="w-4 h-4 mr-2" />
-                            Assigned Users: {campaign.assigned_users}
+                            Assigned Users: {campaign.assigned_users?.length || 0}
                           </div>
                           <div className="flex items-center">
                             <Target className="w-4 h-4 mr-2" />
-                            Total Leads: {campaign.total_leads}
+                            Total Leads: {campaign.total_leads || 0}
                           </div>
                           <div className="flex items-center">
                             <BarChart2 className="w-4 h-4 mr-2" />
-                            Conversion Rate: {campaign.conversion_rate}%
+                            Conversion Rate: {campaign.conversion_rate || 0}%
                           </div>
                           <div className="flex items-center">
                             <Calendar className="w-4 h-4 mr-2" />
-                            Created:{" "}
-                            {campaign.created_at
-                              ? new Date(campaign.created_at).toLocaleDateString()
-                              : "-"}
+                            Created: {campaign.created_at ? new Date(campaign.created_at).toLocaleDateString() : "-"}
                           </div>
                         </div>
                       </div>
@@ -608,206 +605,128 @@ const ManagerDashboard = () => {
           </div>
         )}
 
-        {/* Main Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {/* Team Performance */}
-          <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <UserCheck className="text-blue-600" size={24} />
+        {/* Performance Cards Container */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Team Performance Card */}
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg">
+                <UserCheck className="text-white" size={20} />
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Team Performance
-                </h3>
-                <div className="mt-2 space-y-2">
-                  {console.log('Team Performance Data:', teamPerformance)}
-                  {teamPerformance.slice(0, 3).map((member) => {
-                    console.log('Member Data:', member);
-                    
-                    // Simple score calculation
-                    const totalScore = Math.min(100, Math.max(0, 
-                      (member.total_leads_handled || 0) * 5 + 
-                      (member.total_campaigns_handled || 0) * 10
-                    ));
-
-                    return (
-                      <div key={member.id} className="text-sm">
-                        <div className="flex justify-between mb-2">
-                          <span className="text-gray-600 font-medium">{member.name}</span>
-                          <span className="font-medium">{totalScore}% Performance</span>
-                        </div>
-                        
-                        {/* Performance Progress Bar */}
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full ${
-                              totalScore >= 80 ? 'bg-green-600' :
-                              totalScore >= 60 ? 'bg-blue-600' :
-                              totalScore >= 40 ? 'bg-yellow-600' :
-                              'bg-red-600'
-                            }`}
-                            style={{ width: `${totalScore}%` }}
-                          />
-                        </div>
-
-                        {/* Metrics */}
-                        <div className="grid grid-cols-2 gap-4 mt-2 text-xs text-gray-500">
-                          <div>
-                            <span className="block">Total Leads</span>
-                            <span className="font-medium">{member.total_leads_handled || 0}</span>
-                          </div>
-                          <div>
-                            <span className="block">Total Campaigns</span>
-                            <span className="font-medium">
-                              {member.total_campaigns_handled || 0}
-                              {member.active_campaigns > 0 && 
-                                <span className="text-xs text-green-500 ml-1">
-                                  ({member.active_campaigns} active)
-                                </span>
-                              }
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <h3 className="text-lg font-bold text-gray-800">Team Performance</h3>
             </div>
-          </div>
-
-          {/* Campaign Performance */}
-          <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Target className="text-green-600" size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Campaign Performance
-                </h3>
-                <div className="mt-2 space-y-2">
-                  {campaignStats.slice(0, 3).map((campaign) => (
-                    <div key={campaign.id} className="text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">{campaign.name}</span>
-                        <span className="font-medium">
-                          Progress
-                        </span>
-                      </div>
-                      {(() => {
-                        const startDate = new Date(campaign.start_date);
-                        const endDate = new Date(campaign.end_date);
-                        const currentDate = new Date();
-                        
-                        const totalDuration = endDate - startDate;
-                        const elapsedDuration = currentDate - startDate;
-                        let progressPercentage = Math.floor((elapsedDuration / totalDuration) * 100);
-                        
-                        // Ensure progress is between 0 and 100
-                        progressPercentage = Math.max(0, Math.min(100, progressPercentage));
-                        
-                        // Determine color based on progress and status
-                        const getProgressColor = () => {
-                          if (campaign.status === 'completed') return 'bg-green-500';
-                          if (progressPercentage >= 90) return 'bg-red-500';
-                          if (progressPercentage >= 75) return 'bg-yellow-500';
-                          return 'bg-blue-500';
-                        };
-
-                        const progressColor = getProgressColor();
-
-                        return (
-                          <>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-grow h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div 
-                                  className={`h-full transition-all duration-500 ${progressColor}`}
-                                  style={{ width: `${progressPercentage}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-medium w-9">{progressPercentage}%</span>
-                            </div>
-                            <div className="flex justify-between text-xs text-gray-500 mt-1">
-                              <span>{startDate.toLocaleDateString()}</span>
-                              <span>{endDate.toLocaleDateString()}</span>
-                            </div>
-                          </>
-                        );
-                      })()}
-                      <div className="text-xs text-gray-500 mt-1">
-                        <span>Assigned to: {campaign.assigned_users?.length || 0} users</span>
-                        <span className="mx-2">|</span>
-                        <span>Total Leads: {campaign.total_leads}</span>
+            <div className="space-y-3">
+              {teamPerformance.slice(0, 2).map((member) => (
+                <div key={member.id} className="bg-gray-50 rounded p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                        {member.name[0]}
+                      </span>
+                      <div>
+                        <h4 className="font-medium text-sm">{member.name}</h4>
+                        <p className="text-xs text-gray-500">Team Member</p>
                       </div>
                     </div>
-                  ))}
+                    <div className="text-right text-xs">
+                      <p className="text-blue-600">{member.total_leads_handled} Leads</p>
+                      <p className="text-green-600">{member.active_campaigns} Campaigns</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
 
-          {/* Team Overview */}
-          <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <Users className="text-purple-600" size={24} />
+          {/* Campaign Performance Card */}
+          <div className="bg-white rounded-lg shadow-sm p-3">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-2 bg-gradient-to-r from-green-500 to-green-600 rounded-lg">
+                <Target className="text-white" size={18} />
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Team Overview
-                </h3>
-                <div className="mt-2 space-y-1">
-                  <div className="flex justify-between text-sm items-center">
-                    <span className="text-gray-600 flex items-center gap-2">
-                      <Phone size={16} />
-                      Total Team Members:
-                    </span>
-                    <span className="font-medium">
-                      {teamData.reduce(
-                        (sum, team) => sum + team.team_members.length,
-                        0
-                      )}
+              <h3 className="text-lg font-bold text-gray-800">Campaign Stats</h3>
+            </div>
+            <div className="space-y-2">
+              {campaignStats.slice(0, 2).map((campaign) => (
+                <div key={campaign.id} className="bg-gray-50 rounded p-2">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium text-sm truncate mr-2">{campaign.name}</h4>
+                    <span className={`px-2 py-0.5 text-xs rounded-full ${
+                      campaign.status?.toLowerCase() === 'active' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {campaign.status}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm items-center">
-                    <span className="text-gray-600 flex items-center gap-2">
-                      <Mail size={16} />
-                      Active Members:
-                    </span>
-                    <span className="font-medium">
-                      {teamData.reduce(
-                        (sum, team) =>
-                          sum +
-                          team.team_members.filter((m) => m.status === "active")
-                            .length,
-                        0
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm items-center">
-                    <span className="text-gray-600 flex items-center gap-2">
-                      <Calendar size={16} />
-                      Total Campaigns:
-                    </span>
-                    <span className="font-medium">{stats.totalCampaigns}</span>
-                  </div>
-                  <div className="flex justify-between text-sm items-center">
-                    <span className="text-gray-600 flex items-center gap-2">
-                      <Clock size={16} />
-                      Active Campaigns:
-                    </span>
-                    <span className="font-medium">{stats.activeCampaigns}</span>
-                  </div>
-                  <div className="flex justify-between text-sm items-center">
-                    <span className="text-gray-600 flex items-center gap-2">
-                      <MapPin size={16} />
-                      Team Location:
-                    </span>
-                    <span className="font-medium">Main Office</span>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white p-2 rounded flex flex-col">
+                      <p className="text-gray-500 mb-1">Team Members</p>
+                      <div>
+                        <p className="font-semibold text-sm">
+                          {campaign.assigned_users?.length || 0} Total
+                        </p>
+                        {/* Since we don't have active status in user data, just show total */}
+                        <p className="text-xs text-green-600">
+                          {campaign.assigned_users?.length || 0} Assigned
+                        </p>
+                      </div>
+                    </div>
+                    <div className="bg-white p-2 rounded flex flex-col">
+                      <p className="text-gray-500 mb-1">Total Leads</p>
+                      <div>
+                        <p className="font-semibold text-sm">{campaign.total_leads || 0}</p>
+                        <p className="text-xs text-blue-600">{campaign.conversion_rate || 0}% Rate</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Team Overview Card */}
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg">
+                <Users className="text-white" size={20} />
+              </div>
+              <h3 className="text-lg font-bold text-gray-800">Team Overview</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 p-3 rounded">
+                <div className="flex items-center gap-2 mb-1">
+                  <Users className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-gray-600">Total</span>
+                </div>
+                <p className="text-xl font-bold text-gray-800">
+                  {teamData.reduce((sum, team) => sum + team.team_members.length, 0)}
+                </p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded">
+                <div className="flex items-center gap-2 mb-1">
+                  <UserCheck className="w-4 h-4 text-green-500" />
+                  <span className="text-sm text-gray-600">Active</span>
+                </div>
+                <p className="text-xl font-bold text-gray-800">
+                  {teamData.reduce((sum, team) => 
+                    sum + team.team_members.filter(m => m.status === "active").length, 0
+                  )}
+                </p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded">
+                <div className="flex items-center gap-2 mb-1">
+                  <Target className="w-4 h-4 text-purple-500" />
+                  <span className="text-sm text-gray-600">Campaigns</span>
+                </div>
+                <p className="text-xl font-bold text-gray-800">{stats.totalCampaigns}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded">
+                <div className="flex items-center gap-2 mb-1">
+                  <Activity className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm text-gray-600">Active</span>
+                </div>
+                <p className="text-xl font-bold text-gray-800">{stats.activeCampaigns}</p>
               </div>
             </div>
           </div>
@@ -817,17 +736,8 @@ const ManagerDashboard = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Quick Actions</h2>
-            <div className="flex items-center gap-2">
-              
-            </div>
-          </div>          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <button
-              onClick={() => navigate("/lead-assignment")}
-              className="flex items-center justify-center p-4 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-            >
-              <Users className="w-5 h-5 mr-2" />
-              <span>Lead Assignment</span>
-            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={() => navigate("/manager/teams")}
               className="flex items-center justify-center p-4 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
