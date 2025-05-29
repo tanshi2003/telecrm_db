@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom"; // added
 import { FaUser, FaTasks, FaBullhorn, FaChartLine, FaPencilAlt } from "react-icons/fa"; // added icons
 import Sidebar from "../components/Sidebar";
 
+// Add base URL constant
+const BASE_URL = "http://localhost:5000";
+
 // Update the LEAD_STATUSES array to match backend values
 const LEAD_STATUSES = [
   "new",
@@ -40,54 +43,67 @@ const FieldDashboard = () => {
 
   useEffect(() => {
     if (!user) return;
-    // use user.token if available, otherwise get token from localStorage
+    
     const token = user.token || localStorage.getItem("token");
     if (!token) {
       console.error("Token is undefined, aborting API calls");
       return;
     }
 
-    // Fetch Leads with error handling
-    fetch(`/api/users/${user.id}/leads`, {
-      headers: { Authorization: `Bearer ${token}` }
+    // Fetch Leads
+    fetch(`${BASE_URL}/api/users/${user.id}/leads`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     })
       .then(res => {
-        if (!res.ok) {
-          throw new Error(`Error fetching leads: ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         return res.json();
       })
       .then(data => {
         setLeads(data.data || []);
         setTasks(data.data || []); // Just using leads as dummy tasks
       })
-      .catch(err => console.error(err));
+      .catch(err => {
+        console.error("Error fetching leads:", err);
+        setLeads([]);
+        setTasks([]);
+      });
 
-    // Fetch Campaigns with error handling
-    fetch(`/api/users/${user.id}/campaigns`, {
-      headers: { Authorization: `Bearer ${token}` }
+    // Fetch Campaigns
+    fetch(`${BASE_URL}/api/users/${user.id}/campaigns`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     })
       .then(res => {
-        if (!res.ok) {
-          throw new Error(`Error fetching campaigns: ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         return res.json();
       })
       .then(data => setCampaigns(data.data || []))
-      .catch(err => console.error(err));
+      .catch(err => {
+        console.error("Error fetching campaigns:", err);
+        setCampaigns([]);
+      });
 
-    // Fetch Stats with error handling
-    fetch(`/api/users/${user.id}/stats`, {
-      headers: { Authorization: `Bearer ${token}` }
+    // Fetch Stats
+    fetch(`${BASE_URL}/api/users/${user.id}/stats`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     })
       .then(res => {
-        if (!res.ok) {
-          throw new Error(`Error fetching stats: ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         return res.json();
       })
       .then(data => setStats(data.data || null))
-      .catch(err => console.error(err));
+      .catch(err => {
+        console.error("Error fetching stats:", err);
+        setStats(null);
+      });
   }, [user]);
 
   const handleSelectLead = (lead) => {

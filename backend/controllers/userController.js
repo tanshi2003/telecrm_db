@@ -673,4 +673,36 @@ exports.getUnassignedUsers = (req, res) => {
     });
 };
 
+// Add the removeManager function
+exports.removeManager = (req, res) => {
+    const { id } = req.params;
+    
+    db.query(
+        "UPDATE Users SET manager_id = NULL WHERE id = ?",
+        [id],
+        (error, result) => {
+            if (error) {
+                console.error('Error in removeManager:', error);
+                return res.status(500).json({
+                    success: false,
+                    message: "Failed to remove manager",
+                    error: error.message
+                });
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User not found"
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                message: "Manager removed successfully"
+            });
+        }
+    );
+};
+
 module.exports = exports;
