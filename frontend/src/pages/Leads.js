@@ -6,7 +6,7 @@ import axios from "axios";
 const Leads = () => {
   const [user, setUser] = useState(null);
   const [leads, setLeads] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState([]); 
   const [filters, setFilters] = useState({
     status: "",
     category: "",
@@ -15,62 +15,61 @@ const Leads = () => {
     dateRange: { start: "", end: "" },
   });
   const navigate = useNavigate();
+  
+  // Define fetchLeadsAndUsers before using it
+  const fetchLeadsAndUsers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("http://localhost:5000/api/leads", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.data.success) {
+        setLeads(response.data.data);
+      } else {
+        console.error("Failed to fetch leads:", response.data.message);
+      }
+
+      // Fetch users
+      const usersResponse = await axios.get("http://localhost:5000/api/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsers(usersResponse.data.data || []);
+    } catch (error) {
+      console.error("Error fetching leads or users:", error);
+      if (error.response?.status === 401) {
+        navigate("/login");
+      }
+    }
+  };
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (storedUser && storedUser.role === "admin") {
-      setUser(storedUser);
-    } else {
-      console.error("Unauthorized access.");
+    const token = localStorage.getItem("token");
+    
+    if (!storedUser || !token) {
+      console.error("No user data or token found");
+      navigate("/login");
+      return;
     }
-  }, []);
 
-  useEffect(() => {
-    const fetchLeadsAndUsers = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          console.error("Authentication token is missing.");
-          return;
-        }
-
-        // Fetch leads
-        const leadsResponse = await axios.get("http://localhost:5000/api/leads", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (leadsResponse.data && leadsResponse.data.data) {
-          setLeads(leadsResponse.data.data);
-        } else {
-          console.error("Unexpected API response format for leads:", leadsResponse.data);
-        }
-
-        // Fetch users
-        const usersResponse = await axios.get("http://localhost:5000/api/users", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (usersResponse.data && usersResponse.data.data) {
-          setUsers(usersResponse.data.data);
-        } else {
-          console.error("Unexpected API response format for users:", usersResponse.data);
-        }
-      } catch (error) {
-        console.error("Error fetching leads or users:", error.response?.data || error.message);
-      }
-    };
-
+    setUser(storedUser);
     fetchLeadsAndUsers();
-  }, []);
+  }, [navigate]);
+
+  // Map assigned_to ID to user name using the fetched users
+  const getAssignedUserName = (userId) => {
+    const foundUser = users.find((u) => u._id === userId || u.id === userId);
+    return foundUser ? foundUser.name : "N/A";
+  };
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     if (name.includes("dateRange")) {
-      const [_, key] = name.split(".");
+      const [key] = name.split(".");
       setFilters((prev) => ({
         ...prev,
         dateRange: {
@@ -83,12 +82,6 @@ const Leads = () => {
     }
   };
 
-  // Map assigned_to ID to user name
-  const getAssignedUserName = (userId) => {
-    const user = users.find((u) => u.id === userId);
-    return user ? user.name : "N/A";
-  };
-
   // Delete lead from frontend and database
   const handleDeleteLead = async (id) => {
     if (!window.confirm("Are you sure you want to delete this lead?")) return;
@@ -96,12 +89,10 @@ const Leads = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.delete(`http://localhost:5000/api/leads/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      setLeads((prevLeads) => prevLeads.filter((lead) => lead.id !== id));
+      setLeads((prevLeads) => prevLeads.filter((lead) => lead._id !== id && lead.id !== id));
       console.log("Lead deleted successfully.");
     } catch (error) {
       alert("Failed to delete lead.");
@@ -127,12 +118,15 @@ const Leads = () => {
       <div className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Manage Leads</h1>
-          <button
-            onClick={() => navigate(-1)}
-            className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
-          >
-            Back
-          </button>
+          <div className="flex gap-2">
+            {/* Removed Add Lead button */}
+            <button
+              onClick={() => navigate(-1)}
+              className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
+            >
+              Back
+            </button>
+          </div>
         </div>
         <p className="text-gray-600 mb-6">Add, update, or import leads easily.</p>
 
@@ -141,10 +135,10 @@ const Leads = () => {
           <div className="bg-white p-6 rounded-lg shadow-md w-full min-h-[220px] flex flex-col justify-between">
             <div>
               <h4 className="font-semibold text-lg mb-2">Add Lead</h4>
-              <p className="text-sm text-gray-600 mb-4">Create new leads and connect with potential customers.</p>
+              <p className="text-sm text-gray-600 mb-4">Add a new lead to the system.</p>
             </div>
             <button
-              className="w-full px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               onClick={() => navigate("/Lead1")}
             >
               + Add Lead
@@ -157,69 +151,13 @@ const Leads = () => {
               <p className="text-sm text-gray-600 mb-4">Modify existing lead details and track progress.</p>
             </div>
             <button
-              className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               onClick={() => navigate("/Updatelead")}
             >
               + Update Lead
             </button>
           </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md w-full min-h-[220px] flex flex-col justify-between">
-            <div>
-              <h4 className="font-semibold text-lg mb-2">Excel Upload</h4>
-              <p className="text-sm text-gray-600 mb-4">Import leads in bulk using an Excel file.</p>
-            </div>
-            <button
-              className="w-full px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
-              onClick={() => navigate("/Excelupload")}
-            >
-              + Import Leads
-            </button>
-          </div>
         </section>
-
-        {/* Filters */}
-        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h4 className="font-semibold text-lg mb-4">Filters</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <select
-              name="status"
-              value={filters.status}
-              onChange={handleFilterChange}
-              className="p-2 border rounded"
-            >
-              <option value="">All Statuses</option>
-              <option value="New">New</option>
-              <option value="Contacted">Contacted</option>
-              <option value="Converted">Converted</option>
-            </select>
-            <select
-              name="category"
-              value={filters.category}
-              onChange={handleFilterChange}
-              className="p-2 border rounded"
-            >
-              <option value="">All Categories</option>
-              <option value="Cold Lead">Cold Lead</option>
-              <option value="Warm Lead">Warm Lead</option>
-              <option value="Hot Lead">Hot Lead</option>
-            </select>
-            <input
-              type="date"
-              name="dateRange.start"
-              value={filters.dateRange.start}
-              onChange={handleFilterChange}
-              className="p-2 border rounded"
-            />
-            <input
-              type="date"
-              name="dateRange.end"
-              value={filters.dateRange.end}
-              onChange={handleFilterChange}
-              className="p-2 border rounded"
-            />
-          </div>
-        </div>
 
         {/* Lead List */}
         <div className="bg-white p-6 rounded-lg shadow-md">
@@ -230,7 +168,7 @@ const Leads = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredLeads.map((lead) => (
                 <div
-                  key={lead.id}
+                  key={lead._id || lead.id}
                   className="bg-white p-4 rounded-lg shadow-md flex flex-col justify-between min-h-[320px]"
                 >
                   <div>
@@ -258,25 +196,25 @@ const Leads = () => {
                     </p>
                   </div>
                   <div className="mt-3 flex gap-2 justify-center">
-  <button
-    onClick={() => navigate(`/viewlead/${lead.id}`, { state: { lead } })}
-    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-  >
-    View
-  </button>
-  <button
-    onClick={() => navigate(`/editlead/${lead.id}`, { state: { lead } })}
-    className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
-  >
-    Edit
-  </button>
-  <button
-    onClick={() => handleDeleteLead(lead.id)}
-    className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
-  >
-    Delete
-  </button>
-</div>
+                    <button
+                      onClick={() => navigate(`/viewlead/${lead._id || lead.id}`, { state: { lead } })}
+                      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => navigate(`/editlead/${lead._id || lead.id}`, { state: { lead } })}
+                      className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteLead(lead._id || lead.id)}
+                      className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

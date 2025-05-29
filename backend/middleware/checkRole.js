@@ -1,21 +1,25 @@
-const checkRole = (role) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
-    }
+const responseFormatter = require("../utils/responseFormatter");
 
-    if (req.user.role !== role) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Insufficient permissions.'
-      });
-    }
+/**
+ * Role-based access control middleware
+ * @param {string[]} allowedRoles - Array of roles that are allowed to access the route
+ * @returns {function} Express middleware function
+ */
+const roleMiddleware = (allowedRoles) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json(responseFormatter(false, "Access denied. No user found."));
+        }
 
-    next();
-  };
+        const userRole = req.user.role?.toLowerCase();
+        const normalizedAllowedRoles = allowedRoles.map(role => role.toLowerCase());
+
+        if (!userRole || !normalizedAllowedRoles.includes(userRole)) {
+            return res.status(403).json(responseFormatter(false, "Access denied. Insufficient privileges."));
+        }
+
+        next();
+    };
 };
 
-module.exports = checkRole; 
+module.exports = roleMiddleware;

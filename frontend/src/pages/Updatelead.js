@@ -11,6 +11,7 @@ import {
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { AuthContext } from "../context/AuthContext";
+import BackButton from "../components/BackButton";
 
 const Updatelead = () => {
   const [leads, setLeads] = useState([]);
@@ -49,7 +50,15 @@ const Updatelead = () => {
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:5000/api/users", {
+        const storedUser = JSON.parse(localStorage.getItem("user"));
+        let endpoint = "http://localhost:5000/api/users";
+        
+        // If user is a manager, only fetch their team members
+        if (storedUser?.role === "manager") {
+          endpoint = `http://localhost:5000/api/users?managerId=${storedUser.id}`;
+        }
+
+        const response = await axios.get(endpoint, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data) {
@@ -134,7 +143,9 @@ const Updatelead = () => {
         <div className="flex h-[calc(100vh-4rem)] mt-16">
           {/* Lead List */}
           <div className="w-1/3 bg-gray-50 p-4 overflow-y-auto border-r">
-            <h2 className="text-xl font-bold mb-4">Leads</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Leads</h2>
+            </div>
             {loading ? (
               <p>Loading...</p>
             ) : leads.length === 0 ? (
@@ -167,12 +178,18 @@ const Updatelead = () => {
           </div>
 
           {/* Lead Detail Panel */}
-          <div className="w-2/3 p-6 bg-white overflow-y-auto">
+          <div className="w-2/3 p-6 bg-white overflow-y-auto relative">
+            {/* Single BackButton at top right */}
+            <div className="absolute top-4 right-6 z-10">
+              <BackButton />
+            </div>
             {selectedLead ? (
               isEditing ? (
                 // --- EDIT FORM ---
                 <form onSubmit={handleEditFormSubmit} className="border p-4 rounded shadow mb-4 space-y-3">
-                  <h3 className="text-lg font-semibold text-purple-600 mb-2">Edit Lead</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-purple-600">Edit Lead</h3>
+                  </div>
                   <div>
                     <label className="block text-sm">Name</label>
                     <input
@@ -262,10 +279,13 @@ const Updatelead = () => {
               ) : (
                 // --- EXISTING LEAD DETAILS ---
                 <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-purple-600">{selectedLead.name}</h3>
+                  </div>
                   <div className="border p-4 rounded shadow mb-4 relative">
                     {/* Top Right Icons */}
                     <div className="absolute top-2 right-2 flex space-x-3 text-gray-500">
-                      <button title="Notify" className="hover:text-black">🔔</button>
+                      {/* Removed bell icon */}
                       {/* 3-dot menu */}
                       <div className="relative">
                         <button
@@ -284,7 +304,7 @@ const Updatelead = () => {
                               Edit 
                             </button>
                             <button
-                              className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+                            className="block w-full text-left px-4 py-2 bg-indigo-500 text-white hover:bg-indigo-600"
                               onClick={() => handleDeleteLead(selectedLead.id)}
                             >
                               Delete 

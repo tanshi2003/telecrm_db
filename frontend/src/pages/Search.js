@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 import Sidebar from "../components/Sidebar"; // Import Sidebar
-import { FaUser, FaClipboardList, FaListAlt } from "react-icons/fa"; // Import icons
+import { FaUser } from "react-icons/fa"; // Import icons
 
 const SearchPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -14,38 +14,6 @@ const SearchPage = () => {
   const [showCampaignsModal, setShowCampaignsModal] = useState(false);
   const [filteredLeads, setFilteredLeads] = useState([]); // Leads assigned to the user
   const [filteredCampaigns, setFilteredCampaigns] = useState([]); // Campaigns handled by the user
-
-  const fetchLeadById = async (leadId) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`http://localhost:5000/api/leads/${leadId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      console.log("Lead fetched:", response.data.data); // Debugging: Log the fetched lead
-      setSelectedResult(response.data.data); // Update the selected result with lead data
-    } catch (error) {
-      console.error("Error fetching lead:", error.response?.data || error.message);
-      alert("Failed to fetch lead details.");
-    }
-  };
-
-  const fetchCampaignById = async (campaignId) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`http://localhost:5000/api/campaigns/${campaignId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      console.log("Campaign fetched:", response.data.data); // Debugging: Log the fetched campaign
-      setSelectedResult(response.data.data); // Update the selected result with campaign data
-    } catch (error) {
-      console.error("Error fetching campaign:", error.response?.data || error.message);
-      alert("Failed to fetch campaign details.");
-    }
-  };
 
   const fetchLeadsForUser = async (userId) => {
     try {

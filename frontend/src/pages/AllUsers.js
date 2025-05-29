@@ -386,7 +386,7 @@ const AllUsers = () => {
                     </button>
                     <button
                       onClick={() => handleDeleteUser(user.id)}
-                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                      className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
                     >
                       Delete
                     </button>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import axios from "axios";
@@ -7,6 +7,7 @@ import axios from "axios";
 const Viewlead = () => {
   const { id } = useParams(); // Get the lead ID from the URL
   const { state } = useLocation(); // Access the state passed from Leads.js
+  const navigate = useNavigate();
   const [lead, setLead] = useState(state?.lead || null); // Use passed lead data if available
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState([]); // For user names
@@ -70,8 +71,16 @@ const Viewlead = () => {
         <Navbar />
 
         {/* Lead Details */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h1 className="text-2xl font-bold mb-4">Lead Details</h1>
+        <div className="bg-white p-6 rounded-lg shadow-md relative">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold">Lead Details</h1>
+            <button
+              onClick={() => navigate(-1)}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Back
+            </button>
+          </div>
           {lead ? (
             <div>
               <p><strong>Customer Name:</strong> {lead.name || "N/A"}</p>

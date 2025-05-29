@@ -1,7 +1,5 @@
 import api from './api';
 
-const API_URL = 'http://localhost:5000/api/managers';
-
 // Get auth token from localStorage
 const getAuthHeader = () => {
   const token = localStorage.getItem('token');
@@ -18,14 +16,84 @@ export const getDashboardStats = async () => {
 
 // Get team performance
 export const getTeamPerformance = async () => {
-    const response = await api.get('/api/managers/team-performance');
-    return response.data;
+    try {
+        const response = await api.get('/api/managers/team-performance');
+        console.log('Team Performance API Response:', response.data);
+        
+        // Ensure we have an array of team members
+        if (!response.data || !response.data.data || !Array.isArray(response.data.data)) {
+            console.error('Invalid team performance data format:', response.data);
+            return { data: [] };
+        }
+
+        // Ensure each member has the required fields
+        const processedData = response.data.data.map(member => ({
+            id: member.id || 0,
+            name: member.name || 'Unknown',
+            total_leads_handled: parseInt(member.total_leads_handled) || 0,
+            total_campaigns_handled: parseInt(member.total_campaigns_handled) || 0,
+            active_campaigns: parseInt(member.active_campaigns) || 0
+        }));
+
+        return { data: processedData };
+    } catch (error) {
+        console.error('Error fetching team performance:', error);
+        return { data: [] };
+    }
 };
 
-// Get campaign performance
-export const getCampaignPerformance = async () => {
-    const response = await api.get('/api/managers/campaign-performance');
-    return response.data;
+// Get campaign performance for specific manager
+export const getCampaignPerformance = async (managerId) => {
+    try {
+        if (!managerId) {
+            const user = JSON.parse(localStorage.getItem('user'));
+            managerId = user?.id;
+        }
+
+        if (!managerId) {
+            console.error('No manager ID available');
+            return { data: [] };
+        }
+
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `http://localhost:5000/api/campaigns/manager/${managerId}`,
+            {
+                headers: { 
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        const responseData = await response.json();
+        console.log('Raw API Response:', responseData); // Debug log
+
+        // Map the data to match dashboard expectations
+        const processedData = responseData.data?.map(campaign => ({
+            id: campaign.id,
+            name: campaign.name,
+            status: campaign.status,
+            total_leads: campaign.lead_count || 0,
+            assigned_users: campaign.assigned_users || [],
+            team_size: (campaign.assigned_users || []).length,
+            assigned_user_names: campaign.assigned_user_names,
+            assigned_user_ids: campaign.assigned_user_ids,
+            description: campaign.description,
+            priority: campaign.priority,
+            start_date: campaign.start_date,
+            end_date: campaign.end_date,
+            created_at: campaign.created_at,
+            conversion_rate: 0 // Add if available from API
+        })) || [];
+
+        console.log('Processed Campaign Data:', processedData); // Debug log
+
+        return { success: true, data: processedData };
+    } catch (error) {
+        console.error('Error fetching campaign performance:', error);
+        return { success: false, data: [], error: error.message };
+    }
 };
 
 // Get unassigned users
@@ -50,22 +118,27 @@ export const assignUsersToTeam = async (manager_id, user_ids) => {
     return response.data;
 };
 
-// Assign leads to caller
-export const assignLeads = async (caller_id, lead_ids) => {
-    const response = await api.post('/api/managers/assign-leads', { caller_id, lead_ids });
+// Assign leads to team member
+export const assignLeads = async (selectedMember, selectedLeads) => {
+    // Ensure selectedLeads is an array
+    const leadsArray = Array.isArray(selectedLeads) ? selectedLeads : [selectedLeads];
+    const response = await api.post('/api/managers/assign-leads', { 
+        selectedMember, 
+        selectedLeads: leadsArray 
+    }, getAuthHeader());
     return response.data;
 };
 
 // Get users under manager
 export const getUsers = async () => {
   try {
-    const response = await api.get('/api/managers/teams', getAuthHeader());
-    // The teams endpoint returns data in a different format, so we need to extract the team members
-    const managerId = JSON.parse(localStorage.getItem('user')).id;
-    const managerTeam = response.data.data.find(team => team.manager_id === managerId);
+    const user = JSON.parse(localStorage.getItem('user'));
+    const managerId = user.id;
+    // Use the dedicated team-members endpoint
+    const response = await api.get(`/api/managers/${managerId}/team-members`, getAuthHeader());
     return {
       success: true,
-      data: managerTeam ? managerTeam.team_members : []
+      data: response.data.data || []
     };
   } catch (error) {
     throw error.response?.data || error.message;
@@ -106,4 +179,4 @@ export const getUnassignedLeads = async () => {
     } catch (error) {
         throw error.response?.data || error.message;
     }
-}; 
+};

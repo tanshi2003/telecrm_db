@@ -1,25 +1,38 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import Sidebar from "../components/Sidebar";
 import BackButton from "../components/BackButton";
 import { FaPhone } from "react-icons/fa";
-import axios from "axios";
 
 const Lead1 = () => {
-  const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [status, setStatus] = useState("");
-  const [leadCategory, setLeadCategory] = useState("");
-  const [address, setAddress] = useState("");
-  const [assignedTo, setAssignedTo] = useState("");
-  const [campaignName, setCampaignName] = useState("");
-  const [notes, setNotes] = useState("");
-  const [userName, setUserName] = useState("");
+  const [leadData, setLeadData] = useState({
+    title: "",
+    description: "",
+    status: "New",
+    lead_category: "",
+    name: "",
+    phone_no: "",
+    address: "",
+    assigned_to: "",
+    campaign_id: "",
+    notes: ""
+  });
   const [users, setUsers] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
+  const [userName, setUserName] = useState("");
+  const navigate = useNavigate();
+  
+  // Get role from localStorage to decide if we should fetch extra data.
+  const role = localStorage.getItem("role")?.toLowerCase();
+
+  // Only fetch users and campaigns if role is admin
+  useEffect(() => {
+    if(role === "admin"){
+      fetchUsers();
+      fetchCampaigns();
+    }
+  }, [role]);
 
   useEffect(() => {
     // Validate user access
@@ -42,96 +55,164 @@ const Lead1 = () => {
     }
   }, [navigate]);
 
+  // Fetch users and campaigns assigned to this manager (or all if admin)
   useEffect(() => {
-    // Fetch users for Assigned To dropdown - only callers
-    const fetchUsers = async () => {
+    const fetchManagerUsersAndCampaigns = async () => {
+      const token = localStorage.getItem("token");
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      if (!token || !storedUser) return;
       try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:5000/api/users", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.data?.data) {
-          // Filter only callers from the users list
-          const callers = response.data.data.filter(user => user.role === 'caller');
-          setUsers(callers);
+        if (role === "admin") {
+          // Admin: fetch all callers for assignment
+          const usersRes = await axios.get("http://localhost:5000/api/users", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setUsers(usersRes.data?.data?.filter(u => u.role === "caller") || []);
+          // Admin: fetch all campaigns
+          const campRes = await axios.get("http://localhost:5000/api/campaigns", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setCampaigns(campRes.data?.data || []);
+        } else if (role === "manager") {          // Manager: fetch only users assigned to this manager
+          const usersRes = await axios.get(`http://localhost:5000/api/managers/${storedUser.id}/users`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setUsers(usersRes.data?.data || []);
+          
+          // Manager: fetch only campaigns where they are the manager
+          const campRes = await axios.get(`http://localhost:5000/api/campaigns/manager/${storedUser.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          // Only set campaigns if we got a successful response with an array
+          if (campRes.data?.success && Array.isArray(campRes.data.data)) {
+            setCampaigns(campRes.data.data);
+          } else {
+            console.warn("Invalid campaign data received:", campRes.data);
+            setCampaigns([]);
+          }
         }
       } catch (error) {
-        console.error("Error fetching users:", error.response?.data || error.message);
+        console.error("Error fetching manager's users/campaigns:", error.response?.data || error.message);
       }
     };
-    fetchUsers();
-  }, []);
+    if (role === "admin" || role === "manager") {
+      fetchManagerUsersAndCampaigns();
+    }
+  }, [role]);
 
-  useEffect(() => {
-    // Fetch campaigns for Campaign Name dropdown
-    const fetchCampaigns = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:5000/api/campaigns", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.data?.data) {
-          setCampaigns(response.data.data);
-        }
-      } catch (error) {
-        console.error("Error fetching campaigns:", error.response?.data || error.message);
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("http://localhost:5000/api/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if(response.data?.data){
+        // Filter only callers from the users list
+        const callers = response.data.data.filter(user => user.role === 'caller');
+        setUsers(callers);
       }
-    };
-    fetchCampaigns();
-  }, []);
+    } catch (error) {
+      console.error("Error fetching users:", error.response?.data || error.message);
+    }
+  };
+
+  const fetchCampaigns = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("http://localhost:5000/api/campaigns", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      // Only set campaigns if we got a successful response with an array
+      if (response.data?.success && Array.isArray(response.data.data)) {
+        setCampaigns(response.data.data);
+      } else {
+        console.warn("Invalid campaign data received:", response.data);
+        setCampaigns([]);
+      }
+    } catch (error) {
+      console.error("Error fetching campaigns:", error.response?.data || error.message);
+      setCampaigns([]); // Set empty array on error
+    }
+  };
 
   const handleAddLead = async () => {
     try {
+      // Validate required fields
+      if (!leadData.title || !leadData.status || !leadData.name || !leadData.phone_no) {
+        alert("Please fill all required fields: Title, Status, Name, and Phone.");
+        return;
+      }
+
       const token = localStorage.getItem("token");
-      if (!token) {
-        alert("⚠️ Authentication token missing!");
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      
+      if (!token || !storedUser) {
+        alert("⚠️ Authentication error! Please log in again.");
+        navigate("/login");
         return;
       }
 
-      // Get the logged-in user data
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (!user || !user.id) {
-        alert("⚠️ User data missing!");
-        return;
-      }
+      const leadPayload = {
+        title: leadData.title,
+        description: leadData.description,
+        status: leadData.status,
+        lead_category: leadData.lead_category,
+        name: leadData.name,
+        phone_no: leadData.phone_no.startsWith('+91') ? leadData.phone_no : `+91${leadData.phone_no}`,
+        address: leadData.address,
+        assigned_to: leadData.assigned_to || null,
+        admin_id: role === "admin" ? storedUser.id : null,
+        manager_id: role === "manager" ? storedUser.id : null,
+        campaign_id: leadData.campaign_id ? campaigns.find(c => c.name === leadData.campaign_id)?.id : null,
+        notes: leadData.notes,
+      };
 
-      await axios.post(
+      console.log('Sending lead data:', leadPayload);
+
+      const response = await axios.post(
         "http://localhost:5000/api/leads",
-        {
-          name,
-          phone_no: `+91${phone}`,
-          title,
-          description,
-          status,
-          lead_category: leadCategory,
-          address,
-          assigned_to: assignedTo,
-          admin_id: user.id,
-          campaign_name: campaignName,
-          notes,
-        },
+        leadPayload,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
-          },
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         }
       );
 
-      alert("✅ Lead added successfully!");
-      setName("");
-      setPhone("");
-      setTitle("");
-      setDescription("");
-      setStatus("");
-      setLeadCategory("");
-      setAddress("");
-      setAssignedTo("");
-      setCampaignName("");
-      setNotes("");
-      navigate("/leads");
+      if (response.data.success) {
+        alert("✅ Lead added successfully!");
+        // Clear form
+        setLeadData({
+          title: "",
+          description: "",
+          status: "New",
+          lead_category: "",
+          name: "",
+          phone_no: "",
+          address: "",
+          assigned_to: "",
+          campaign_id: "",
+          notes: ""
+        });
+        
+        // Redirect based on role
+        if (role === "manager") {
+          navigate("/viewleads");  // Redirect to ViewLeadsbyM for managers
+        } else {
+          navigate("/leads");      // Redirect to leads for other roles
+        }
+      } else {
+        alert(response.data.message || "Failed to add lead");
+      }
     } catch (error) {
-      console.error("❌ Error adding lead:", error.response?.data || error.message);
-      alert("Failed to add lead 😔");
+      console.error("❌ Error adding lead:", error.response?.data || error);
+      if (error.response?.status === 401) {
+        alert("Session expired. Please log in again.");
+        navigate("/login");
+      } else {
+        alert(error.response?.data?.message || "Failed to add lead 😔");
+      }
     }
   };
 
@@ -156,8 +237,8 @@ const Lead1 = () => {
           <div>
             <label className="block font-semibold">Title</label>
             <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              value={leadData.title}
+              onChange={(e) => setLeadData({...leadData, title: e.target.value})}
               className="w-full p-2 rounded border shadow"
             />
           </div>
@@ -165,8 +246,8 @@ const Lead1 = () => {
           <div>
             <label className="block font-semibold">Description</label>
             <input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              value={leadData.description}
+              onChange={(e) => setLeadData({...leadData, description: e.target.value})}
               className="w-full p-2 rounded border shadow"
             />
           </div>
@@ -174,8 +255,8 @@ const Lead1 = () => {
           <div>
             <label className="block font-semibold">Status</label>
             <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              value={leadData.status}
+              onChange={(e) => setLeadData({...leadData, status: e.target.value})}
               className="w-full p-2 rounded border shadow"
             >
               <option value="">Select Status</option>
@@ -196,8 +277,8 @@ const Lead1 = () => {
           <div>
             <label className="block font-semibold">Lead Category</label>
             <select
-              value={leadCategory}
-              onChange={(e) => setLeadCategory(e.target.value)}
+              value={leadData.lead_category}
+              onChange={(e) => setLeadData({...leadData, lead_category: e.target.value})}
               className="w-full p-2 rounded border shadow"
             >
               <option value="">Select Lead Category</option>
@@ -217,8 +298,8 @@ const Lead1 = () => {
           <div>
             <label className="block font-semibold">Name</label>
             <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={leadData.name}
+              onChange={(e) => setLeadData({...leadData, name: e.target.value})}
               className="w-full p-2 rounded border shadow"
             />
           </div>
@@ -231,8 +312,8 @@ const Lead1 = () => {
                 +91
               </div>
               <input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                value={leadData.phone_no}
+                onChange={(e) => setLeadData({...leadData, phone_no: e.target.value})}
                 className="w-full p-2 rounded border shadow"
               />
             </div>
@@ -241,49 +322,56 @@ const Lead1 = () => {
           <div>
             <label className="block font-semibold">Address</label>
             <input
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              value={leadData.address}
+              onChange={(e) => setLeadData({...leadData, address: e.target.value})}
               className="w-full p-2 rounded border shadow"
             />
           </div>
 
           <div>
             <label className="block font-semibold">Assigned To</label>
-            <select
-              value={assignedTo}
-              onChange={(e) => setAssignedTo(e.target.value)}
-              className="w-full p-2 rounded border shadow bg-white"
-            >
-              <option value="">Select User</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name}
-                </option>
-              ))}
-            </select>
+            {(role === "admin" || role === "manager") ? (
+              <select
+                value={leadData.assigned_to || ""}
+                onChange={(e) => setLeadData({...leadData, assigned_to: e.target.value})}
+                className="w-full p-2 rounded border shadow bg-white"
+              >
+                <option value="">Select User</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="p-2 border rounded bg-gray-100">N/A</p>
+            )}
           </div>
 
           <div>
             <label className="block font-semibold">Campaign Name</label>
-            <select
-              value={campaignName}
-              onChange={(e) => setCampaignName(e.target.value)}
-              className="w-full p-2 rounded border shadow bg-white"
-            >
-              <option value="">Select Campaign</option>
-              {campaigns.map((campaign) => (
-                <option key={campaign.id} value={campaign.name}>
-                  {campaign.name}
-                </option>
-              ))}
-            </select>
+            {(role === "admin" || role === "manager") ? (              <select
+                value={leadData.campaign_id || ""}
+                onChange={(e) => setLeadData({...leadData, campaign_id: e.target.value})}
+                className="w-full p-2 rounded border shadow bg-white"
+              >
+                <option value="">Select Campaign</option>
+                {campaigns.map((campaign) => (
+                    <option key={campaign.id} value={campaign.name}>
+                      {campaign.name}
+                    </option>
+                  ))}
+              </select>
+            ) : (
+              <p className="p-2 border rounded bg-gray-100">N/A</p>
+            )}
           </div>
 
           <div className="md:col-span-2">
             <label className="block font-semibold">Notes</label>
             <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              value={leadData.notes}
+              onChange={(e) => setLeadData({...leadData, notes: e.target.value})}
               className="w-full p-2 rounded border shadow"
               rows={3}
             />

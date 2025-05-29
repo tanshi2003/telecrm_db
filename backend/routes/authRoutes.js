@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const auth = require('../middleware/auth');
+const { authenticateToken } = require("../middleware/auth");
 
 // Login route
 router.post('/login', (req, res) => {
@@ -139,7 +139,7 @@ router.post('/login', (req, res) => {
 });
 
 // Get current user
-router.get('/me', auth, (req, res) => {
+router.get('/me', authenticateToken, (req, res) => {
     res.json({
         success: true,
         user: req.user
@@ -147,7 +147,7 @@ router.get('/me', auth, (req, res) => {
 });
 
 // Logout route
-router.post('/logout', auth, (req, res) => {
+router.post('/logout', authenticateToken, (req, res) => {
     const query = req.user.role === 'admin' 
         ? 'UPDATE admins SET token = NULL WHERE id = ?'
         : 'UPDATE users SET token = NULL WHERE id = ?';
@@ -168,4 +168,4 @@ router.post('/logout', auth, (req, res) => {
     });
 });
 
-module.exports = router; 
+module.exports = router;

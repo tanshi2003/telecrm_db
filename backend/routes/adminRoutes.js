@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/adminController");
-const { authenticateToken } = require("../middlewares/auth");
-const roleMiddleware = require("../middlewares/role");
+const { authenticateToken } = require("../middleware/auth");
+const roleMiddleware = require("../middleware/checkRole");
 
 // Public routes (no authentication required)
 // Register a new admin

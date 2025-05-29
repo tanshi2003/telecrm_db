@@ -1,16 +1,15 @@
-import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState, useCallback } from "react";
 import Sidebar from "../components/Sidebar";
 import BackButton from "../components/BackButton";
-import { Eye, Phone, Mail, Calendar, MapPin, Activity, Briefcase, Clock } from "lucide-react";
+import {Phone, Mail, Calendar, MapPin, Activity, Briefcase, Clock } from "lucide-react";
 import { getTeams } from "../services/managerService";
 import toast from "react-hot-toast";
+import axios from "axios";
 
 const TeamsList = () => {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedUser, setSelectedUser] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
@@ -26,13 +25,7 @@ const TeamsList = () => {
     }
   }, []);
 
-  useEffect(() => {
-    if (currentUser) {
-      fetchTeams();
-    }
-  }, [currentUser]);
-
-  const fetchTeams = async () => {
+  const fetchTeams = useCallback(async () => {
     try {
       console.log("Fetching teams...");
       const response = await getTeams();
@@ -56,11 +49,35 @@ const TeamsList = () => {
       toast.error("Failed to load teams data");
       setLoading(false);
     }
-  };
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchTeams();
+    }
+  }, [currentUser, fetchTeams]);
 
   const handleUserClick = async (member) => {
-    setUserDetails(member);
-    setShowModal(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`http://localhost:5000/api/leads/user/${member.id}/lead-counts`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (response.data.success) {
+        setUserDetails({
+          ...member,
+          ...response.data.data
+        });
+      }
+      setShowModal(true);
+    } catch (error) {
+      toast.error("Failed to fetch lead counts");
+      setUserDetails(member);
+      setShowModal(true);
+    }
   };
 
   const UserDetailsModal = ({ user, onClose }) => {
@@ -134,6 +151,13 @@ const TeamsList = () => {
                     }`}>
                       {user.status}
                     </span>
+                  </div>
+                </div>
+                <div className="flex items-center text-gray-600">
+                  <Briefcase className="w-5 h-5 mr-3" />
+                  <div>
+                    <p className="text-sm font-medium">Total Leads Assigned</p>
+                    <p className="font-medium text-blue-600">{user.total_leads || 0}</p>
                   </div>
                 </div>
                 {user.last_login && (
@@ -237,13 +261,6 @@ const TeamsList = () => {
                         Email: {team.manager_email}
                       </p>
                     </div>
-                    <Link
-                      to={`/${currentUser?.role}/teams/${team.manager_id}`}
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Team Details
-                    </Link>
                   </div>
                 </div>
                 
@@ -256,9 +273,11 @@ const TeamsList = () => {
                         className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
                         onClick={() => handleUserClick(member)}
                       >
-                        <h4 className="font-medium">{member.name}</h4>
-                        <p className="text-sm text-gray-600">Role: {member.role}</p>
-                        <p className="text-sm text-gray-600">Email: {member.email}</p>
+                        <div>
+                          <h4 className="font-medium">{member.name}</h4>
+                          <p className="text-sm text-gray-600">Role: {member.role}</p>
+                          <p className="text-sm text-gray-600">Email: {member.email}</p>
+                        </div>
                         <div className="mt-2">
                           <span className={`text-xs px-2 py-1 rounded ${
                             member.status === "active"

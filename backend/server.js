@@ -3,12 +3,38 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const db = require("./config/db");
 const viewsRoutes = require('./routes/viewsRoutes');
+const http = require('http');
+const jwt = require('jsonwebtoken');
+const morgan = require('morgan');
+const initializeSocket = require('./socket');
+
+// Import Routes
+const adminRoutes = require("./routes/adminRoutes");
+const userRoutes = require("./routes/userRoutes");
+const leadRoutes = require("./routes/leadRoutes");
+const campaignRoutes = require("./routes/campaignRoutes");
+const searchRoutes = require("./routes/searchRoutes");
+const authRoutes = require('./routes/authRoutes');
+const managerRoutes = require('./routes/managerRoutes');
+const callsRouter = require('./routes/calls');
+const settingsRoutes = require('./routes/settings');
 
 // Load environment variables
 dotenv.config();
 
 // Initialize express app
 const app = express();
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+const io = initializeSocket(server);
+
+// Configure logging
+app.use(morgan('dev')); // HTTP request logger
+console.log = (...args) => {
+    const timestamp = new Date().toISOString();
+    console.info(`[${timestamp}]`, ...args);
+};
 
 // ✅ CORS FIRST — before routes!
 app.use(cors({
@@ -21,26 +47,14 @@ app.use(cors({
 app.use(express.json()); // Using built-in express.json instead of body-parser
 app.use(express.urlencoded({ extended: true })); // Using built-in express.urlencoded
 
-// Import Routes
-const adminRoutes = require("./routes/adminRoutes");
-const userRoutes = require("./routes/userRoutes");
-const leadRoutes = require("./routes/leadRoutes");
-const campaignRoutes = require("./routes/campaignRoutes");
-const searchRoutes = require("./routes/searchRoutes");
-const callRoutes = require("./routes/callRoutes");
-const authRoutes = require('./routes/authRoutes');
-const managerRoutes = require('./routes/managerRoutes');
-
 // Use Routes
 app.use("/api/admins", adminRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/campaigns", campaignRoutes);
 app.use("/api/search", searchRoutes);
-app.use("/api/calls", callRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/managers', managerRoutes);
-app.use('/api/Views', viewsRoutes);
 
 // Root Endpoint
 app.get("/", (req, res) => {
@@ -53,7 +67,7 @@ app.get("/", (req, res) => {
 
 // Start the server (no need for DB connection in this case, pool is already managing it)
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`✅ Server is running on port ${PORT}`);
 });
 

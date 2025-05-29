@@ -117,44 +117,61 @@ exports.loginUser = (req, res) => {
     });
 };
 
-// Get all users
-exports.getUsers = (req, res) => {
-    const { role, unassigned } = req.query;
-    let query = `
-        SELECT 
-            u.id, u.name, u.email, u.phone_no, u.role, u.status, u.manager_id, u.location,
-            v.total_leads, v.campaigns_handled, v.total_working_hours
-        FROM Users u
-        LEFT JOIN user_stats_view v ON u.id = v.id
-        WHERE 1=1
-    `;
-    
-    const params = [];
+// Get all users or filtered by manager ID
+exports.getUsers = async (req, res) => {
+    try {
+        const managerId = req.query.manager_id;
+        let query = `
+            SELECT 
+                u.id,
+                u.name,
+                u.email,
+                u.phone_no,
+                u.role,
+                u.status,
+                u.manager_id,
+                u.location,
+                u.created_at,
+                u.updated_at,
+                COALESCE(m.name, '') as manager_name,
+                -- Total leads assigned to user
+                (SELECT COUNT(*) FROM leads l WHERE l.assigned_to = u.id) as total_leads,
+                -- Campaigns handled by user
+                (SELECT COUNT(DISTINCT cu.campaign_id) FROM campaign_users cu WHERE cu.user_id = u.id) as campaigns_handled,
+                -- Total working hours (sum of call logs in hours)
+                COALESCE((
+                  SELECT SUM(TIME_TO_SEC(TIMEDIFF(cl.end_time, cl.start_time))/3600)
+                  FROM call_logs cl WHERE cl.user_id = u.id
+                ), 0) as total_working_hours
+            FROM Users u 
+            LEFT JOIN Users m ON u.manager_id = m.id
+            WHERE 1=1
+        `;
 
-    if (role) {
-        query += ` AND u.role = ?`;
-        params.push(role);
-    }
-
-    if (unassigned === 'true') {
-        query += ` AND u.manager_id IS NULL`;
-    }
-
-    db.query(query, params, (err, results) => {
-        if (err) {
-            console.error("Error fetching users:", err);
-            return res.status(500).json({
-                success: false,
-                message: "Database error",
-                error: err.message
-            });
+        const queryParams = [];
+        if (managerId) {
+            query += ` AND u.manager_id = ?`;
+            queryParams.push(managerId);
         }
-        res.json({
-            success: true,
-            data: results,
-            message: "Users fetched successfully"
+        if (req.user && req.user.role === 'manager') {
+            query += ` AND u.manager_id = ?`;
+            queryParams.push(req.user.id);
+        }
+        query += ` AND u.role != 'admin'`;
+        query += ` ORDER BY u.name ASC`;
+
+        db.query(query, queryParams, (err, users) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: "Database error", error: err });
+            }
+            res.json({
+                success: true,
+                data: users
+            });
         });
-    });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Server error", error });
+    }
 };
 
 // Get user by ID
@@ -356,6 +373,7 @@ exports.updateUserRole = (req, res) => {
         db.query("SELECT * FROM Users WHERE id = ?", [id], (err, rows) => {
             if (err) return res.status(500).json({ message: "Error fetching updated user", error: err });
             res.status(200).json({
+                 success: true,
                 message: "User role updated successfully",
                 updatedUser: rows[0]
             });
@@ -403,76 +421,65 @@ exports.assignManager = (req, res) => {
 };
 
 // Update user status in bulk
-exports.updateBulkStatus = async (req, res) => {
-    try {
-        const { userIds, status } = req.body;
-        
-        // Input validation
-        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
-            return res.status(400).json(responseFormatter(false, "Please provide valid user IDs"));
-        }
+exports.updateBulkStatus = (req, res) => {
+  const { userIds, status } = req.body;
+  console.log("🚀 Payload received:", { userIds, status });
 
-        if (!status) {
-            return res.status(400).json(responseFormatter(false, "Status is required"));
-        }
+  if (!userIds || !Array.isArray(userIds) || userIds.length === 0 || !status) {
+    return res.status(400).json({ success: false, message: "Missing userIds or status" });
+  }
 
-        // Validate status enum
-        const validStatuses = ["active", "inactive", "suspended"];
-        if (!validStatuses.includes(status)) {
-            return res.status(400).json(responseFormatter(false, "Invalid status. Must be 'active', 'inactive', or 'suspended'"));
-        }
+  const validStatuses = ["active", "inactive", "suspended"];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ success: false, message: "Invalid status" });
+  }
 
-        // Convert array to string for SQL
-        const userIdsString = userIds.join(',');
+  const placeholders = userIds.map(() => '?').join(',');
+  const checkQuery = `SELECT id FROM Users WHERE id IN (${placeholders})`;
 
-        // First check if users exist
-        const checkQuery = "SELECT id FROM Users WHERE id IN (?)";
-        db.query(checkQuery, [userIds], (checkErr, users) => {
-            if (checkErr) {
-                return res.status(500).json(responseFormatter(false, "Error checking users"));
-            }
-
-            if (!users || users.length === 0) {
-                return res.status(404).json(responseFormatter(false, "No users found with the provided IDs"));
-            }
-
-            // Perform the update
-            const updateQuery = "UPDATE Users SET status = ?, updated_at = NOW() WHERE id IN (?)";
-            db.query(updateQuery, [status, userIds], (updateErr, result) => {
-                if (updateErr) {
-                    return res.status(500).json(responseFormatter(false, "Error updating users"));
-                }
-
-                // Get updated users
-                const selectQuery = `
-                    SELECT id, name, email, status, role, updated_at 
-                    FROM Users 
-                    WHERE id IN (?)
-                `;
-                
-                db.query(selectQuery, [userIds], (selectErr, updatedUsers) => {
-                    if (selectErr) {
-                        return res.status(500).json(responseFormatter(false, "Error fetching updated users"));
-                    }
-
-                    const response = {
-                        modifiedCount: result.affectedRows,
-                        updatedUsers: updatedUsers
-                    };
-
-                    return res.json(responseFormatter(
-                        true, 
-                        `Successfully updated ${result.affectedRows} user(s) status to ${status}`,
-                        response
-                    ));
-                });
-            });
-        });
-    } catch (error) {
-        console.error("Bulk status update error:", error);
-        return res.status(500).json(responseFormatter(false, "Internal server error"));
+  db.query(checkQuery, userIds, (checkErr, checkResults) => {
+    if (checkErr) {
+      console.error("❌ Error checking user existence:", checkErr);
+      return res.status(500).json({ success: false, message: "Database error" });
     }
+
+    console.log("✅ Found users in DB:", checkResults.map(u => u.id));
+
+    if (checkResults.length !== userIds.length) {
+      return res.status(404).json({
+        success: false,
+        message: "One or more users not found",
+        data: {
+          providedIds: userIds,
+          foundIds: checkResults.map(u => u.id)
+        }
+      });
+    }
+
+    const updateQuery = `UPDATE Users SET status = ?, updated_at = NOW() WHERE id IN (${placeholders})`;
+    db.query(updateQuery, [status, ...userIds], (updateErr, updateResults) => {
+      if (updateErr) {
+        console.error("❌ Error updating statuses:", updateErr);
+        return res.status(500).json({ success: false, message: "Database error" });
+      }
+
+      console.log("✅ Update query results:", updateResults);
+
+      return res.status(200).json({
+        success: true,
+        message: "Statuses updated successfully",
+        data: {
+          affectedRows: updateResults.affectedRows,
+          changedRows: updateResults.changedRows,
+          warningCount: updateResults.warningCount,
+          userIds
+        }
+      });
+    });
+  });
 };
+
+
 
 // Update single user status
 exports.updateUserStatus = (req, res) => {
@@ -664,6 +671,38 @@ exports.getUnassignedUsers = (req, res) => {
 
         res.json(responseFormatter(true, "Unassigned users fetched successfully", users));
     });
+};
+
+// Add the removeManager function
+exports.removeManager = (req, res) => {
+    const { id } = req.params;
+    
+    db.query(
+        "UPDATE Users SET manager_id = NULL WHERE id = ?",
+        [id],
+        (error, result) => {
+            if (error) {
+                console.error('Error in removeManager:', error);
+                return res.status(500).json({
+                    success: false,
+                    message: "Failed to remove manager",
+                    error: error.message
+                });
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User not found"
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                message: "Manager removed successfully"
+            });
+        }
+    );
 };
 
 module.exports = exports;

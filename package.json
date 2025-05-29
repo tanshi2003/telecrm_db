@@ -1,6 +1,9 @@
 {
   "dependencies": {
-    "mysql2": "^3.14.0"
+    "mysql2": "^3.14.0",
+    "react-hot-toast": "^2.5.2",
+    "socket.io": "^4.8.1",
+    "twilio": "^5.6.1"
   },
   "proxy": "http://localhost:5000"
 }
