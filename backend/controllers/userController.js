@@ -387,6 +387,7 @@ exports.updateUserRole = (req, res) => {
         db.query("SELECT * FROM Users WHERE id = ?", [id], (err, rows) => {
             if (err) return res.status(500).json({ message: "Error fetching updated user", error: err });
             res.status(200).json({
+                success: true,
                 message: "User role updated successfully",
                 updatedUser: rows[0]
             });
@@ -412,8 +413,20 @@ exports.deleteUser = (req, res) => {
 // Assign or reassign manager to a user
 exports.assignManager = (req, res) => {
     const { id } = req.params; // user id
-    const { manager_id } = req.body;
+    const { manager_id, remove } = req.body;
 
+    // If remove flag is true, allow null manager_id
+    if (remove) {
+        db.query("UPDATE Users SET manager_id = NULL WHERE id = ?", [id], (err, result) => {
+            if (err) return res.status(500).json({ message: "Error removing manager", error: err });
+            if (result.affectedRows === 0) return res.status(404).json({ message: "User not found" });
+
+            res.status(200).json({ success: true, message: "Manager removed successfully" });
+        });
+        return;
+    }
+
+    // Regular assignment logic
     if (!manager_id) {
         return res.status(400).json({ message: "Manager ID is required" });
     }
@@ -491,7 +504,6 @@ exports.updateBulkStatus = (req, res) => {
     });
   });
 };
-
 
 
 
@@ -687,4 +699,82 @@ exports.getUnassignedUsers = (req, res) => {
     });
 };
 
-module.exports = exports;
+const assignManager = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { manager_id, force_remove } = req.body;
+
+        // Handle removal case
+        if (force_remove === true) {
+            const query = "UPDATE Users SET manager_id = NULL WHERE id = ?";
+            const [result] = await db.query(query, [id]);
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ message: "User not found" });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "User removed from team successfully"
+            });
+        }
+
+        // Regular assignment requires manager_id
+        if (!manager_id && manager_id !== 0) {
+            return res.status(400).json({ message: "Manager ID is required" });
+        }
+
+        // Proceed with normal assignment...
+        const query = "UPDATE Users SET manager_id = ? WHERE id = ?";
+        const [result] = await db.query(query, [manager_id, id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Manager assigned successfully"
+        });
+
+    } catch (error) {
+        console.error('Error in assignManager:', error);
+        res.status(500).json({
+            message: "Failed to update manager assignment",
+            error: error.message
+        });
+    }
+};
+
+// Add new endpoint for removing manager
+exports.removeManager = (req, res) => {
+    const { id } = req.params;
+    
+    // Using callback style query
+    db.query(
+        "UPDATE Users SET manager_id = NULL WHERE id = ?",
+        [id],
+        (error, result) => {
+            if (error) {
+                console.error('Error in removeManager:', error);
+                return res.status(500).json({
+                    success: false,
+                    message: "Failed to remove manager",
+                    error: error.message
+                });
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User not found"
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                message: "Manager removed successfully"
+            });
+        }
+    );
+};

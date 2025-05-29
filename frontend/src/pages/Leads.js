@@ -119,12 +119,7 @@ const Leads = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Manage Leads</h1>
           <div className="flex gap-2">
-            <button
-              onClick={() => navigate("/Lead1")}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              + Add Lead
-            </button>
+            {/* Removed Add Lead button */}
             <button
               onClick={() => navigate(-1)}
               className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
@@ -139,6 +134,19 @@ const Leads = () => {
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           <div className="bg-white p-6 rounded-lg shadow-md w-full min-h-[220px] flex flex-col justify-between">
             <div>
+              <h4 className="font-semibold text-lg mb-2">Add Lead</h4>
+              <p className="text-sm text-gray-600 mb-4">Add a new lead to the system.</p>
+            </div>
+            <button
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={() => navigate("/Lead1")}
+            >
+              + Add Lead
+            </button>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md w-full min-h-[220px] flex flex-col justify-between">
+            <div>
               <h4 className="font-semibold text-lg mb-2">Update Lead</h4>
               <p className="text-sm text-gray-600 mb-4">Modify existing lead details and track progress.</p>
             </div>
@@ -147,19 +155,6 @@ const Leads = () => {
               onClick={() => navigate("/Updatelead")}
             >
               + Update Lead
-            </button>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md w-full min-h-[220px] flex flex-col justify-between">
-            <div>
-              <h4 className="font-semibold text-lg mb-2">Excel Upload</h4>
-              <p className="text-sm text-gray-600 mb-4">Import leads in bulk using an Excel file.</p>
-            </div>
-            <button
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              onClick={() => navigate("/Excelupload")}
-            >
-              + Import Leads
             </button>
           </div>
         </section>

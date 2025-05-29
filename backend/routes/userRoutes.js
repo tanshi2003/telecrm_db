@@ -36,6 +36,7 @@ router.put("/:id/role", roleMiddleware(['admin']), userController.updateUserRole
 
 // Manager assignment
 router.put("/:id/assign-manager", roleMiddleware(['admin']), userController.assignManager);
+router.put("/:id/remove-manager", roleMiddleware(['admin']), userController.removeManager);
 
 // User statistics
 router.get("/:id/stats", roleMiddleware(['admin', 'field_employee']), userController.getUserStats);

@@ -55,64 +55,8 @@ const AdminDashboard = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
           <div className="relative" ref={settingsRef}>
-            <button
-              onClick={() => setSettingsOpen((prev) => !prev)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              System Settings
-            </button>
-            {settingsOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white border rounded shadow-lg z-50">
-                <button
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                  onClick={() => handleNavigation("/admin/settings/lead-fields")}
-                >
-                  Lead Fields
-                </button>
-                <button
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                  onClick={() => handleNavigation("/admin/settings/lead-stage")}
-                >
-                  Lead Stage
-                </button>
-                <button
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                  onClick={() => handleNavigation("/admin/settings/call-feedback")}
-                >
-                  Call Feedback
-                </button>
-                <button
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                  onClick={() => handleNavigation("/admin/settings/api-templates")}
-                >
-                  API Templates
-                </button>
-                <button
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                  onClick={() => handleNavigation("/admin/settings/team")}
-                >
-                  Team
-                </button>
-                <button
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                  onClick={() => handleNavigation("/admin/settings/permission-templates")}
-                >
-                  Permission Templates
-                </button>
-                <button
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                  onClick={() => handleNavigation("/admin/settings/licenses")}
-                >
-                  Licenses
-                </button>
-                <button
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                  onClick={() => handleNavigation("/admin/settings/workspace-preferences")}
-                >
-                  Workspace Preferences
-                </button>
-              </div>
-            )}
+           
+            
           </div>
         </div>
 

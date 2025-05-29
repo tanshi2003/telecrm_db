@@ -203,34 +203,93 @@ const AssignManager = () => {
         return;
       }
 
-      // Remove user from their current team
+      // Create a modal or dialog for reassignment
+      const newManagerId = window.prompt(
+        `Select new manager for ${userToReassign.name} (Current: ${currentManager.name})\n\n` +
+        `Available Managers:\n${managers
+          .filter(m => m.id !== currentManager.id)
+          .map(m => `${m.id}: ${m.name}`)
+          .join('\n')}\n\n` +
+        "Enter manager ID or 'cancel' to cancel:"
+      );
+
+      if (!newManagerId || newManagerId.toLowerCase() === 'cancel') {
+        setLoading(false);
+        return;
+      }
+
+      const newManager = managers.find(m => m.id === parseInt(newManagerId));
+      if (!newManager) {
+        showToast("Invalid manager selection", "error");
+        setLoading(false);
+        return;
+      }
+
+      // Perform the reassignment
       const response = await axios.put(
         `http://localhost:5000/api/users/${userId}/assign-manager`,
-        { manager_id: null },
+        { manager_id: parseInt(newManagerId) },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.success) {
-        // Update the managers state by removing the user from their team
-        setManagers(prevManagers => 
-          prevManagers.map(manager => ({
-            ...manager,
-            team: manager.team.filter(member => member.id !== userId)
-          }))
+        showToast(
+          `${userToReassign.name} has been reassigned from ${currentManager.name}'s team to ${newManager.name}'s team`,
+          "success"
         );
-
-        // Add user to unassigned users
-        setUnassignedUsers(prev => [...prev, userToReassign]);
-
-        showToast(`${userToReassign.name} has been removed from ${currentManager.name}'s team`, "success");
-        setSuccessMessage(`${userToReassign.name} has been removed from ${currentManager.name}'s team`);
+        setSuccessMessage(
+          `${userToReassign.name} has been reassigned from ${currentManager.name}'s team to ${newManager.name}'s team`
+        );
+        await fetchData(); // Refresh data
       }
     } catch (err) {
       console.error("Reassignment error:", err);
-      showToast(err.response?.data?.message || "Failed to remove team member", "error");
+      showToast(err.response?.data?.message || "Failed to reassign team member", "error");
     } finally {
       setLoading(false);
-      await fetchData(); // Refresh data to ensure everything is in sync
+    }
+  };
+
+  const handleRemove = async (userId) => {
+    try {
+        setLoading(true);
+        const token = localStorage.getItem("token");
+        const userRole = localStorage.getItem("role");
+
+        if (userRole !== "admin") {
+            showToast("Only administrators can remove team members", "error");
+            return;
+        }
+
+        const userToRemove = managers.flatMap(m => m.team).find(u => u.id === userId);
+        if (!userToRemove) {
+            showToast("User not found in any team", "error");
+            return;
+        }
+
+        // Using the dedicated remove endpoint
+        const response = await axios({
+            method: 'put',
+            url: `http://localhost:5000/api/users/${userId}/remove-manager`,
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.data.success) {
+            await fetchData();
+            showToast(`${userToRemove.name} has been removed from team`, "success");
+            setSuccessMessage(`${userToRemove.name} has been removed from team`);
+        }
+    } catch (err) {
+        console.error("Remove error:", err);
+        showToast(
+            err.response?.data?.message || "Failed to remove user from team", 
+            "error"
+        );
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -318,11 +377,18 @@ const AssignManager = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <button
-                              className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:bg-gray-400"
+                              className="h-6 px-2 inline-flex items-center justify-center
+                                        text-[11px] font-medium text-white 
+                                        bg-blue-600 rounded-sm
+                                        hover:bg-blue-700 
+                                        disabled:bg-gray-400 disabled:cursor-not-allowed"
                               onClick={() => handleAssign(user.id, selectedManager[user.id])}
                               disabled={!selectedManager[user.id]}
                             >
-                              Assign
+                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M12 5v14M5 12h14" strokeWidth="2" strokeLinecap="round"/>
+                              </svg>
+                              <span className="ml-1">Assign</span>
                             </button>
                           </td>
                         </tr>
@@ -358,24 +424,50 @@ const AssignManager = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {manager.team.map((member) => (
                       <div key={member.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex justify-between">
-                          <div>
+                        <div className="flex flex-col">
+                          {/* User Information */}
+                          <div className="mb-3">
                             <h4 className="font-medium">{member.name}</h4>
                             <p className="text-sm text-gray-600">Role: {member.role}</p>
                             <p className="text-sm text-gray-600">Email: {member.email}</p>
                             {member.role === 'manager' && (
-                              <p className="text-sm text-blue-600 mt-1">
+                              <p className="text-sm text-blue-600">
                                 Also manages a team
                               </p>
                             )}
                           </div>
-                          <div className="ml-2">
+
+                          {/* Divider */}
+                          <div className="border-t my-2"></div>
+
+                          {/* Action Buttons */}
+                          <div className="flex flex-col gap-2 pt-2">
                             <button
                               onClick={() => handleReassign(member.id)}
-                              className="text-sm text-red-600 hover:text-red-800"
+                              className="h-7 w-full inline-flex items-center justify-center
+                                        text-xs font-medium text-blue-600 
+                                        bg-blue-50 border border-blue-200 
+                                        rounded hover:bg-blue-100"
                             >
-                              Remove
+                              <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M8 7h12M20 7l-4-4M20 7l-4 4" strokeWidth="2" strokeLinecap="round"/>
+                              </svg>
+                              Move to Another Team
                             </button>
+                            {localStorage.getItem("role") === "admin" && (
+                              <button
+                                onClick={() => handleRemove(member.id)}
+                                className="h-7 w-full inline-flex items-center justify-center
+                                          text-xs font-medium text-red-600 
+                                          bg-red-50 border border-red-200 
+                                          rounded hover:bg-red-100"
+                              >
+                                <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                  <path d="M6 18L18 6M6 6l12 12" strokeWidth="2" strokeLinecap="round"/>
+                                </svg>
+                                Remove from Team
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

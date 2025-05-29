@@ -12,7 +12,7 @@ import CallerDashboard from "./pages/CallerDashboard";
 import Leads from "./pages/Leads";
 import ViewLeads from "./pages/ViewLeadsbyM";
 import Lead1 from "./pages/Lead1";
-import Excelupload from "./pages/Excelupload"; 
+
 import Viewlead from "./pages/Viewlead";
 import EditLead from "./pages/EditLead";
 import EditUser from "./pages/EditUser";
@@ -285,15 +285,7 @@ const AppContent = () => {
                 }
               />
               
-            {/* 🆕 Excel Upload Route */}
-            <Route
-              path="/excelupload"
-              element={
-                <ProtectedRoute allowedRoles={["admin", "manager"]}>
-                  <Excelupload />
-                </ProtectedRoute>
-              }
-            />
+           
              <Route
               path="/ReportsLeaderboard"
               element={

@@ -118,12 +118,12 @@ const Sidebar = ({ user }) => {
     {
       icon: PlusCircle,
       label: "Add Leads",
-      path: "/leads",
+      path: "/Lead1",
     },
     {
       icon: FileText,
       label: "Campaigns",
-      path: "/campaigns1",
+      path: "/admin/campaigns1",
     },
     {
       icon: Activity,
