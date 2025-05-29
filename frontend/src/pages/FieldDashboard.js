@@ -3,19 +3,20 @@ import { useNavigate } from "react-router-dom"; // added
 import { FaUser, FaTasks, FaBullhorn, FaChartLine, FaPencilAlt } from "react-icons/fa"; // added icons
 import Sidebar from "../components/Sidebar";
 
+// Update the LEAD_STATUSES array to match backend values
 const LEAD_STATUSES = [
-  "New",
-  "Contacted",
-  "Follow-up",
-  "Meeting Scheduled",
-  "Proposal Sent",
-  "Negotiating",
-  "Won",
-  "Lost",
-  "Not Interested",
-  "Wrong Number",
-  "Invalid Lead",
-  "Duplicate"
+  "new",
+  "contacted",
+  "followup",    // Changed from "Follow-up" to "followup"
+  "meeting_scheduled",
+  "proposal_sent",
+  "negotiating",
+  "won",
+  "lost",
+  "not_interested",
+  "wrong_number",
+  "invalid",
+  "duplicate"
 ];
 
 const FieldDashboard = () => {
@@ -95,6 +96,25 @@ const FieldDashboard = () => {
     setLeadNotes(lead.notes || "");
   };
 
+  // Update the status display helper function
+  const formatStatusDisplay = (status) => {
+    const statusMap = {
+      'new': 'New',
+      'contacted': 'Contacted',
+      'followup': 'Follow-up',
+      'meeting_scheduled': 'Meeting Scheduled',
+      'proposal_sent': 'Proposal Sent',
+      'negotiating': 'Negotiating',
+      'won': 'Won',
+      'lost': 'Lost',
+      'not_interested': 'Not Interested',
+      'wrong_number': 'Wrong Number',
+      'invalid': 'Invalid Lead',
+      'duplicate': 'Duplicate'
+    };
+    return statusMap[status] || status;
+  };
+
   const handleUpdateLead = async () => {
     if (!selectedLead) return;
     
@@ -105,7 +125,7 @@ const FieldDashboard = () => {
       const updateData = {
         name: selectedLead.name,        // Keep existing name
         phone_no: selectedLead.phone_no, // Keep existing phone
-        status: leadStatus,             // New status
+        status: leadStatus.toLowerCase(), // Ensure status is lowercase
         notes: leadNotes,               // New notes
         updated_by: user.id
       };
@@ -126,10 +146,10 @@ const FieldDashboard = () => {
         throw new Error(errorData.message || `Error updating lead: ${response.status}`);
       }
 
-      // Update local state
+      // Update local state with formatted status
       setLeads(leads.map(lead => 
         lead.id === selectedLead.id 
-          ? { ...lead, status: leadStatus, notes: leadNotes }
+          ? { ...lead, status: leadStatus.toLowerCase(), notes: leadNotes }
           : lead
       ));
       
@@ -198,12 +218,12 @@ const FieldDashboard = () => {
                           </td>
                           <td className="py-3 px-4">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                              ${lead.status === "New" ? "bg-blue-100 text-blue-800" :
-                              lead.status === "Contacted" ? "bg-yellow-100 text-yellow-800" :
-                              lead.status === "Follow-up" ? "bg-purple-100 text-purple-800" :
-                              lead.status === "Converted" ? "bg-green-100 text-green-800" :
+                              ${lead.status === "new" ? "bg-blue-100 text-blue-800" :
+                              lead.status === "contacted" ? "bg-yellow-100 text-yellow-800" :
+                              lead.status === "followup" ? "bg-purple-100 text-purple-800" :
+                              lead.status === "won" ? "bg-green-100 text-green-800" :
                               "bg-gray-100 text-gray-800"}`}>
-                              {lead.status}
+                              {formatStatusDisplay(lead.status)}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-sm text-gray-500">
@@ -346,7 +366,9 @@ const FieldDashboard = () => {
                     className="w-full p-2 border rounded-md"
                   >
                     {LEAD_STATUSES.map(status => (
-                      <option key={status} value={status}>{status}</option>
+                      <option key={status} value={status}>
+                        {formatStatusDisplay(status)}
+                      </option>
                     ))}
                   </select>
                 </div>
