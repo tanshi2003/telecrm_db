@@ -1,11 +1,12 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Sidebar from "../components/Sidebar";
+import BackButton from "../components/BackButton";
+import { FaPhone } from "react-icons/fa";
 
 const AddLead = () => {
-  const [user] = useState(JSON.parse(localStorage.getItem("user")));
-  const [form, setForm] = useState({
+  const [leadData, setLeadData] = useState({
     name: "",
     phone_no: "",
     lead_category: "Cold Lead",
@@ -13,126 +14,177 @@ const AddLead = () => {
     address: "",
     notes: "",
   });
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+
+  const [userName, setUserName] = useState("");
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const role = localStorage.getItem("role")?.toLowerCase();
+  const storedUser = JSON.parse(localStorage.getItem("user"));
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const allowedRoles = ["admin", "manager", "caller", "field_employee"];
+
+    if (!token || !allowedRoles.includes(role)) {
+      navigate("/login");
+      return;
+    }
+
+    if (storedUser?.name) {
+      setUserName(storedUser.name);
+    }
+  }, [navigate, role, storedUser]);
+
+  const handleAddLead = async () => {
+    const { name, phone_no, lead_category, status, address, notes } = leadData;
+
+    if (!name || !phone_no) {
+      alert("Name and Phone number are required.");
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
-      await axios.post(
-        "http://localhost:5000/api/leads/add-lead",
-        form,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setSuccess("Lead added successfully.");
-      setForm({
-        name: "",
-        phone_no: "",
-        lead_category: "Cold Lead",
-        status: "New",
-        address: "",
-        notes: "",
+      if (!token || !storedUser) {
+        alert("Authentication error. Please log in again.");
+        navigate("/login");
+        return;
+      }
+
+      const leadPayload = {
+        name,
+        phone_no: phone_no.startsWith("+91") ? phone_no : `+91${phone_no}`,
+        lead_category,
+        status,
+        address,
+        notes,
+        admin_id: role === "admin" ? storedUser.id : null,
+        manager_id: role === "manager" ? storedUser.id : null,
+      };
+
+      const response = await axios.post("http://localhost:5000/api/leads/add-lead", leadPayload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
-      setTimeout(() => {
-        navigate("/leads"); // Navigate to the leads page after 2 seconds
-      }, 2000);
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to add lead.");
+
+      if (response.data.success) {
+        alert("✅ Lead added successfully!");
+        setLeadData({
+          name: "",
+          phone_no: "",
+          lead_category: "Cold Lead",
+          status: "New",
+          address: "",
+          notes: "",
+        });
+        // Redirect to caller dashboard after adding a lead
+        if (role === "caller") {
+          navigate("/caller/dashboard");
+        } else {
+          navigate("/leads");
+        }
+      } else {
+        alert(response.data.message || "Failed to add lead");
+      }
+    } catch (error) {
+      console.error("Error adding lead:", error.response?.data || error);
+      alert(error.response?.data?.message || "Failed to add lead.");
     }
   };
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar user={user} />
-      <div className="flex-grow bg-gray-100 p-8 ml-64 mt-16">
-        <h1 className="text-3xl font-bold mb-6">Add New Lead</h1>
-        {error && <div className="mb-4 text-red-600">{error}</div>}
-        {success && <div className="mb-4 text-green-600">{success}</div>}
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow-md max-w-lg">
-          <div className="mb-4">
-            <label className="block mb-1 font-medium">Name</label>
+    <div className="flex min-h-screen overflow-hidden">
+      <Sidebar />
+      <div className="flex-grow bg-gray-100 ml-64 mt-16 p-6">
+        <div className="flex justify-between items-center mb-4">
+          <div className="text-lg font-semibold">Engineering Techno World 🛠️</div>
+          <BackButton />
+        </div>
+
+        <p className="text-gray-800 text-sm font-semibold truncate">
+          Hey, {userName || "User"}!
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mt-4">
+          <div>
+            <label className="block font-semibold">Name</label>
             <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              required
-              className="w-full border rounded px-3 py-2"
+              value={leadData.name}
+              onChange={(e) => setLeadData({ ...leadData, name: e.target.value })}
+              className="w-full p-2 rounded border shadow"
             />
           </div>
-          <div className="mb-4">
-            <label className="block mb-1 font-medium">Phone Number</label>
-            <input
-              type="text"
-              name="phone_no"
-              value={form.phone_no}
-              onChange={handleChange}
-              required
-              className="w-full border rounded px-3 py-2"
-            />
+
+          <div>
+            <label className="block font-semibold">Phone</label>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-2 border rounded shadow bg-white">
+                <FaPhone /> +91
+              </div>
+              <input
+                value={leadData.phone_no}
+                onChange={(e) => setLeadData({ ...leadData, phone_no: e.target.value })}
+                className="w-full p-2 rounded border shadow"
+              />
+            </div>
           </div>
-          <div className="mb-4">
-            <label className="block mb-1 font-medium">Category</label>
+
+          <div>
+            <label className="block font-semibold">Lead Category</label>
             <select
-              name="lead_category"
-              value={form.lead_category}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
+              value={leadData.lead_category}
+              onChange={(e) => setLeadData({ ...leadData, lead_category: e.target.value })}
+              className="w-full p-2 rounded border shadow"
             >
-              <option value="Cold Lead">Cold Lead</option>
-              <option value="Warm Lead">Warm Lead</option>
-              <option value="Hot Lead">Hot Lead</option>
+              {["Cold Lead", "Warm Lead", "Hot Lead", "Bulk Lead", "Converted Lead", "Lost Lead"].map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
             </select>
           </div>
-          <div className="mb-4">
-            <label className="block mb-1 font-medium">Status</label>
+
+          <div>
+            <label className="block font-semibold">Status</label>
             <select
-              name="status"
-              value={form.status}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
+              value={leadData.status}
+              onChange={(e) => setLeadData({ ...leadData, status: e.target.value })}
+              className="w-full p-2 rounded border shadow"
             >
-              <option value="New">New</option>
-              <option value="Contacted">Contacted</option>
-              <option value="Follow-up">Follow-up</option>
-              <option value="Converted">Converted</option>
-              <option value="Not Interested">Not Interested</option>
+              {["New", "Contacted", "Interested", "Not Interested", "Follow-Up", "Converted", "Lost"].map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
             </select>
           </div>
-          <div className="mb-4">
-            <label className="block mb-1 font-medium">Address</label>
+
+          <div className="md:col-span-2">
+            <label className="block font-semibold">Address</label>
             <input
-              type="text"
-              name="address"
-              value={form.address}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
+              value={leadData.address}
+              onChange={(e) => setLeadData({ ...leadData, address: e.target.value })}
+              className="w-full p-2 rounded border shadow"
             />
           </div>
-          <div className="mb-4">
-            <label className="block mb-1 font-medium">Notes</label>
+
+          <div className="md:col-span-2">
+            <label className="block font-semibold">Notes</label>
             <textarea
-              name="notes"
-              value={form.notes}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
+              value={leadData.notes}
+              onChange={(e) => setLeadData({ ...leadData, notes: e.target.value })}
+              className="w-full p-2 rounded border shadow"
+              rows={3}
             />
           </div>
+        </div>
+
+        <div className="flex justify-center mt-8">
           <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+            onClick={handleAddLead}
+            className="bg-blue-600 text-white px-6 py-2 rounded shadow hover:bg-blue-700"
           >
             Add Lead
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );
