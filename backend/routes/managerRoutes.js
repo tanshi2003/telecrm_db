@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../config/db');
 const { authenticateToken } = require("../middleware/auth");
 const managerController = require('../controllers/managerController');
+const campaignController = require('../controllers/campaignController');
 
 // Middleware to check if user is a manager or admin
 const checkManagerAccess = (req, res, next) => {
@@ -251,69 +252,50 @@ router.post('/assign-users', authenticateToken, checkManagerAccess, (req, res) =
 
 // Assign leads to team members
 router.post('/assign-leads', authenticateToken, checkManagerAccess, async (req, res) => {
-    const { selectedMember, selectedLeads } = req.body;
-    
-    if (!selectedMember || !selectedLeads || !Array.isArray(selectedLeads) || selectedLeads.length === 0) {
-        return res.status(400).json({
-            success: false,
-            message: 'Invalid request parameters'
-        });
-    }
-
     try {
-        // Verify the user belongs to this manager's team
-        const verifyQuery = `
-            SELECT id FROM users 
-            WHERE id = ? AND manager_id = ? AND role IN ('caller', 'field_employee')
-        `;
-        db.query(verifyQuery, [selectedMember, req.user.id], (err, userResult) => {
-            if (err) {
-                console.error('Database error:', err);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Error verifying team member'
-                });
-            }
+        const { userId, leadIds } = req.body;
+        const managerId = req.user.id;
 
-            if (userResult.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Selected user is not part of your team'
-                });
-            }            // Update all selected leads
-            const placeholders = selectedLeads.map(() => '?').join(',');
-            const updateQuery = `
-                UPDATE leads 
-                SET assigned_to = ?,
-                    updated_at = NOW() 
-                WHERE id IN (${placeholders}) 
-                AND (assigned_to IS NULL 
-                    OR assigned_to IN (
-                        SELECT id FROM users WHERE manager_id = ?
-                    )
-                )
-            `;
+        // First, verify the user belongs to this manager's team
+        const [userCheck] = await db.promise().query(
+            'SELECT id FROM users WHERE id = ? AND manager_id = ?',
+            [userId, managerId]
+        );
 
-            db.query(updateQuery, [selectedMember, ...selectedLeads, req.user.id], (err, result) => {
-                if (err) {
-                    console.error('Database error:', err);
-                    return res.status(500).json({
-                        success: false,
-                        message: 'Error assigning leads'
-                    });
-                }
-
-                res.json({
-                    success: true,
-                    message: `Successfully assigned ${result.affectedRows} leads`
-                });
+        if (userCheck.length === 0) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only assign leads to your team members'
             });
+        }
+
+        // Then update leads in a separate query
+        const [result] = await db.promise().query(
+            `UPDATE leads 
+             SET assigned_to = ?,
+                 updated_at = NOW() 
+             WHERE id IN (?) 
+             AND (assigned_to IS NULL 
+                  OR assigned_to IN (
+                     SELECT id FROM (
+                         SELECT u.id 
+                         FROM users u 
+                         WHERE u.manager_id = ?
+                     ) AS subq
+                  ))`,
+            [userId, leadIds, managerId]
+        );
+
+        res.json({
+            success: true,
+            message: 'Leads assigned successfully',
+            affected: result.affectedRows
         });
     } catch (error) {
-        console.error('Error in lead assignment:', error);
+        console.error('Error assigning leads:', error);
         res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Failed to assign leads'
         });
     }
 });
@@ -495,42 +477,100 @@ router.get('/:managerId/team', authenticateToken, checkManagerAccess, async (req
 
 // Get team members for a specific manager
 router.get('/:managerId/team-members', authenticateToken, checkManagerAccess, async (req, res) => {
+    try {
+        const parsedManagerId = parseInt(req.params.managerId);
+        
+        const query = `
+            SELECT 
+                u.id,
+                u.name,
+                u.email,
+                u.phone_no,
+                u.role,
+                u.manager_id,
+                u.created_at,
+                u.updated_at,
+                u.location,
+                COALESCE(l.total_leads, 0) as total_leads,
+                COALESCE(c.campaigns_handled, 0) as campaigns_handled
+            FROM users u
+            LEFT JOIN (
+                SELECT assigned_to, COUNT(*) as total_leads
+                FROM leads
+                GROUP BY assigned_to
+            ) l ON u.id = l.assigned_to
+            LEFT JOIN (
+                SELECT user_id, COUNT(*) as campaigns_handled
+                FROM campaign_users cu
+                INNER JOIN campaigns c ON cu.campaign_id = c.id
+                WHERE c.status = 'active'
+                GROUP BY user_id
+            ) c ON u.id = c.user_id
+            WHERE u.manager_id = ?
+            AND u.role IN ('caller', 'field_employee')
+            AND u.status = 'active'
+            ORDER BY u.name ASC`;
+
+        const [teamMembers] = await db.promise().query(query, [parsedManagerId]);
+        
+        res.json({
+            success: true,
+            message: "Team members retrieved successfully",
+            data: teamMembers
+        });
+    } catch (error) {
+        console.error("Error fetching team members:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch team members",
+            error: error.message
+        });
+    }
+});
+
+// Get campaigns for a specific manager
+router.get('/:managerId/campaigns', authenticateToken, checkManagerAccess, async (req, res) => {
     const managerId = req.params.managerId;
     
-    // Ensure managers can only access their own team members
+    // Ensure managers can only access their own campaigns
     if (req.user.role === 'manager' && req.user.id !== parseInt(managerId)) {
         return res.status(403).json({
             success: false,
-            message: 'Access denied. You can only view your own team members.'
+            message: 'Access denied. You can only view your own campaigns.'
         });
-    }
-
-    const query = `
+    }    const query = `
         SELECT 
-            u.id,
-            u.name,
-            u.email,
-            u.role,
-            u.status
-        FROM users u
-        WHERE u.manager_id = ?
-        AND u.status = 'active'
-        ORDER BY u.name ASC
+            c.*,
+            COUNT(DISTINCT l.id) as total_leads,
+            COUNT(DISTINCT cu.user_id) as total_users
+        FROM campaigns c
+        LEFT JOIN leads l ON c.id = l.campaign_id
+        LEFT JOIN campaign_users cu ON c.id = cu.campaign_id
+        WHERE c.manager_id = ? OR c.id IN (
+            SELECT campaign_id 
+            FROM campaign_users 
+            WHERE user_id = ?
+        )
+        GROUP BY c.id
+        ORDER BY c.created_at DESC
     `;
 
     try {
-        const [teamMembers] = await db.query(query, [managerId]);
+        const [campaigns] = await db.promise().query(query, [managerId, managerId]);
         res.json({
             success: true,
-            data: teamMembers
+            data: campaigns
         });
     } catch (err) {
         console.error('Database error:', err);
         res.status(500).json({
             success: false,
-            message: 'Error fetching team members'
+            message: 'Error fetching campaigns'
         });
     }
 });
+
+// Add this new route
+router.get('/:managerId/campaign-performance', authenticateToken, checkManagerAccess, campaignController.getCampaignPerformance);
 
 module.exports = router;

@@ -55,13 +55,11 @@ const Lead1 = () => {
     }
   }, [navigate]);
 
-  // Fetch the user's name from localStorage
-  const storedUser = JSON.parse(localStorage.getItem("user"));
-
   // Fetch users and campaigns assigned to this manager (or all if admin)
   useEffect(() => {
     const fetchManagerUsersAndCampaigns = async () => {
       const token = localStorage.getItem("token");
+      const storedUser = JSON.parse(localStorage.getItem('user'));
       if (!token || !storedUser) return;
       try {
         if (role === "admin") {
@@ -138,13 +136,13 @@ const Lead1 = () => {
   };
 
   const handleAddLead = async () => {
-    // Validate required fields
-    if (!leadData.title || !leadData.status || !leadData.name || !leadData.phone_no) {
-      alert("Please fill all required fields: Title, Status, Name, and Phone.");
-      return;
-    }
-
     try {
+      // Validate required fields
+      if (!leadData.title || !leadData.status || !leadData.name || !leadData.phone_no) {
+        alert("Please fill all required fields: Title, Status, Name, and Phone.");
+        return;
+      }
+
       const token = localStorage.getItem("token");
       const storedUser = JSON.parse(localStorage.getItem("user"));
       
@@ -186,18 +184,24 @@ const Lead1 = () => {
         alert("✅ Lead added successfully!");
         // Clear form
         setLeadData({
-  title: "",
-  description: "",
-  status: "New",
-  lead_category: "",
-  name: "",
-  phone_no: "",
-  address: "",
-  assigned_to: "",
-  campaign_id: "",
-  notes: ""
-});
-        navigate("/leads");
+          title: "",
+          description: "",
+          status: "New",
+          lead_category: "",
+          name: "",
+          phone_no: "",
+          address: "",
+          assigned_to: "",
+          campaign_id: "",
+          notes: ""
+        });
+        
+        // Redirect based on role
+        if (role === "manager") {
+          navigate("/viewleads");  // Redirect to ViewLeadsbyM for managers
+        } else {
+          navigate("/leads");      // Redirect to leads for other roles
+        }
       } else {
         alert(response.data.message || "Failed to add lead");
       }

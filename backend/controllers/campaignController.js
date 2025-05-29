@@ -553,6 +553,120 @@ const campaignController = {
             }
         );
     },
+
+    // Get campaign performance metrics
+    getCampaignPerformance: async (req, res) => {
+        try {
+            const managerId = req.params.managerId;
+            const query = `
+                SELECT 
+                    c.id,
+                    c.name,
+                    c.status,
+                    c.start_date,
+                    c.end_date,
+                    c.created_at,
+                    COUNT(DISTINCT cu.user_id) as assigned_users_count,
+                    COUNT(DISTINCT l.id) as total_leads,
+                    COUNT(DISTINCT CASE WHEN l.status = 'Converted' THEN l.id END) as converted_leads,
+                    COALESCE(
+                        ROUND(
+                            (COUNT(DISTINCT CASE WHEN l.status = 'Converted' THEN l.id END) * 100.0) / 
+                            NULLIF(COUNT(DISTINCT l.id), 0)
+                        , 2)
+                    , 0) as conversion_rate,
+                    (
+                        SELECT JSON_ARRAYAGG(
+                            JSON_OBJECT(
+                                'id', u.id,
+                                'name', u.name,
+                                'role', u.role
+                            )
+                        )
+                        FROM campaign_users cu2 
+                        JOIN users u ON cu2.user_id = u.id 
+                        WHERE cu2.campaign_id = c.id
+                    ) as assigned_users
+                FROM campaigns c
+                LEFT JOIN campaign_users cu ON c.id = cu.campaign_id
+                LEFT JOIN leads l ON c.id = l.campaign_id
+                WHERE c.manager_id = ?
+                GROUP BY c.id
+                ORDER BY c.created_at DESC`;
+
+            const [campaigns] = await db.promise().query(query, [managerId]);
+
+            // Process the results
+            const processedCampaigns = campaigns.map(campaign => ({
+                ...campaign,
+                assigned_users: JSON.parse(campaign.assigned_users || '[]'),
+                assigned_users_count: parseInt(campaign.assigned_users_count || 0),
+                total_leads: parseInt(campaign.total_leads || 0),
+                converted_leads: parseInt(campaign.converted_leads || 0),
+                conversion_rate: parseFloat(campaign.conversion_rate || 0)
+            }));
+
+            res.json({
+                success: true,
+                data: processedCampaigns
+            });
+        } catch (error) {
+            console.error('Error fetching campaign performance:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to fetch campaign performance'
+            });
+        }
+    },
+
+    // Unassign user from campaign
+    unassignUserFromCampaign: (req, res) => {
+        const { campaign_id, user_id } = req.body;
+
+        // First check if user is assigned
+        db.query(
+          'SELECT * FROM campaign_users WHERE campaign_id = ? AND user_id = ?',
+          [campaign_id, user_id],
+          (err, results) => {
+            if (err) {
+              console.error('Database error:', err);
+              return res.status(500).json({
+                success: false,
+                message: 'Database error',
+                error: err.message
+              });
+            }
+
+            if (!results.length) {
+              return res.status(404).json({
+                success: false,
+                message: 'User is not assigned to this campaign'
+              });
+            }
+
+            // If user is assigned, remove them
+            db.query(
+              'DELETE FROM campaign_users WHERE campaign_id = ? AND user_id = ?',
+              [campaign_id, user_id],
+              (err, result) => {
+                if (err) {
+                  console.error('Database error:', err);
+                  return res.status(500).json({
+                    success: false,
+                    message: 'Failed to unassign user',
+                    error: err.message
+                  });
+                }
+
+                res.json({
+                  success: true,
+                  message: 'User unassigned successfully'
+                });
+              }
+            );
+          }
+        );
+    }
 };
 
 module.exports = campaignController;

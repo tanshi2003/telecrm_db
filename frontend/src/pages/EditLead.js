@@ -29,32 +29,26 @@ const EditLead = () => {
       try {
         const token = localStorage.getItem("token");
         const storedUser = JSON.parse(localStorage.getItem("user"));
-        const userRole = storedUser?.role;
-
-        // Different endpoints for managers vs other roles
-        const endpoint = userRole === "manager" 
-          ? `http://localhost:5000/api/managers/${storedUser.id}/team-members` 
-          : "http://localhost:5000/api/users";
-          
+        let endpoint = "http://localhost:5000/api/users";
+        
+        // If user is a manager, only fetch their team members
+        if (storedUser?.role === "manager") {
+          endpoint = `http://localhost:5000/api/managers/${storedUser.id}/team-members`;
+        }
+        
         const response = await axios.get(endpoint, {
           headers: { Authorization: `Bearer ${token}` }
         });
-
-        if (response.data?.data) {          if (userRole === "manager") {
-            // For managers, team members are already filtered by the backend
-            const teamMembers = response.data.data.map(user => ({
-              ...user,
-              displayName: `${user.name} (${user.role}) - Team Member`
-            }));
-            setUsers(teamMembers);
+        
+        if (response.data?.data) {
+          // For managers, team members are already filtered by the backend
+          if (storedUser?.role === "manager") {
+            setUsers(response.data.data);
           } else {
             // For other roles, filter to show only caller and field_employee
-            const eligibleUsers = response.data.data
-              .filter(user => user.role === "caller" || user.role === "field_employee")
-              .map(user => ({
-                ...user,
-                displayName: `${user.name} (${user.role})`
-              }));
+            const eligibleUsers = response.data.data.filter(
+              user => user.role === "caller" || user.role === "field_employee"
+            );
             setUsers(eligibleUsers);
           }
         }
@@ -252,11 +246,10 @@ const EditLead = () => {
                   value={lead.assigned_to || ""}
                   onChange={(e) => setLead({ ...lead, assigned_to: e.target.value })}
                   className="w-full p-2 border rounded"
-                >
-                  <option value="">Select User</option>
+                >                  <option value="">Select User</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.displayName}
+                      {u.name}
                     </option>
                   ))}
                 </select>

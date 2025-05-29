@@ -27,11 +27,23 @@ const AddLead = () => {
     setSuccess("");
     try {
       const token = localStorage.getItem("token");
-      axios.post(
+      await axios.post(
         "http://localhost:5000/api/leads/add-lead",
         form,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      setSuccess("Lead added successfully.");
+      setForm({
+        name: "",
+        phone_no: "",
+        lead_category: "Cold Lead",
+        status: "New",
+        address: "",
+        notes: "",
+      });
+      setTimeout(() => {
+        navigate("/leads"); // Navigate to the leads page after 2 seconds
+      }, 2000);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add lead.");
     }

@@ -138,11 +138,10 @@ function AppContent() {
                   <FieldDashboard />
                 </ProtectedRoute>
               }
-            />
-            <Route
+            />            <Route
               path="/manager-dashboard"
               element={
-                <ProtectedRoute allowedRoles={["manager"]}>
+                <ProtectedRoute allowedRoles={["manager", "admin"]}>
                   <ManagerDashboard />
                 </ProtectedRoute>
               }

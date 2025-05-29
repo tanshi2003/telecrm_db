@@ -20,7 +20,7 @@ router.get("/managers", roleMiddleware(['admin']), userController.getManagers);
 
 // Admin only routes
 router.post("/register", roleMiddleware(['admin']), userController.registerUser);
-router.get("/", roleMiddleware(['admin', 'manager']), userController.getUsers);
+router.get("/", roleMiddleware(['admin', 'manager', 'caller', 'field_employee']), userController.getUsers);
 
 // Routes with :id parameter
 router.get("/:id", roleMiddleware(['admin']), userController.getUserById);

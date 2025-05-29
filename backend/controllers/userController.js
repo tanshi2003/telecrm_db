@@ -122,8 +122,18 @@ exports.getUsers = async (req, res) => {
   try {
     const { managerId } = req.query;
     let query = `
-      SELECT u.*, 
-             COALESCE(m.name, '') as manager_name 
+      SELECT 
+        u.id,
+        u.name,
+        u.email,
+        u.phone_no,
+        u.role,
+        u.status,
+        u.manager_id,
+        u.location,
+        u.created_at,
+        u.updated_at,
+        COALESCE(m.name, '') as manager_name
       FROM Users u 
       LEFT JOIN Users m ON u.manager_id = m.id
       WHERE 1=1
@@ -137,24 +147,42 @@ exports.getUsers = async (req, res) => {
     }
 
     // If user is a manager, only show their team members
-    if (req.user.role === 'manager') {
+    if (req.user && req.user.role === 'manager') {
       query += ` AND u.manager_id = ?`;
       queryParams.push(req.user.id);
     }
 
+    // Exclude sensitive information
+    query += ` AND u.role != 'admin'`;
+
     query += ` ORDER BY u.name ASC`;
 
-    const [users] = await db.query(query, queryParams);
+    db.query(query, queryParams, (err, users) => {
+      if (err) {
+        console.error('Error in getUsers:', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to fetch users',
+          error: err.message
+        });
+      }
 
-    res.json({
-      success: true,
-      data: users
+      // Remove sensitive fields
+      const safeUsers = users.map(user => {
+        const { password, token, reset_token, reset_token_expiry, ...safeUser } = user;
+        return safeUser;
+      });
+
+      res.json({
+        success: true,
+        data: safeUsers
+      });
     });
   } catch (error) {
-    console.error('Error in getUsers:', error);
+    console.error('Unexpected error in getUsers:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch users',
+      message: 'Internal server error',
       error: error.message
     });
   }
