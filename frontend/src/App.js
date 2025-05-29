@@ -25,8 +25,9 @@ import UpdateCampaign from "./pages/UpdateCampaign";
 import ManageCampaigns from "./pages/ManageCampaigns";
 import Campaign from "./pages/Campaign";
 import ManageUsers from "./pages/ManageUser";
-import Search from "./pages/Search";  // Make sure path matches your file structure
-import { Filters } from "./components/Filters";  // Make sure path matches your file structure
+import Search from "./pages/Search";
+import FiltersComponent from "./components/Filters";
+import FiltersPage from "./pages/Filters";
 import AddUser from "./pages/Register";
 import AllUsers from "./pages/AllUsers";
 import AccessLogs from "./pages/AccessLogs";
@@ -61,7 +62,7 @@ function ScrollToTop() {
 }
 
 // Wrap the main app content in this component to handle route changes
-function AppContent() {
+const AppContent = () => {
   const { user } = useContext(AuthContext);
   const location = useLocation();
   const navigate = useNavigate();
@@ -73,6 +74,21 @@ function AppContent() {
       navigate("/admin");
     }
   }, [location, user, navigate]);
+
+  useEffect(() => {
+    // Redirect based on role when app loads
+    if (user) {
+      switch (user.role) {
+        case 'field_employee':
+          window.location.pathname === '/' && navigate('/field-dashboard');
+          break;
+        case 'caller':
+          window.location.pathname === '/' && navigate('/caller-dashboard');
+          break;
+        // ...other roles
+      }
+    }
+  }, [user]);
 
   return (
     <div className="flex min-h-screen">
@@ -299,7 +315,7 @@ function AppContent() {
               path="/filters" 
               element={
                 <ProtectedRoute allowedRoles={["admin", "manager", "caller", "field_employee"]}>
-                  <Filters />
+                  <FiltersPage />
                 </ProtectedRoute>
               } 
             />

@@ -593,3 +593,63 @@ exports.getUnassignedLeads = (req, res) => {
         res.json(responseFormatter(true, "Unassigned leads retrieved successfully", leads));
     });
 };
+
+// Update the updateLead function
+const updateLead = (req, res) => {
+  const leadId = req.params.id;
+  const updates = req.body;
+  const userRole = req.user.role;
+
+  // Different validation rules based on user role
+  if (userRole === 'field_employee' || userRole === 'caller') {
+    // For field employees and callers, only status and notes updates are allowed
+    if (!updates.status) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status is required for lead update'
+      });
+    }
+
+    // Only update status and notes
+    const query = `
+      UPDATE leads 
+      SET status = ?, 
+          notes = ?,
+          updated_by = ?,
+          updated_at = NOW()
+      WHERE id = ?
+    `;
+
+    db.query(
+      query,
+      [updates.status, updates.notes || '', req.user.id, leadId],
+      (err, result) => {
+        if (err) {
+          console.error('Lead update error:', err);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to update lead',
+            error: err.message
+          });
+        }
+
+        res.json({
+          success: true,
+          message: 'Lead updated successfully'
+        });
+      }
+    );
+
+  } else {
+    // For other roles (admin, manager), full validation applies
+    if (!updates.name || !updates.phone || !updates.status) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, phone number, and status are required'
+      });
+    }
+
+    // Full update query
+    // ...existing full update code...
+  }
+};

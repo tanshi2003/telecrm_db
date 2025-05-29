@@ -7,48 +7,64 @@ import { FaCheckCircle, FaTimes } from "react-icons/fa";
 
 const AssignManager = () => {
   const [managers, setManagers] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [teams, setTeams] = useState([]);
+  const [unassignedUsers, setUnassignedUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedManager, setSelectedManager] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
 
-  const fetchTeamsData = async () => {
+  // Update the fetchData function to handle users who are both team members and managers
+  const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
-      // First get all managers
-      const managersRes = await axios.get("http://localhost:5000/api/users?role=manager", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
       
-      const managersData = managersRes.data.data || [];
-      setManagers(managersData);
-
-      // Get all users to map team members
+      // Fetch all users first
       const usersRes = await axios.get("http://localhost:5000/api/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       const allUsers = usersRes.data.data || [];
-      const nonManagerUsers = allUsers.filter(user => user.role !== 'manager');
-      setUsers(nonManagerUsers);
-      
-      // Create teams structure
-      const teamsData = managersData.map(manager => ({
-        ...manager,
-        team: allUsers.filter(user => user.manager_id === manager.id)
-      }));
-      
-      setTeams(teamsData);
+
+      // Get managers (anyone with role 'manager')
+      const managersData = allUsers.filter(user => user.role === 'manager');
+
+      // Get unassigned users (not managers and no manager_id)
+      const unassigned = allUsers.filter(user => 
+        user.role !== 'manager' && !user.manager_id
+      );
+
+      // Create managers with their team members
+      const managersWithTeams = managersData.map(manager => {
+        // Get team members for this manager
+        const teamMembers = allUsers.filter(user => user.manager_id === manager.id);
+        
+        // If the manager is also assigned to another manager's team, include that info
+        const isAlsoTeamMember = allUsers.find(user => 
+          user.role === 'manager' && 
+          user.id === manager.id && 
+          user.manager_id
+        );
+
+        return {
+          ...manager,
+          team: teamMembers,
+          assignedTo: isAlsoTeamMember ? {
+            manager_id: manager.manager_id,
+            managerName: allUsers.find(u => u.id === manager.manager_id)?.name
+          } : null
+        };
+      });
+
+      setManagers(managersWithTeams);
+      setUnassignedUsers(unassigned);
     } catch (err) {
-      toast.error("Failed to fetch teams data");
+      toast.error("Failed to fetch data");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTeamsData();
+    fetchData();
   }, []);
 
   // Clear success message after 5 seconds
@@ -100,7 +116,7 @@ const AssignManager = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
       
-      const user = users.find(u => u.id === userId);
+      const user = unassignedUsers.find(u => u.id === userId);
       const manager = managers.find(m => m.id === parseInt(managerId));
       
       if (!user || !manager) {
@@ -121,13 +137,13 @@ const AssignManager = () => {
       if (response.data.success) {
         // Update users state
         const updatedUser = { ...user, manager_id: parseInt(managerId) };
-        setUsers(prevUsers => 
+        setUnassignedUsers(prevUsers => 
           prevUsers.map(u => u.id === userId ? updatedUser : u)
         );
 
         // Update teams state
-        setTeams(prevTeams => 
-          prevTeams.map(team => {
+        setManagers(prevManagers => 
+          prevManagers.map(team => {
             if (team.id === parseInt(managerId)) {
               return {
                 ...team,
@@ -161,7 +177,60 @@ const AssignManager = () => {
       showToast(err.response?.data?.message || "Failed to assign manager. Please try again.", "error");
     } finally {
       setLoading(false);
-      await fetchTeamsData();
+      await fetchData();
+    }
+  };
+
+  const handleReassign = async (userId) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      
+      // Find the user in all teams
+      let userToReassign = null;
+      let currentManager = null;
+      
+      managers.forEach(manager => {
+        const foundMember = manager.team.find(member => member.id === userId);
+        if (foundMember) {
+          userToReassign = foundMember;
+          currentManager = manager;
+        }
+      });
+
+      if (!userToReassign || !currentManager) {
+        showToast("User not found in any team", "error");
+        return;
+      }
+
+      // Remove user from their current team
+      const response = await axios.put(
+        `http://localhost:5000/api/users/${userId}/assign-manager`,
+        { manager_id: null },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        // Update the managers state by removing the user from their team
+        setManagers(prevManagers => 
+          prevManagers.map(manager => ({
+            ...manager,
+            team: manager.team.filter(member => member.id !== userId)
+          }))
+        );
+
+        // Add user to unassigned users
+        setUnassignedUsers(prev => [...prev, userToReassign]);
+
+        showToast(`${userToReassign.name} has been removed from ${currentManager.name}'s team`, "success");
+        setSuccessMessage(`${userToReassign.name} has been removed from ${currentManager.name}'s team`);
+      }
+    } catch (err) {
+      console.error("Reassignment error:", err);
+      showToast(err.response?.data?.message || "Failed to remove team member", "error");
+    } finally {
+      setLoading(false);
+      await fetchData(); // Refresh data to ensure everything is in sync
     }
   };
 
@@ -192,159 +261,129 @@ const AssignManager = () => {
       <Sidebar />
       <div className="flex-1 ml-64 mt-16 p-8 bg-gray-100">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Assign/Reassign Manager</h1>
+          <h1 className="text-2xl font-bold">Team Management</h1>
           <BackButton />
         </div>
 
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            className: '',
-            style: {
-              marginTop: '70px',
-              background: '#363636',
-              color: '#fff',
-              zIndex: 9999,
-            },
-          }}
-        />
+        <Toaster position="top-center" />
 
-        {/* Success Message */}
         {successMessage && (
-          <SuccessAlert 
-            message={successMessage} 
-            onClose={() => setSuccessMessage("")}
-          />
+          <SuccessAlert message={successMessage} onClose={() => setSuccessMessage("")} />
         )}
 
         {loading ? (
           <div className="text-center py-4">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
-            <p className="mt-2 text-gray-600">Updating team structure...</p>
+            <p className="mt-2 text-gray-600">Loading team data...</p>
           </div>
         ) : (
           <div className="space-y-6">
             {/* Unassigned Users Section */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-4">Unassigned Users</h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assign To</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {users.filter(user => !user.manager_id).map((user) => (
-                      <tr key={user.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">{user.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">{user.email}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm capitalize">{user.role}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <select
-                            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                            value={selectedManager[user.id] || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setSelectedManager(prev => ({
-                                ...prev,
-                                [user.id]: value
-                              }));
-                            }}
-                          >
-                            <option value="">Select Manager</option>
-                            {managers.map((manager) => (
-                              <option key={manager.id} value={manager.id}>
-                                {manager.name}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <button
-                            className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:bg-gray-400"
-                            onClick={() => handleAssign(user.id, selectedManager[user.id])}
-                            disabled={!selectedManager[user.id]}
-                          >
-                            Assign
-                          </button>
-                        </td>
+            {unassignedUsers.length > 0 && (
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h2 className="text-xl font-semibold mb-4 text-red-600">Unassigned Users</h2>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assign To</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {unassignedUsers.map((user) => (
+                        <tr key={user.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">{user.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
+                          <td className="px-6 py-4 whitespace-nowrap capitalize">{user.role}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <select
+                              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                              value={selectedManager[user.id] || ""}
+                              onChange={(e) => {
+                                setSelectedManager(prev => ({
+                                  ...prev,
+                                  [user.id]: e.target.value
+                                }));
+                              }}
+                            >
+                              <option value="">Select Manager</option>
+                              {managers.map((manager) => (
+                                <option key={manager.id} value={manager.id}>{manager.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <button
+                              className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:bg-gray-400"
+                              onClick={() => handleAssign(user.id, selectedManager[user.id])}
+                              disabled={!selectedManager[user.id]}
+                            >
+                              Assign
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Teams Section */}
+            {/* Managers and Their Teams Section */}
             <div className="space-y-6">
-              {teams.map((manager) => (
+              {managers.map((manager) => (
                 <div key={manager.id} className="bg-white rounded-lg shadow-md p-6">
                   <div className="border-b pb-4 mb-4">
                     <h2 className="text-xl font-semibold text-blue-600">
                       {manager.name}'s Team
                     </h2>
-                    <p className="text-gray-600">
-                      Email: {manager.email} | Total Team Members: {manager.team.length}
-                    </p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-gray-600">
+                        Manager Email: {manager.email} | Team Size: {manager.team.length}
+                      </p>
+                      
+                      {/* Show if manager is assigned to another team */}
+                      {manager.assignedTo && (
+                        <div className="text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
+                          Reports to: {manager.assignedTo.managerName}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {manager.team.map((member) => (
-                        <div key={member.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-medium">{member.name}</h4>
-                              <p className="text-sm text-gray-600">Role: {member.role}</p>
-                              <p className="text-sm text-gray-600">Email: {member.email}</p>
-                            </div>
-                            <div className="ml-4">
-                              <select
-                                className="block w-full px-2 py-1 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                value={selectedManager[member.id] || ""}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  setSelectedManager(prev => ({
-                                    ...prev,
-                                    [member.id]: value
-                                  }));
-                                }}
-                              >
-                                <option value="">Change Manager</option>
-                                {managers
-                                  .filter(m => m.id !== manager.id)
-                                  .map((m) => (
-                                    <option key={m.id} value={m.id}>
-                                      {m.name}
-                                    </option>
-                                  ))}
-                              </select>
-                              {selectedManager[member.id] && (
-                                <button
-                                  className="mt-2 w-full px-2 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                                  onClick={() => {
-                                    const newManagerId = selectedManager[member.id];
-                                    const newManager = managers.find(m => m.id === parseInt(newManagerId));
-                                    if (newManager) {
-                                      handleAssign(member.id, newManagerId);
-                                    }
-                                  }}
-                                >
-                                  Reassign
-                                </button>
-                              )}
-                            </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {manager.team.map((member) => (
+                      <div key={member.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex justify-between">
+                          <div>
+                            <h4 className="font-medium">{member.name}</h4>
+                            <p className="text-sm text-gray-600">Role: {member.role}</p>
+                            <p className="text-sm text-gray-600">Email: {member.email}</p>
+                            {member.role === 'manager' && (
+                              <p className="text-sm text-blue-600 mt-1">
+                                Also manages a team
+                              </p>
+                            )}
+                          </div>
+                          <div className="ml-2">
+                            <button
+                              onClick={() => handleReassign(member.id)}
+                              className="text-sm text-red-600 hover:text-red-800"
+                            >
+                              Remove
+                            </button>
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                     {manager.team.length === 0 && (
-                      <p className="text-gray-500 italic">No team members assigned yet</p>
+                      <p className="col-span-full text-gray-500 italic text-center py-4">
+                        No team members assigned
+                      </p>
                     )}
                   </div>
                 </div>

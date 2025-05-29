@@ -1,7 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"; // added
-import { FaUser, FaTasks, FaBullhorn, FaChartLine } from "react-icons/fa"; // added icons
+import { FaUser, FaTasks, FaBullhorn, FaChartLine, FaPencilAlt } from "react-icons/fa"; // added icons
 import Sidebar from "../components/Sidebar";
+
+const LEAD_STATUSES = [
+  "New",
+  "Contacted",
+  "Follow-up",
+  "Meeting Scheduled",
+  "Proposal Sent",
+  "Negotiating",
+  "Won",
+  "Lost",
+  "Not Interested",
+  "Wrong Number",
+  "Invalid Lead",
+  "Duplicate"
+];
 
 const FieldDashboard = () => {
   const [user, setUser] = useState(null);
@@ -13,6 +28,7 @@ const FieldDashboard = () => {
   const [leadStatus, setLeadStatus] = useState("");
   const [leadNotes, setLeadNotes] = useState("");
   const [updateMessage, setUpdateMessage] = useState(""); // new state for success message
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const navigate = useNavigate(); // added
 
@@ -80,48 +96,50 @@ const FieldDashboard = () => {
   };
 
   const handleUpdateLead = async () => {
-    if (!selectedLead) {
-      console.log("No lead selected");
-      return;
-    }
+    if (!selectedLead) return;
+    
     const token = user.token || localStorage.getItem("token");
-    console.log("Updating lead", selectedLead.id, "with token:", token);
-
+    
     try {
-      const response = await fetch(`/api/leads/${selectedLead.id}`, {
+      // Include existing lead data to maintain required fields
+      const updateData = {
+        name: selectedLead.name,        // Keep existing name
+        phone_no: selectedLead.phone_no, // Keep existing phone
+        status: leadStatus,             // New status
+        notes: leadNotes,               // New notes
+        updated_by: user.id
+      };
+
+      console.log('Updating lead with data:', updateData);
+
+      const response = await fetch(`http://localhost:5000/api/leads/${selectedLead.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ status: leadStatus, notes: leadNotes })
+        body: JSON.stringify(updateData)
       });
-      console.log("PUT response status:", response.status);
-      if (!response.ok) {
-        throw new Error(`Error updating lead: ${response.status}`);
-      }
-      
-      // Refetch leads after update
-      const res = await fetch(`/api/users/${user.id}/leads`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log("Refetch leads response status:", res.status);
-      if (!res.ok) {
-        throw new Error(`Error re-fetching leads: ${res.status}`);
-      }
-      const data = await res.json();
-      setLeads(data.data || []);
-      setSelectedLead(null);
 
-      // Set and log success message, then clear after 3 seconds
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Error updating lead: ${response.status}`);
+      }
+
+      // Update local state
+      setLeads(leads.map(lead => 
+        lead.id === selectedLead.id 
+          ? { ...lead, status: leadStatus, notes: leadNotes }
+          : lead
+      ));
+      
+      setSelectedLead(null);
       setUpdateMessage("Lead updated successfully");
-      console.log("Update message set");
-      setTimeout(() => {
-        setUpdateMessage("");
-        console.log("Update message cleared");
-      }, 3000);
+      setTimeout(() => setUpdateMessage(""), 3000);
+
     } catch (err) {
       console.error("Update error:", err);
+      setUpdateMessage(err.message || "Failed to update lead");
     }
   };
 
@@ -151,92 +169,72 @@ const FieldDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
           {/* Assigned Leads Tile */}
-          <div className="bg-white p-4 rounded shadow-md hover:shadow-lg transition transform duration-300 col-span-1 flex flex-col">
-            <h2 className="text-xl font-semibold mb-2 flex items-center">
-              <FaUser className="mr-2" />
+          <div className="bg-white rounded-lg shadow-lg p-6 col-span-2">
+            <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-800">
+              <FaUser className="mr-2 text-blue-600" />
               Assigned Leads
             </h2>
-            {selectedLead ? (
-              // Update form embedded within the tile
+            
+            {leads.length > 0 ? (
               <>
-                <div className="mb-2">
-                  <label className="block mb-1 font-medium">Status</label>
-                  <select
-                    value={leadStatus}
-                    onChange={e => setLeadStatus(e.target.value)}
-                    className="border rounded px-2 py-1 w-full"
-                  >
-                    <option>New</option>
-                    <option>Contacted</option>
-                    <option>Follow-up</option>
-                    <option>Converted</option>
-                    <option>Not Interested</option>
-                  </select>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full bg-white">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="py-3 px-4 text-left text-sm font-semibold text-gray-600">Name</th>
+                        <th className="py-3 px-4 text-left text-sm font-semibold text-gray-600">Status</th>
+                        <th className="py-3 px-4 text-left text-sm font-semibold text-gray-600">Notes</th>
+                        <th className="py-3 px-4 text-left text-sm font-semibold text-gray-600">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {leads.map(lead => (
+                        <tr key={lead.id} className="hover:bg-gray-50">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center">
+                              <FaUser className="mr-2 text-gray-400" />
+                              <span className="font-medium text-gray-700">{lead.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                              ${lead.status === "New" ? "bg-blue-100 text-blue-800" :
+                              lead.status === "Contacted" ? "bg-yellow-100 text-yellow-800" :
+                              lead.status === "Follow-up" ? "bg-purple-100 text-purple-800" :
+                              lead.status === "Converted" ? "bg-green-100 text-green-800" :
+                              "bg-gray-100 text-gray-800"}`}>
+                              {lead.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-500">
+                            {lead.notes || "No notes"}
+                          </td>
+                          <td className="py-3 px-4">
+                            <button
+                              onClick={() => {
+                                setSelectedLead(lead);
+                                setLeadStatus(lead.status);
+                                setLeadNotes(lead.notes || '');
+                                setIsModalOpen(true);
+                              }}
+                              className="inline-flex items-center px-2 py-1 border border-transparent rounded-md 
+                                         text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 
+                                         focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                              <FaPencilAlt className="mr-1" />
+                              Update
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="mb-2">
-                  <label className="block mb-1 font-medium">Notes</label>
-                  <textarea
-                    value={leadNotes}
-                    onChange={e => setLeadNotes(e.target.value)}
-                    className="border rounded px-2 py-1 w-full"
-                  />
-                </div>
-                <div className="flex justify-end gap-2 mt-4">
-                  <button
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                    onClick={handleUpdateLead}
-                  >
-                    Save
-                  </button>
-                  <button
-                    className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
-                    onClick={() => setSelectedLead(null)}
-                  >
-                    Cancel
-                  </button>
-                </div>
+                
+                {/* Removed bulk update button and logic since it's not needed */}
               </>
             ) : (
-              // Show the list of leads with icons; no update panel visible
-              <>
-                <p className="mb-2 text-sm text-gray-700">
-                  Manage and update your assigned leads to track performance.
-                </p>
-                {leads.length > 0 ? (
-                  <ul className="flex-grow">
-                    {leads.slice(0, 5).map(lead => (
-                      <li key={lead.id} className="mb-2 flex justify-between items-center">
-                        <span className="flex items-center">
-                          <FaUser className="mr-1" />
-                          {lead.name}{" "}
-                          <span className={`ml-2 px-2 py-1 rounded text-xs ${
-                            lead.status === "New" ? "bg-blue-200" :
-                            lead.status === "Contacted" ? "bg-yellow-200" :
-                            lead.status === "Follow-up" ? "bg-purple-200" :
-                            lead.status === "Converted" ? "bg-green-300" :
-                            lead.status === "Not Interested" ? "bg-red-200" :
-                            "bg-gray-200"
-                          }`}>
-                            {lead.status}
-                          </span>
-                        </span>
-                        {/* Removed individual Update button */}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500 flex-grow">No leads assigned yet.</p>
-                )}
-                <div className="flex justify-center mt-4">
-                  {/* On click, set selectedLead to the first lead to trigger update form */}
-                  <button 
-                    className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                    onClick={() => leads.length > 0 && setSelectedLead(leads[0])}
-                  >
-                    Manage Leads
-                  </button>
-                </div>
-              </>
+              <p className="text-gray-500 text-center py-8">No leads assigned yet.</p>
             )}
           </div>
           
@@ -308,25 +306,86 @@ const FieldDashboard = () => {
               Performance Summary
             </h2>
             <p className="mb-2 text-sm text-gray-700">
-              Review overall performance and key metrics.
+              Check your daily tasks and update progress.
             </p>
-            <ul className="flex-grow space-y-2 text-gray-800">
-              <li>Total Leads Handled: <b>{totalLeads}</b></li>
-              <li>Leads Converted: <b>{convertedLeads}</b></li>
-              <li>Conversion Rate: <b>{conversionRate}%</b></li>
-            </ul>
+            {tasks.length > 0 ? (
+              <ul className="flex-grow">
+                {tasks.slice(0, 5).map(task => (
+                  <li key={task.id} className="mb-2">{task.task || task.name}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500 flex-grow">No tasks for today.</p>
+            )}
             <div className="flex justify-center mt-4">
               <button 
                 className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
                 onClick={() => navigate("/performance")}
               >
-                View Summary
+                View Performance
               </button>
             </div>
           </div>
-          
         </div>
-        {/* Remove separate update panel outside the grid */}
+        
+        {/* Update Modal */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Update Lead: {selectedLead?.name}
+                </h3>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status
+                  </label>
+                  <select
+                    value={leadStatus}
+                    onChange={(e) => setLeadStatus(e.target.value)}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    {LEAD_STATUSES.map(status => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    value={leadNotes}
+                    onChange={(e) => setLeadNotes(e.target.value)}
+                    className="w-full p-2 border rounded-md"
+                    rows="3"
+                    placeholder="Add notes..."
+                  />
+                </div>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setSelectedLead(null);
+                    }}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleUpdateLead();
+                      setIsModalOpen(false);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    Update
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
