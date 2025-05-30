@@ -106,20 +106,7 @@ const AdminDashboard = () => {
             </button>
           </div>
 
-          {/* Reports Tile */}
-          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
-            <h2 className="text-xl font-semibold mb-4 flex items-center">
-              <FaChartLine className="mr-2" />
-              Reports
-            </h2>
-            <p>Performance summaries by user, team, or campaign. Export data and download PDFs.</p>
-            <button
-              className="mt-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              onClick={() => handleNavigation("/Report")}
-            >
-              View Reports
-            </button>
-          </div>
+          
         </div>
       </div>
     </div>

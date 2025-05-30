@@ -11,8 +11,9 @@ import {
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { AuthContext } from "../context/AuthContext";
+import BackButton from "../components/BackButton";
 
-const ActivityCalls = () => {
+const Activities1 = () => {
   
   const [leads, setLeads] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
@@ -133,10 +134,13 @@ const ActivityCalls = () => {
       <Sidebar role={user?.role || "admin"} />
       <div className="ml-64 flex-grow">
         <Navbar />
+        
         <div className="flex h-[calc(100vh-4rem)] mt-16">
+          
           {/* Lead List */}
           <div className="w-1/3 bg-gray-50 p-4 overflow-y-auto border-r">
-            <h2 className="text-xl font-bold mb-4">Leads</h2>
+            <h2 className="text-xl font-bold mb-4">My calls</h2>
+            
             {loading ? (
               <p>Loading...</p>
             ) : leads.length === 0 ? (
@@ -169,13 +173,19 @@ const ActivityCalls = () => {
           </div>
 
           {/* Lead Detail Panel */}
+          
           <div className="w-2/3 p-6 bg-white overflow-y-auto">
+          
             {selectedLead ? (
               isEditing ? (
                 // --- EDIT FORM ---
+                
                 <form onSubmit={handleEditFormSubmit} className="border p-4 rounded shadow mb-4 space-y-3">
+                  
                   <h3 className="text-lg font-semibold text-purple-600 mb-2">Edit Lead</h3>
+                  
                   <div>
+                    
                     <label className="block text-sm">Name</label>
                     <input
                       type="text"
@@ -379,4 +389,4 @@ const ActivityCalls = () => {
     </div>
   );
 };
-export default ActivityCalls;
+export default Activities1;

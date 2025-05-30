@@ -44,6 +44,7 @@ app.use(cors({
 }));
 
 // Middleware
+app.use('/api', viewsRoutes);
 app.use(express.json()); // Using built-in express.json instead of body-parser
 app.use(express.urlencoded({ extended: true })); // Using built-in express.urlencoded
 

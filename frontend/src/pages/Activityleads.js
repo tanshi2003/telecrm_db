@@ -11,6 +11,7 @@ import {
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { AuthContext } from "../context/AuthContext";
+import BackButton from "../components/BackButton";
 
 const Activities2 = () => {
   const [leads, setLeads] = useState([]);
@@ -133,8 +134,9 @@ const Activities2 = () => {
         <Navbar />
         <div className="flex h-[calc(100vh-4rem)] mt-16">
           {/* Lead List */}
+          <BackButton/>
           <div className="w-1/3 bg-gray-50 p-4 overflow-y-auto border-r">
-            <h2 className="text-xl font-bold mb-4">Leads</h2>
+            <h2 className="text-xl font-bold mb-4">My Leads</h2>
             {loading ? (
               <p>Loading...</p>
             ) : leads.length === 0 ? (

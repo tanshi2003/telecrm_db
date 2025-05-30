@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
+import BackButton from "../components/BackButton";
 const COLORS = ["#FF4C4C", "#FFC107", "#00C49F", "#8884d8", "#FF8042", "#82ca9d"];
+
 
 export default function Reports2() {
   const [user, setUser] = useState(null);
@@ -64,63 +66,102 @@ export default function Reports2() {
   if (!user) return null;
 
   return (
-    <div className="flex min-h-screen overflow-hidden">
-      <Sidebar user={user} />
-      <div className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
-        {/* Header Section */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Call Report</h1>
-          <button
-            onClick={() => handleNavigation("/admin/settings")}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            System Settings
-          </button>
+  <div className="flex min-h-screen overflow-hidden bg-gradient-to-br from-blue-900 to-blue-300">
+    <Sidebar user={user} />
+    <div className="flex-1 flex flex-col ml-64 mt-16 p-8 bg-gray-100">
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex items-center gap-16">
+          <h1 className="text-3xl font-bold text-black drop-shadow">Call Report</h1>
         </div>
-        {/* Filters and Charts */}
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-                      
-          </div>
-          {/* Charts */}
-          <div className="grid grid-cols-2 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-lg font-semibold mb-4">Bar Chart</h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={barData}>
-                  <XAxis dataKey="status" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#8884d8">
-                    {barData.map((_entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+        <BackButton />
+      </div>
+      {/* Charts */}
+      <div className="grid grid-cols-2 gap-8">
+    
+{/* Bar Chart Card */}
+<div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
+  <h2 className="text-lg font-semibold mb-4">Bar Chart</h2>
+  {/* Removed overflow-x-auto and minWidth for fixed chart */}
+  <ResponsiveContainer width="100%" height={300}>
+    <BarChart
+      data={barData}
+      margin={{ top: 10, right: 30, left: 10, bottom: 40 }}
+      barSize={40}
+    >
+      <XAxis tick={false} />
+      <YAxis stroke="#333" strokeWidth={2} tick={{ fontSize: 15 }} />
+      <Tooltip />
+      <Bar dataKey="count">
+        {barData.map((_entry, index) => (
+          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+        ))}
+      </Bar>
+    </BarChart>
+  </ResponsiveContainer>
+</div>
+       
+        {/* Pie Chart Card */}
+        <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
+          <h2 className="text-lg font-semibold mb-4">Pie Chart</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={pieData}
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                dataKey="count"
+                labelLine={false}
+                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, count }) => {
+                  // Center label in slice
+                  const RADIAN = Math.PI / 180;
+                  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                  return (
+                    <text
+                      x={x}
+                      y={y}
+                      fill="#333"
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontSize={14}
+                      fontWeight="bold"
+                    >
+                      {count}
+                    </text>
+                  );
+                }}
+              >
+                {pieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+           </div>
+        
+      
+      {/* Color Legend Below Both Charts */}
+      <div className="flex justify-center mt-2">
+        <div className="flex flex-wrap gap-2 bg-white rounded-lg shadow p-2 border max-w-6xl w-full justify-center">
+          {pieData.map((entry, index) => (
+            <div key={entry.status} className="flex items-center gap-2">
+              <span
+                className="inline-block w-4 h-4 rounded"
+                style={{ backgroundColor: COLORS[index % COLORS.length] }}
+              ></span>
+              <span className="font-semibold">{entry.status}</span>
+              <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">
+                {entry.count}
+              </span>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-lg font-semibold mb-4">Pie Chart</h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    dataKey="count"
-                    label
-                  >
-                    {pieData.map((_entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
-    </div>
-  );
+  </div>
+  </div>
+);
 }
