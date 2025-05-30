@@ -5,12 +5,14 @@ import Sidebar from "../components/Sidebar";
 import BackButton from "../components/BackButton";
 import { FaPhone } from "react-icons/fa";
 
+const BASE_URL = "http://localhost:5000";
+
 const AddLead = () => {
   const [leadData, setLeadData] = useState({
     name: "",
     phone_no: "",
-    lead_category: "Cold Lead",
-    status: "New",
+    lead_category: "",
+    status: "",
     address: "",
     notes: "",
   });
@@ -26,7 +28,7 @@ const AddLead = () => {
     const allowedRoles = ["admin", "manager", "caller", "field_employee"];
 
     if (!token || !allowedRoles.includes(role)) {
-      navigate("/login");
+      navigate("/leads");
       return;
     }
 
@@ -35,6 +37,33 @@ const AddLead = () => {
     }
   }, [navigate, role, storedUser]);
 
+  // Add at the top of your component
+  useEffect(() => {
+    const checkStorage = () => {
+      console.log('Token:', localStorage.getItem('token'));
+      console.log('User:', localStorage.getItem('user'));
+      console.log('Role:', localStorage.getItem('role'));
+    };
+
+    checkStorage();
+    // Remove this in production
+  }, []);
+
+  // Log auth state every 2 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const authData = {
+        token: localStorage.getItem('token'),
+        user: localStorage.getItem('user'),
+        role: localStorage.getItem('role')
+      };
+      console.log('Auth state:', authData);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Update handleAddLead function
   const handleAddLead = async () => {
     const { name, phone_no, lead_category, status, address, notes } = leadData;
 
@@ -45,52 +74,51 @@ const AddLead = () => {
 
     try {
       const token = localStorage.getItem("token");
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      const currentRole = localStorage.getItem("role");
+
       if (!token || !storedUser) {
-        alert("Authentication error. Please log in again.");
-        navigate("/login");
+        alert("Session expired. Please login again.");
         return;
       }
 
       const leadPayload = {
         name,
         phone_no: phone_no.startsWith("+91") ? phone_no : `+91${phone_no}`,
-        lead_category,
-        status,
+        lead_category: lead_category || "Cold Lead",
+        status: status || "New",
         address,
         notes,
-        admin_id: role === "admin" ? storedUser.id : null,
-        manager_id: role === "manager" ? storedUser.id : null,
+        created_by: storedUser.id
       };
 
-      const response = await axios.post("http://localhost:5000/api/leads/add-lead", leadPayload, {
+      const response = await axios({
+        method: 'post',
+        url: `${BASE_URL}/api/leads/add-lead`,
+        data: leadPayload,
         headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (response.data.success) {
-        alert("✅ Lead added successfully!");
-        setLeadData({
-          name: "",
-          phone_no: "",
-          lead_category: "Cold Lead",
-          status: "New",
-          address: "",
-          notes: "",
-        });
-        // Redirect to caller dashboard after adding a lead
-        if (role === "caller") {
-          navigate("/caller/dashboard");
-        } else {
-          navigate("/leads");
+        alert("Lead added successfully!");
+        
+        // Navigate based on role without clearing storage
+        switch(currentRole) {
+          case "field_employee":
+            navigate("/field_employee-dashboard");
+            break;
+          case "caller":
+            navigate("/caller-dashboard");
+            break;
+          default:
+            navigate("/leads");
         }
-      } else {
-        alert(response.data.message || "Failed to add lead");
       }
     } catch (error) {
-      console.error("Error adding lead:", error.response?.data || error);
-      alert(error.response?.data?.message || "Failed to add lead.");
+      console.error("Add lead error:", error);
+      alert(error.response?.data?.message || "Failed to add lead");
     }
   };
 

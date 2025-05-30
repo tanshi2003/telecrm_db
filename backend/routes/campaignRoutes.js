@@ -41,4 +41,37 @@ router.delete("/:id/remove-users", roleMiddleware(["admin", "manager"]), campaig
 // Unassign users from campaign (new route)
 router.post('/unassign', roleMiddleware(["admin", "manager"]), campaignController.unassignUserFromCampaign);
 
+// Update the campaigns with leads route
+router.get("/:userId/campaigns/with-leads", authenticateToken, async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const [campaigns] = await db.query(`
+            SELECT 
+                c.id, 
+                c.name, 
+                c.description, 
+                c.created_at,
+                c.start_date,
+                c.end_date,
+                c.status,
+                u.name as manager_name,
+                COUNT(DISTINCT l.id) as lead_count
+            FROM campaigns c
+            INNER JOIN campaign_users cu ON c.id = cu.campaign_id
+            LEFT JOIN users u ON c.manager_id = u.id
+            LEFT JOIN leads l ON c.id = l.campaign_id
+            WHERE cu.user_id = ?
+            GROUP BY c.id, c.name, c.description, c.created_at, c.start_date, c.end_date, c.status, u.name
+        `, [userId]);
+
+        res.json({
+            success: true,
+            data: campaigns || []
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ success: false, message: "Error fetching campaigns" });
+    }
+});
+
 module.exports = router;
