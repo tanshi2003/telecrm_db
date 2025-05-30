@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
-import { FaUserPlus } from "react-icons/fa";
-import { HiOutlinePhoneMissedCall } from "react-icons/hi";
+import { FaChartLine, FaPhoneVolume, FaClipboardList } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import { MdLeaderboard } from "react-icons/md";
 import BackButton from "../components/BackButton";
 
 const Reports = () => {
@@ -43,64 +41,61 @@ const Reports = () => {
   
     console.log("AdminDashboard - Rendering dashboard");
   return (
-    <div className="flex min-h-screen overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar user={user} />
-
-      {/* Main Content */}
-      <div className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
+    <div className="flex min-h-screen bg-gray-100">
+      {/* Sidebar */}      <Sidebar user={user} />
+      <div className="flex-1 p-8 ml-64 mt-16">
         {/* Header Section */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Reports</h1>
+          <h1 className="text-2xl font-bold">Reports</h1>
           <BackButton/>
           </div>        
-        {/* Dashboard Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Dashboard Cards */}        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Leaderboard */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">
-              <MdLeaderboard className="text-blue-600 inline-block mr-2" />
-                Leaderboard
-            </h2>
-            <p>Register, assign roles, deactivate/activate users, and manage employee profiles.</p>
-          
-                 <button
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              onClick={() => handleNavigation(`/report-leaderboard/42`)}
-            >
-              View
-            </button>
-
+          <div 
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg cursor-pointer transition-all duration-300 transform hover:-translate-y-1"
+            onClick={() => handleNavigation(`/report-leaderboard/42`)}
+          >
+            <div className="flex items-center mb-4">
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <FaChartLine className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Leaderboard</h3>
+            <p className="text-gray-600 text-sm">
+              Monitor top-performing employees across roles — real-time rankings based on lead conversions and campaign contributions.
+            </p>
           </div>
 
           {/* Calls Report */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-             <h2 className="text-xl font-semibold mb-4">
-              <HiOutlinePhoneMissedCall className="text-blue-600 inline-block mr-2" />
-                Call Report 
-            </h2>
-            <p>Create campaigns, assign users, track progress, and analyze performance.</p>
-            <button
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              onClick={() => handleNavigation("/CallReport")}
-            >
-              View
-            </button>
+          <div 
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg cursor-pointer transition-all duration-300 transform hover:-translate-y-1"
+            onClick={() => handleNavigation("/CallReport")}
+          >
+            <div className="flex items-center mb-4">
+              <div className="bg-green-50 p-3 rounded-lg">
+                <FaPhoneVolume className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Calls Report</h3>
+            <p className="text-gray-600 text-sm">
+              Total calls, connection rates, and talk performance — analyze caller productivity and campaign engagement.
+            </p>
           </div>
 
           {/* Leads Reports */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-             <h2 className="text-xl font-semibold mb-4">
-              <FaUserPlus className="text-blue-600 inline-block mr-2" />
-                Leads Report
-            </h2>
-            <p>Performance summaries by user, team, or campaign. Export data and download PDFs.</p>
-            <button
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              onClick={() => handleNavigation("/LeadsReport")}
-            >
-              View 
-            </button>
+          <div 
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg cursor-pointer transition-all duration-300 transform hover:-translate-y-1"
+            onClick={() => handleNavigation("/LeadsReport")}
+          >
+            <div className="flex items-center mb-4">
+              <div className="bg-purple-50 p-3 rounded-lg">
+                <FaClipboardList className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Leads Report</h3>
+            <p className="text-gray-600 text-sm">
+              Track lead progress, status distribution, and conversion trends — gain clarity on the health of your sales funnel.
+            </p>
           </div>
         </div>
       </div>
@@ -109,4 +104,4 @@ const Reports = () => {
 };
 
 export default Reports;
-        
+

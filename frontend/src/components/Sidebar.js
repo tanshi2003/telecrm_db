@@ -84,7 +84,7 @@ const Sidebar = ({ user }) => {
       .join(" ");
   };
 
-  // Move menuItems here, after handleDashboardClick is defined
+  // Update menuItems array
   const menuItems = [
     {
       icon: LayoutDashboard,
@@ -92,7 +92,11 @@ const Sidebar = ({ user }) => {
       path: getDashboardPath(role),
       onClick: handleDashboardClick,
     },
-    { icon: Search, label: "Search", path: "/search" },
+    { 
+      icon: Search, 
+      label: "Search", 
+      path: "/search" 
+    },
     {
       icon: PlusCircle,
       label: "Add Leads",
@@ -106,9 +110,7 @@ const Sidebar = ({ user }) => {
     {
       icon: Activity,
       label: "Activities",
-      path: "/activities",
-      isActivity: true,
-      onClick: () => setShowActivityOptions((prev) => !prev),
+      path: "/activities", // Updated path
     },
     {
       icon: Filter,
@@ -118,9 +120,7 @@ const Sidebar = ({ user }) => {
     {
       icon: BarChart2,
       label: "Reports",
-      path: "/reports",
-      isReport: true,
-      onClick: () => setShowReportOptions((prev) => !prev),
+      path: "/reports", // Updated path
     },
   ];
 

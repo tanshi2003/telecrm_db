@@ -524,9 +524,10 @@ const FieldDashboard = () => {
               Make Call
             </button>
             <button 
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
                 onClick={() => navigate("/addlead")}
             >
+              <FaUser className="mr-2" />
                 Create Lead
             </button>
           </div>
@@ -538,14 +539,92 @@ const FieldDashboard = () => {
           </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          
-          {/* Assigned Leads Tile - Full width */}
+
+          {/* Performance Summary - Left side */}
+          <div className="bg-white p-4 rounded shadow-md hover:shadow-lg transition col-span-2">
+            <h2 className="text-xl font-semibold mb-2 flex items-center">
+              <FaChartLine className="mr-2" />
+              Performance Summary
+            </h2>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="p-3 bg-blue-50 rounded">
+                <p className="text-sm text-gray-600">Total Assigned Leads</p>
+                <p className="text-xl font-bold">{performanceData.totalLeads}</p>
+              </div>
+              <div className="p-3 bg-green-50 rounded">
+                <p className="text-sm text-gray-600">Converted Leads</p>
+                <p className="text-xl font-bold">{performanceData.convertedLeads}</p>
+              </div>
+              <div className="p-3 bg-yellow-50 rounded">
+                <p className="text-sm text-gray-600">Pending Follow-ups</p>
+                <p className="text-xl font-bold">{performanceData.pendingFollowups}</p>
+              </div>
+              <div className="p-3 bg-green-50 rounded">
+                <p className="text-sm text-gray-600">Contacted Today</p>
+                <p className="text-xl font-bold">{performanceData.contactedToday}</p>
+              </div>
+              <div className="p-3 bg-purple-50 rounded">
+                <p className="text-sm text-gray-600">Total Calls</p>
+                <p className="text-xl font-bold">{performanceData.totalCalls}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Campaigns Tile - Right side */}
+          <div className="bg-white p-4 rounded-lg shadow-lg col-span-1">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold flex items-center">
+                <FaBullhorn className="mr-2 text-blue-600" />
+                Active Campaigns
+              </h2>
+              <span className="text-sm bg-gray-100 px-3 py-1 rounded">
+                {campaigns?.length || 0} Total
+              </span>
+            </div>
+            {campaigns && campaigns.length > 0 ? (
+              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                {campaigns.map(campaign => (
+                  <div 
+                    key={campaign.id} 
+                    className="border-b last:border-0 pb-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                    onClick={() => {
+                      setSelectedCampaign(campaign);
+                      setIsCampaignModalOpen(true);
+                    }}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium text-gray-800 text-sm">{campaign.name}</h3>
+                        {campaign.description && (
+                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                            {campaign.description}
+                          </p>
+                        )}
+                      </div>
+                      <span className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded">
+                        {campaign.lead_count || 0} Leads
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      {new Date(campaign.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-500">
+                <FaBullhorn className="mx-auto mb-2 text-gray-400 text-lg" />
+                <p className="text-sm">No active campaigns</p>
+              </div>
+            )}
+          </div>
+
+          {/* Assigned Leads - Full width below */}
           <div className="bg-white rounded-lg shadow-lg p-6 col-span-3">
             <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-800">
               <FaUser className="mr-2 text-blue-600" />
               Assigned Leads
             </h2>
-            
             {leads.length > 0 ? (
               <>
                 <div className="overflow-x-auto">
@@ -641,86 +720,6 @@ const FieldDashboard = () => {
               </>
             ) : (
               <p className="text-gray-500 text-center py-8">No leads assigned yet.</p>
-            )}
-          </div>
-          
-          {/* Performance Summary - Left side */}
-          <div className="bg-white p-4 rounded shadow-md hover:shadow-lg transition col-span-2">
-            <h2 className="text-xl font-semibold mb-2 flex items-center">
-              <FaChartLine className="mr-2" />
-              Performance Summary
-            </h2>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="p-3 bg-blue-50 rounded">
-                <p className="text-sm text-gray-600">Total Assigned Leads</p>
-                <p className="text-xl font-bold">{performanceData.totalLeads}</p>
-              </div>
-              <div className="p-3 bg-green-50 rounded">
-                <p className="text-sm text-gray-600">Converted Leads</p>
-                <p className="text-xl font-bold">{performanceData.convertedLeads}</p>
-              </div>
-              <div className="p-3 bg-yellow-50 rounded">
-                <p className="text-sm text-gray-600">Pending Follow-ups</p>
-                <p className="text-xl font-bold">{performanceData.pendingFollowups}</p>
-              </div>
-              <div className="p-3 bg-green-50 rounded">
-                <p className="text-sm text-gray-600">Contacted Today</p>
-                <p className="text-xl font-bold">{performanceData.contactedToday}</p>
-              </div>
-              <div className="p-3 bg-purple-50 rounded">
-                <p className="text-sm text-gray-600">Total Calls</p>
-                <p className="text-xl font-bold">{performanceData.totalCalls}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Campaigns Tile - Right side, more compact */}
-          <div className="bg-white p-4 rounded-lg shadow-lg col-span-1">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold flex items-center">
-                <FaBullhorn className="mr-2 text-blue-600" />
-                Active Campaigns
-              </h2>
-              <span className="text-sm bg-gray-100 px-3 py-1 rounded">
-                {campaigns?.length || 0} Total
-              </span>
-            </div>
-            
-            {campaigns && campaigns.length > 0 ? (
-              <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                {campaigns.map(campaign => (
-                  <div 
-                    key={campaign.id} 
-                    className="border-b last:border-0 pb-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
-                    onClick={() => {
-                      setSelectedCampaign(campaign);
-                      setIsCampaignModalOpen(true);
-                    }}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium text-gray-800 text-sm">{campaign.name}</h3>
-                        {campaign.description && (
-                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                            {campaign.description}
-                          </p>
-                        )}
-                      </div>
-                      <span className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded">
-                        {campaign.lead_count || 0} Leads
-                      </span>
-                    </div>
-                    <div className="mt-1 text-xs text-gray-400">
-                      {new Date(campaign.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-4 text-gray-500">
-                <FaBullhorn className="mx-auto mb-2 text-gray-400 text-lg" />
-                <p className="text-sm">No active campaigns</p>
-              </div>
             )}
           </div>
         </div>

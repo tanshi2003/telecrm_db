@@ -2,33 +2,58 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  FaStar,
-  FaCheckCircle,
-  FaPhoneAlt,
-  FaClock,
+  FaPhoneVolume,
+  FaPhoneSlash,
   FaMapMarkerAlt,
+  FaChartLine,
+  FaCheck,
+  FaHourglassHalf,
+  FaCalendarCheck,
+  FaTrophy
 } from "react-icons/fa";
-import { MdShowChart } from "react-icons/md";
+import { IoCallOutline } from "react-icons/io5";
 import BackButton from "../components/BackButton";
+import Select from 'react-select';
 
-export default function CallerReport() {
-  const { caller_id } = useParams();
+export default function CallerReport() {  const { caller_id } = useParams();
   const [user, setUser] = useState(null);
   const [caller, setCaller] = useState({});
   const [callStats, setCallStats] = useState([]);
-  const [leads, setLeads] = useState([]);
-  const [groupedStages, setGroupedStages] = useState({});
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Auth logic
+  const [leads, setLeads] = useState([]);  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const navigate = useNavigate();  useEffect(() => {
+    // Auth logic and fetch user data
     const storedUser = JSON.parse(localStorage.getItem("user"));
     const role = localStorage.getItem("role");
+    const token = localStorage.getItem("token");
+
     if (
       storedUser &&
       (role?.toLowerCase() === "admin" || role?.toLowerCase() === "caller")
     ) {
       setUser(storedUser);
+      
+      // Fetch all users if admin
+      if (role?.toLowerCase() === "admin") {
+        fetch("http://localhost:5000/api/users", {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            const callers = data.data.filter(user => user.role.toLowerCase() === 'caller');
+            setUsers(callers.map(user => ({
+              value: user.id,
+              label: user.name,
+              email: user.email
+            })));
+          }
+        })
+        .catch(err => console.error("Error fetching users:", err));
+      }
     } else {
       navigate("/login");
     }
@@ -42,54 +67,56 @@ export default function CallerReport() {
       .then((res) => res.json())
       .then((data) => {
         const c = data.data || data || {};
+        
+        // Find the matching user from users array to get correct email
+        const selectedUserData = users.find(u => u.value.toString() === caller_id.toString());
+        
         setCaller({
-          name: c.caller_name || "Caller Name",
-          email: c.caller_email || "tanshikhandelwal56@gmail.com",
+          name: c.caller_name || selectedUserData?.label || "Caller Name",
+          email: selectedUserData?.email || c.caller_email || "example@email.com",
         });
 
-        setCallStats([
-          {
-            icon: <FaPhoneAlt className="text-blue-700" />,
+        setCallStats([          {
+            icon: <IoCallOutline className="text-blue-700 w-5 h-5" />,
             label: "All Calls",
             value: c.total_calls || 0,
+            bgColor: "bg-blue-50"
           },
-        
           {
-            icon: <FaPhoneAlt className="text-green-600" />,
+            icon: <FaPhoneVolume className="text-green-600 w-5 h-5" />,
             label: "Completed Calls",
             value: c.completed_calls || 0,
+            bgColor: "bg-green-50"
           },
           {
-            icon: 
-              <FaStar className="text-blue-700" />,
+            icon: <FaCheck className="text-blue-700 w-5 h-5" />,
             label: "Interested Leads",
             value: c.interested_leads || 0,
-           
+            bgColor: "bg-blue-50"
           },
           {
-            icon: (
-              <FaPhoneAlt
-                className="text-red-500"
-                style={{ transform: "rotate(90deg)" }}
-              />
-            ),
+            icon: <FaPhoneSlash className="text-red-500 w-5 h-5" />,
             label: "Missed Calls",
             value: c.missed_calls || 0,
+            bgColor: "bg-red-50"
           },
           {
-            icon: <FaCheckCircle className="text-green-600" />,
+            icon: <FaChartLine className="text-green-600 w-5 h-5" />,
             label: "Completion Rate",
             value: c.completion_rate || "0%",
+            bgColor: "bg-green-50"
           },
           {
-            icon: <FaClock className="text-blue-700" />,
+            icon: <FaHourglassHalf className="text-blue-700 w-5 h-5" />,
             label: "Total Hours",
             value: c.total_hours || "3.5h",
+            bgColor: "bg-blue-50"
           },
           {
-            icon: <FaPhoneAlt className="text-yellow-600" />,
-            label: "Average Call Duration Minutes",
+            icon: <FaCalendarCheck className="text-yellow-600 w-5 h-5" />,
+            label: "Average Call Duration",
             value: c.avg_call_duration_minutes || "0 mins",
+            bgColor: "bg-yellow-50"
           },
         ]);
       });
@@ -100,7 +127,7 @@ export default function CallerReport() {
       .then((data) => {
         setLeads(data.data || []);
       });
-  }, [caller_id, navigate]);
+  }, [caller_id, navigate, users]); // Added users to dependency array
 
   // Calculate lead stage counts based on current leads state
   const leadStageCounts = {
@@ -118,18 +145,43 @@ export default function CallerReport() {
   return (
     <div className="flex min-h-screen overflow-hidden bg-gradient-to-br from-blue-900 to-blue-300">
       <Sidebar user={user} />
-      <div className="flex-grow ml-64 mt-16 p-2 bg-gray-100">
-  
-     <BackButton/>
-     <div className="flex flex-col md:flex-row gap-4 px-8 py-6">
+      <div className="flex-grow ml-64 mt-16 p-2 bg-gray-100"> {/* Increased top margin to 16 */}
+        <div className="flex justify-between items-center px-4 py-2 mt-4"> {/* Added top margin */}
+          <h1 className="text-xl font-bold text-gray-800">Leaderboard</h1> {/* Smaller text */}
+          <div className="flex items-center gap-2"> {/* Reduced gap */}
+            <div className="w-48"> {/* Made dropdown narrower */}
+              <Select
+                options={users}
+                value={selectedUser}
+                onChange={(option) => {
+                  setSelectedUser(option);
+                  navigate(`/report-leaderboard/${option.value}`);
+                }}
+                placeholder="Select Caller..."
+                className="text-sm"
+                menuPlacement="auto"
+                theme={(theme) => ({
+                  ...theme,
+                  colors: {
+                    ...theme.colors,
+                    primary: '#1d4ed8',
+                    primary25: '#dbeafe',
+                  },
+                })}
+              />
+            </div>
+            <BackButton />
+          </div>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-4 px-4 py-2">
           {/* Left: Leaderboard Card */}
           <div className="flex-1 max-w-2xl">
             <div className="bg-white rounded-xl shadow border border-gray-200 p-6 mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-semibold text-lg text-gray-700">
+              <div className="flex items-center justify-between mb-2">                <div className="font-semibold text-lg text-gray-700">
                   Leaderboard
                 </div>
-                <MdShowChart className="text-gray-700" size={24} />
+                <FaTrophy className="text-yellow-500" size={24} />
               </div>
               {/* Tabs */}
               <div className="flex gap-2 mb-4">
@@ -181,110 +233,59 @@ export default function CallerReport() {
           </div>
 
           {/* Right: Profile & Stats */}
-          <div className="flex-1 flex flex-col gap-4">
-            {/* Profile Card */}
-            <div className="bg-white rounded-xl shadow border border-gray-200 p-4 flex items-center gap-4">
-              <div className="flex-shrink-0 w-14 h-14 rounded-full bg-purple-200 flex items-center justify-center text-2xl font-bold text-purple-700 uppercase">
+          <div className="flex-1 flex flex-col gap-2"> {/* Reduced gap */}
+            {/* Profile Card - More compact */}
+            <div className="bg-white rounded-lg shadow border border-gray-200 p-3 flex items-center gap-3">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-purple-200 flex items-center justify-center text-lg font-bold text-purple-700 uppercase">
                 {caller.name
-                  ? caller.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
+                  ? caller.name.split(" ").map((n) => n[0]).join("")
                   : "?"}
               </div>
               <div>
-                <div className="font-semibold text-base">
-                  {caller.name || "Caller Name"}
-                </div>
-                <div className="text-gray-500 text-sm">
-                  {caller.email || "tanshikhandelwal56@gmail.com"}
-                </div>
+                <div className="font-semibold text-sm">{caller.name || "Caller Name"}</div>
+                <div className="text-gray-500 text-xs">{caller.email}</div>
               </div>
             </div>
 
-            {/* Calls Card */}
-            <div className="bg-white rounded-xl shadow border border-gray-200 p-4">
-              <div className="font-semibold text-gray-600 mb-2">Calls</div>
-              <div className="divide-y">
+            {/* Calls Stats - More compact */}
+            <div className="bg-white rounded-lg shadow border border-gray-200 p-3">
+              <div className="font-semibold text-sm text-gray-600 mb-2">Quick Stats</div>
+              <div className="grid grid-cols-2 gap-2">
                 {callStats.map((stat) => (
                   <div
                     key={stat.label}
-                    className="flex items-center py-2 gap-3"
+                    className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-md"
                   >
-                    <span className="w-6 flex justify-center">{stat.icon}</span>
-                    <span className="flex-1">{stat.label}</span>
-                    <span className="font-semibold">{stat.value}</span>
-                    <span className="w-3">&#8250;</span>
+                    <span className={`w-8 h-8 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
+                      {stat.icon}
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-xs text-gray-600">{stat.label}</span>
+                      <span className="font-semibold text-sm">{stat.value}</span>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Location Check In */}
-            <div className="bg-white rounded-xl shadow border border-gray-200 p-4 flex items-center gap-3">
-              <FaMapMarkerAlt className="text-blue-700" />
-              <span className="flex-1 text-gray-700">Location Check In</span>
-              <span className="font-semibold">{0}</span>
-            </div>
-
-            {/* Lead Stage Card */}
-            <div className="bg-white rounded-xl shadow border border-gray-200 p-4">
-              <div className="font-semibold text-gray-600 mb-2">Lead Stage</div>
-              <div className="rounded-lg border border-gray-300">
-                {/* Initial */}
-                <div className="px-4 pt-3 pb-1 text-xs text-gray-500 font-semibold">
-                  Initial
-                </div>
-                <div className="flex items-center px-4 py-2 border-t border-gray-200">
-                  <span className="w-3 h-3 rounded-sm bg-green-700 mr-2"></span>
-                  <span className="flex-1 text-gray-800">Fresh</span>
-                  <span className="text-gray-800">{leadStageCounts.Fresh}</span>
-                  <span className="w-3 text-gray-400 ml-2">&#8250;</span>
-                </div>
-                {/* Active */}
-                <div className="px-4 pt-3 pb-1 text-xs text-gray-500 font-semibold">
-                  Active
-                </div>
-                <div className="flex items-center px-4 py-2 border-t border-gray-200">
-                  <span className="w-3 h-3 rounded-sm bg-yellow-700 mr-2"></span>
-                  <span className="flex-1 text-gray-800">Call Later</span>
-                  <span className="text-gray-800">
-                    {leadStageCounts["Call Later"]}
-                  </span>
-                  <span className="w-3 text-gray-400 ml-2">&#8250;</span>
-                </div>
-                <div className="flex items-center px-4 py-2 border-t border-gray-200">
-                  <span className="w-3 h-3 rounded-sm bg-yellow-700 mr-2"></span>
-                  <span className="flex-1 text-gray-800">Interested</span>
-                  <span className="text-gray-800">
-                    {leadStageCounts.Interested}
-                  </span>
-                  <span className="w-3 text-gray-400 ml-2">&#8250;</span>
-                </div>
-                {/* Closed */}
-                <div className="px-4 pt-3 pb-1 text-xs text-gray-500 font-semibold">
-                  Closed
-                </div>
-                <div className="flex items-center px-4 py-2 border-t border-gray-200">
-                  <span className="w-3 h-3 rounded-sm bg-green-500 mr-2"></span>
-                  <span className="flex-1 text-gray-800">Won</span>
-                  <span className="text-gray-800">{leadStageCounts.Won}</span>
-                  <span className="w-3 text-gray-400 ml-2">&#8250;</span>
-                </div>
-                <div className="flex items-center px-4 py-2 border-t border-gray-200">
-                  <span className="w-3 h-3 rounded-sm bg-red-600 mr-2"></span>
-                  <span className="flex-1 text-gray-800">Lost</span>
-                  <span className="text-gray-800">{leadStageCounts.Lost}</span>
-                  <span className="w-3 text-gray-400 ml-2">&#8250;</span>
-                </div>
-                <div className="flex items-center px-4 py-2 border-t border-gray-200">
-                  <span className="w-3 h-3 rounded-sm bg-gray-400 mr-2"></span>
-                  <span className="flex-1 text-gray-800">Not Interested</span>
-                  <span className="text-gray-800">
-                    {leadStageCounts["Not Interested"]}
-                  </span>
-                  <span className="w-3 text-gray-400 ml-2">&#8250;</span>
-                </div>
+            {/* Lead Stage Card - More compact */}
+            <div className="bg-white rounded-lg shadow border border-gray-200 p-3">
+              <div className="font-semibold text-sm text-gray-600 mb-2">Lead Stages</div>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(leadStageCounts).map(([stage, count]) => (
+                  <div key={stage} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${
+                        stage === "Won" ? "bg-green-500" :
+                        stage === "Lost" ? "bg-red-500" :
+                        stage === "Interested" ? "bg-yellow-500" :
+                        "bg-gray-400"
+                      }`}></span>
+                      <span className="text-xs text-gray-700">{stage}</span>
+                    </div>
+                    <span className="font-semibold text-xs">{count}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

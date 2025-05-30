@@ -1,3 +1,4 @@
+
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
@@ -16,7 +17,7 @@ const campaignRoutes = require("./routes/campaignRoutes");
 const searchRoutes = require("./routes/searchRoutes");
 const authRoutes = require('./routes/authRoutes');
 const managerRoutes = require('./routes/managerRoutes');
-const callsRouter = require('./routes/calls');
+const callRoutes = require('./routes/callRoutes');
 const settingsRoutes = require('./routes/settings');
 
 // Load environment variables
@@ -56,6 +57,8 @@ app.use("/api/campaigns", campaignRoutes);
 app.use("/api/search", searchRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/managers', managerRoutes);
+app.use('/api/calls', callRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Root Endpoint
 app.get("/", (req, res) => {

@@ -1,19 +1,28 @@
 import React, { useEffect, useState } from "react";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from "recharts";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
 import BackButton from "../components/BackButton";
-const COLORS = ["#FF4C4C", "#FFC107", "#00C49F", "#8884d8", "#FF8042", "#82ca9d"];
+import Select from 'react-select';
 
+const COLORS = ["#4F46E5", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
-export default function Reports2() {
+const timeRangeOptions = [
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: 'This Week' },
+  { value: 'month', label: 'This Month' },
+  { value: 'year', label: 'This Year' }
+];
+
+export default function CallReport() {
   const [user, setUser] = useState(null);
   const [barData, setBarData] = useState([]);
   const [pieData, setPieData] = useState([]);
-  const [filter, setFilter] = useState("Call Reports");
+  const [timeRange, setTimeRange] = useState(timeRangeOptions[1]); // Default to "This Week"
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Check authentication and role
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     const role = localStorage.getItem("role");
@@ -24,144 +33,207 @@ export default function Reports2() {
     }
   }, [navigate]);
 
-  // Fetch chart data from backend
- const fetchChartData = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await fetch("http://localhost:5000/api/calls", {
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
-      }
-    });
-    const data = await response.json();
-    console.log("Token:", token);
-    console.log("API DATA:", data);
-    const callsArray = Array.isArray(data.data) ? data.data : [];
-    const statusCounts = callsArray.reduce((acc, call) => {
-      const status = call.status || "Unknown";
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {});
-    const chartData = Object.entries(statusCounts).map(([status, count]) => ({ status, count }));
-    console.log("Chart Data:", chartData);
+  const fetchChartData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const token = localStorage.getItem("token");
+      
+      const response = await fetch(`http://localhost:5000/api/calls/stats/${timeRange.value}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
 
-    setBarData(chartData);
-    setPieData(chartData);
-  } catch (error) {
-    console.error("Error fetching chart data:", error);
-    setBarData([]);
-    setPieData([]);
-  }
-};
+      if (!response.ok) {
+        throw new Error('Failed to fetch data');
+      }
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to fetch data');
+      }
+
+      // Transform data for charts
+      const transformedData = [
+        { status: 'Completed', count: data.data.completed || 0 },
+        { status: 'Missed', count: data.data.missed || 0 },
+        { status: 'Interested', count: data.data.interested || 0 },
+        { status: 'Not Interested', count: data.data.notInterested || 0 },
+        { status: 'Callback', count: data.data.callback || 0 }
+      ].filter(item => item.count > 0);
+
+      setBarData(transformedData);
+      setPieData(transformedData);
+      
+    } catch (error) {
+      console.error("Error fetching chart data:", error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchChartData();
-  }, [filter]);
-
-  function handleNavigation(path) {
-    navigate(path);
-  }
+  }, [timeRange]);
 
   if (!user) return null;
 
+  const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-2 border rounded shadow-lg">
+          <p className="text-sm font-semibold">{payload[0].payload.status}</p>
+          <p className="text-sm">Count: {payload[0].value}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
-  <div className="flex min-h-screen overflow-hidden bg-gradient-to-br from-blue-900 to-blue-300">
-    <Sidebar user={user} />
-    <div className="flex-1 flex flex-col ml-64 mt-16 p-8 bg-gray-100">
-      {/* Header Section */}
-      <div className="flex justify-between items-center mb-3">
-        <div className="flex items-center gap-16">
-          <h1 className="text-3xl font-bold text-black drop-shadow">Call Report</h1>
-        </div>
-        <BackButton />
-      </div>
-      {/* Charts */}
-      <div className="grid grid-cols-2 gap-8">
-    
-{/* Bar Chart Card */}
-<div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
-  <h2 className="text-lg font-semibold mb-4">Bar Chart</h2>
-  {/* Removed overflow-x-auto and minWidth for fixed chart */}
-  <ResponsiveContainer width="100%" height={300}>
-    <BarChart
-      data={barData}
-      margin={{ top: 10, right: 30, left: 10, bottom: 40 }}
-      barSize={40}
-    >
-      <XAxis tick={false} />
-      <YAxis stroke="#333" strokeWidth={2} tick={{ fontSize: 15 }} />
-      <Tooltip />
-      <Bar dataKey="count">
-        {barData.map((_entry, index) => (
-          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-        ))}
-      </Bar>
-    </BarChart>
-  </ResponsiveContainer>
-</div>
-       
-        {/* Pie Chart Card */}
-        <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
-          <h2 className="text-lg font-semibold mb-4">Pie Chart</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                dataKey="count"
-                labelLine={false}
-                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, count }) => {
-                  // Center label in slice
-                  const RADIAN = Math.PI / 180;
-                  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                  return (
-                    <text
-                      x={x}
-                      y={y}
-                      fill="#333"
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      fontSize={14}
-                      fontWeight="bold"
-                    >
-                      {count}
-                    </text>
-                  );
-                }}
-              >
-                {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-           </div>
-        
-      
-      {/* Color Legend Below Both Charts */}
-      <div className="flex justify-center mt-2">
-        <div className="flex flex-wrap gap-2 bg-white rounded-lg shadow p-2 border max-w-6xl w-full justify-center">
-          {pieData.map((entry, index) => (
-            <div key={entry.status} className="flex items-center gap-2">
-              <span
-                className="inline-block w-4 h-4 rounded"
-                style={{ backgroundColor: COLORS[index % COLORS.length] }}
-              ></span>
-              <span className="font-semibold">{entry.status}</span>
-              <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">
-                {entry.count}
-              </span>
+    <div className="flex min-h-screen overflow-hidden bg-gradient-to-br from-blue-900 to-blue-300">
+      <Sidebar user={user} />
+      <div className="flex-grow ml-64 mt-16 p-2 bg-gray-100">
+        <div className="flex justify-between items-center px-8 py-4">
+          <h1 className="text-2xl font-bold text-gray-800">Calls Report</h1>
+          <div className="flex items-center gap-4">
+            <div className="w-48">
+              <Select
+                options={timeRangeOptions}
+                value={timeRange}
+                onChange={setTimeRange}
+                className="text-sm"
+                isSearchable={false}
+                theme={(theme) => ({
+                  ...theme,
+                  colors: {
+                    ...theme.colors,
+                    primary: '#1d4ed8',
+                    primary25: '#dbeafe',
+                  },
+                })}
+              />
             </div>
-          ))}
+            <BackButton />
+          </div>
         </div>
+
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+          </div>
+        ) : error ? (
+          <div className="text-center p-4 text-red-600">
+            <p>{error}</p>
+            <button 
+              onClick={fetchChartData}
+              className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-8 mb-6">
+              {/* Bar Chart Card */}
+              <div className="bg-white rounded-xl shadow-md p-4">
+                <h2 className="text-lg font-semibold text-gray-700 mb-4">Call Distribution</h2>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart
+                    data={barData}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+                    barSize={40}
+                  >
+                    <XAxis 
+                      dataKey="status" 
+                      angle={-45} 
+                      textAnchor="end"
+                      height={60}
+                      stroke="#4B5563"
+                      fontSize={12}
+                    />
+                    <YAxis stroke="#4B5563" />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="count">
+                      {barData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Pie Chart Card */}
+              <div className="bg-white rounded-xl shadow-md p-4">
+                <h2 className="text-lg font-semibold text-gray-700 mb-4">Call Status Overview</h2>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      dataKey="count"
+                      labelLine={false}
+                      label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, value }) => {
+                        const RADIAN = Math.PI / 180;
+                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                        return value ? (
+                          <text
+                            x={x}
+                            y={y}
+                            fill="#fff"
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fontSize={12}
+                            fontWeight="bold"
+                          >
+                            {value}
+                          </text>
+                        ) : null;
+                      }}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Stats Legend */}
+            <div className="px-8">
+              <div className="bg-white rounded-xl shadow-md p-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {pieData.map((entry, index) => (
+                    <div 
+                      key={entry.status}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50"
+                    >
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">{entry.status}</p>
+                        <p className="text-lg font-semibold text-gray-900">{entry.count}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
-  </div>
-  </div>
-);
+    </div>
+  );
 }

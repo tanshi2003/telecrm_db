@@ -665,7 +665,63 @@ const CallController = {
             console.error('Error fetching caller stats:', error);
             res.status(500).json(responseFormatter(false, error.message));
         }
-    }
+    },
+
+    // Get call statistics
+    getCallStats: async (req, res) => {
+        try {
+            const { timeRange } = req.params;
+            let startDate = new Date();
+            
+            // Set the start date based on timeRange
+            switch (timeRange) {
+                case 'today':
+                    startDate.setHours(0,0,0,0);
+                    break;
+                case 'week':
+                    startDate.setDate(startDate.getDate() - 7);
+                    break;
+                case 'month':
+                    startDate.setMonth(startDate.getMonth() - 1);
+                    break;
+                case 'year':
+                    startDate.setFullYear(startDate.getFullYear() - 1);
+                    break;
+                default:
+                    startDate.setDate(startDate.getDate() - 7); // Default to last 7 days
+            }
+
+            const [results] = await db.promise().query(
+                `SELECT 
+                    COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
+                    COUNT(CASE WHEN status = 'missed' THEN 1 END) as missed,
+                    COUNT(CASE WHEN disposition = 'interested' THEN 1 END) as interested,
+                    COUNT(CASE WHEN disposition = 'not_interested' THEN 1 END) as notInterested,
+                    COUNT(CASE WHEN disposition = 'callback' THEN 1 END) as callback
+                FROM calls 
+                WHERE created_at >= ?`,
+                [startDate]
+            );
+
+            res.json({
+                success: true,
+                data: results[0] || {
+                    completed: 0,
+                    missed: 0,
+                    interested: 0,
+                    notInterested: 0,
+                    callback: 0
+                }
+            });
+        } catch (error) {
+            console.error('Error fetching call statistics:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to fetch call statistics',
+                error: error.message
+            });
+        }
+    },
 };
 
 module.exports = CallController;

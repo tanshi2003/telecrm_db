@@ -365,7 +365,7 @@ const AppContent = () => {
               }
             />
              <Route
-              path="/Report"
+              path="/reports"
               element={
                 <ProtectedRoute allowedRoles={["admin", "manager"]}>
                   <Reports />
@@ -393,9 +393,9 @@ const AppContent = () => {
               }
             />
              <Route
-                path="/Activity"
+                path="/activities"
                 element={
-                     <ProtectedRoute allowedRoles={["admin"]}>
+                     <ProtectedRoute allowedRoles={["admin", "manager"]}>
                      <Activities />
                      </ProtectedRoute>
                         }

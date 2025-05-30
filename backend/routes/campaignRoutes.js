@@ -45,24 +45,41 @@ router.post('/unassign', roleMiddleware(["admin", "manager"]), campaignControlle
 router.get("/:userId/campaigns/with-leads", authenticateToken, async (req, res) => {
     try {
         const userId = req.params.userId;
-        const [campaigns] = await db.query(`
+        const userRole = req.user.role;        // Different query based on role
+        const query = userRole === 'caller' ? `
+            SELECT 
+                c.id, 
+                c.name, 
+                c.description, 
+                c.created_at,
+                c.status,
+                u.name AS manager_name,
+                COUNT(DISTINCT l.id) AS lead_count
+            FROM campaigns c
+            INNER JOIN campaign_users cu ON c.id = cu.campaign_id
+            LEFT JOIN users u ON c.manager_id = u.id
+            LEFT JOIN leads l ON c.id = l.campaign_id AND l.assigned_to = ?
+            WHERE cu.user_id = ?
+            GROUP BY c.id, c.name, c.description, c.created_at, c.status, u.name
+        ` : `
             SELECT 
                 c.id, 
                 c.name, 
                 c.description, 
                 c.created_at,
                 c.start_date,
-                c.end_date,
-                c.status,
-                u.name as manager_name,
-                COUNT(DISTINCT l.id) as lead_count
+                c.end_date,                c.status,
+                u.name AS manager_name,
+                COUNT(DISTINCT l.id) AS lead_count
             FROM campaigns c
             INNER JOIN campaign_users cu ON c.id = cu.campaign_id
             LEFT JOIN users u ON c.manager_id = u.id
             LEFT JOIN leads l ON c.id = l.campaign_id
             WHERE cu.user_id = ?
             GROUP BY c.id, c.name, c.description, c.created_at, c.start_date, c.end_date, c.status, u.name
-        `, [userId]);
+        `;
+
+        const [campaigns] = await db.query(query, [userId, userId]);
 
         res.json({
             success: true,
@@ -70,7 +87,50 @@ router.get("/:userId/campaigns/with-leads", authenticateToken, async (req, res) 
         });
     } catch (error) {
         console.error('Error:', error);
-        res.status(500).json({ success: false, message: "Error fetching campaigns" });
+        res.status(500).json({
+            success: false,
+            message: "Error fetching campaigns"
+        });
+    }
+});
+
+// Replace or update the existing /user/:userId route
+router.get('/user/:userId', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const userRole = req.user.role;
+        
+        const query = `
+            SELECT 
+                c.*,
+                u.name as manager_name,
+                COUNT(DISTINCT l.id) as lead_count
+            FROM campaigns c
+            INNER JOIN campaign_users cu ON c.id = cu.campaign_id
+            LEFT JOIN users u ON c.manager_id = u.id
+            LEFT JOIN leads l ON c.id = l.campaign_id
+            WHERE cu.user_id = ?
+                AND c.status = 'active'
+            GROUP BY c.id
+            ORDER BY c.created_at DESC
+        `;
+
+        const [campaigns] = await db.query(query, [userId]);
+
+        console.log('Fetched campaigns for user:', userId, campaigns.length);
+
+        res.json({
+            success: true,
+            data: campaigns || []
+        });
+
+    } catch (error) {
+        console.error('Error fetching campaigns:', error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching campaigns",
+            error: error.message
+        });
     }
 });
 
