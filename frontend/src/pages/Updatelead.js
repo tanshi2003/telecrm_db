@@ -13,6 +13,33 @@ import Sidebar from "../components/Sidebar";
 import { AuthContext } from "../context/AuthContext";
 import BackButton from "../components/BackButton";
 
+const statusOptions = [
+  "New",
+  "Contacted",
+  "Follow-Up Scheduled",
+  "Interested",
+  "Not Interested",
+  "Call Back Later",
+  "Under Review",
+  "Converted",
+  "Lost",
+  "Not Reachable",
+  "On Hold",
+];
+
+const categoryOptions = [
+  "Fresh Lead",
+  "Bulk Lead",
+  "Cold Lead",
+  "Warm Lead",
+  "Hot Lead",
+  "Converted Lead",
+  "Lost Lead",
+  "Walk-in Lead",
+  "Re-Targeted Lead",
+  "Campaign Lead",
+];
+
 const Updatelead = () => {
   const [leads, setLeads] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
@@ -214,23 +241,37 @@ const Updatelead = () => {
                   </div>
                   <div>
                     <label className="block text-sm">Status</label>
-                    <input
-                      type="text"
+                    <select
                       name="status"
                       value={editForm.status || ""}
                       onChange={handleEditFormChange}
                       className="w-full border rounded p-2"
-                    />
+                      required
+                    >
+                      <option value="">Select Status</option>
+                      {statusOptions.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm">Category</label>
-                    <input
-                      type="text"
+                    <select
                       name="lead_category"
                       value={editForm.lead_category || ""}
                       onChange={handleEditFormChange}
                       className="w-full border rounded p-2"
-                    />
+                      required
+                    >
+                      <option value="">Select Category</option>
+                      {categoryOptions.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm">Assigned To</label>
