@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   LayoutDashboard,
   Search,
@@ -10,6 +10,11 @@ import {
   Menu,
   ChevronLeft,
   LogOut,
+  BarChart,
+  PhoneCall,
+  Users,
+  ClipboardList,
+  PhoneIncoming,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -17,6 +22,13 @@ const Sidebar = ({ user }) => {
   // State management
   const [isExpanded, setIsExpanded] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showActivityOptions, setShowActivityOptions] = useState(false);
+  const [showReportOptions, setShowReportOptions] = useState(false);
+  const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0 });
+
+  // Refs
+  const reportBtnRef = useRef(null);
+  const activityBtnRef = useRef(null);
 
   // Navigation and location
   const navigate = useNavigate();
@@ -94,7 +106,9 @@ const Sidebar = ({ user }) => {
     {
       icon: Activity,
       label: "Activities",
-      path: "/Activity", // Direct redirect to Activities page
+      path: "/activities",
+      isActivity: true,
+      onClick: () => setShowActivityOptions((prev) => !prev),
     },
     {
       icon: Filter,
@@ -104,7 +118,9 @@ const Sidebar = ({ user }) => {
     {
       icon: BarChart2,
       label: "Reports",
-      path: "/Report", // Direct redirect to Reports page
+      path: "/reports",
+      isReport: true,
+      onClick: () => setShowReportOptions((prev) => !prev),
     },
   ];
 
@@ -138,9 +154,10 @@ const Sidebar = ({ user }) => {
       {/* Menu Items */}
       <div className="flex-1 py-4">
         {menuItems.map(
-          ({ icon: Icon, label, path, onClick }) => (
+          ({ icon: Icon, label, path, onClick, isReport, isActivity }) => (
             <div
               key={label}
+              ref={isReport ? reportBtnRef : isActivity ? activityBtnRef : null}
               className={`group relative flex items-center ${
                 isExpanded ? "gap-4 px-4 py-3" : "justify-center p-3"
               } cursor-pointer transition-all rounded-md ${
