@@ -16,7 +16,7 @@ import {
   ClipboardList,
   PhoneIncoming,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Sidebar = ({ user }) => {
   // State management
@@ -30,8 +30,9 @@ const Sidebar = ({ user }) => {
   const reportBtnRef = useRef(null);
   const activityBtnRef = useRef(null);
 
-  // Navigation
+  // Navigation and location
   const navigate = useNavigate();
+  const location = useLocation();
   const localUser = JSON.parse(localStorage.getItem("user") || "{}");
   const role = localStorage.getItem("role");
 
@@ -112,6 +113,7 @@ const Sidebar = ({ user }) => {
     {
       icon: LayoutDashboard,
       label: "Dashboard",
+      path: getDashboardPath(role),
       onClick: handleDashboardClick,
     },
     { icon: Search, label: "Search", path: "/search" },
@@ -128,6 +130,7 @@ const Sidebar = ({ user }) => {
     {
       icon: Activity,
       label: "Activities",
+      path: "/activities",
       isActivity: true,
       onClick: () => setShowActivityOptions((prev) => !prev),
     },
@@ -139,10 +142,17 @@ const Sidebar = ({ user }) => {
     {
       icon: BarChart2,
       label: "Reports",
+      path: "/reports",
       isReport: true,
       onClick: () => setShowReportOptions((prev) => !prev),
     },
   ];
+
+  // Function to check if menu item is active
+  const isMenuItemActive = (itemPath) => {
+    if (!itemPath) return false;
+    return location.pathname === itemPath || location.pathname.startsWith(itemPath + '/');
+  };
 
   return (
     <div
@@ -174,11 +184,21 @@ const Sidebar = ({ user }) => {
               ref={isReport ? reportBtnRef : isActivity ? activityBtnRef : null}
               className={`group relative flex items-center ${
                 isExpanded ? "gap-4 px-4 py-3" : "justify-center p-3"
-              } cursor-pointer text-gray-700 hover:bg-gray-100 transition-all rounded-md`}
+              } cursor-pointer transition-all rounded-md ${
+                isMenuItemActive(path)
+                  ? "bg-blue-50 text-blue-600"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
               onClick={onClick || (path ? () => navigate(path) : undefined)}
             >
-              <Icon size={20} />
-              {isExpanded && <span className="text-sm font-medium">{label}</span>}
+              <Icon size={20} className={isMenuItemActive(path) ? "text-blue-600" : ""} />
+              {isExpanded && (
+                <span className={`text-sm font-medium ${
+                  isMenuItemActive(path) ? "text-blue-600" : ""
+                }`}>
+                  {label}
+                </span>
+              )}
               {!isExpanded && (
                 <span className="absolute left-full ml-2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {label}

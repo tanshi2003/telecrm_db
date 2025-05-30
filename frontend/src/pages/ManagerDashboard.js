@@ -129,13 +129,7 @@ const ManagerDashboard = () => {
                 <Plus size={20} />
                 Create Lead
               </button>
-              <button
-                className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50"
-                onClick={() => navigate("/manager/users")}
-              >
-                <UserCog size={20} />
-                Manage Team
-              </button>
+              
             </div>
           </div>
 
@@ -739,11 +733,11 @@ const ManagerDashboard = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
-              onClick={() => navigate("/manager/teams")}
+              onClick={() =>  navigate("/manager/users")}
               className="flex items-center justify-center p-4 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
             >
               <Briefcase className="w-5 h-5 mr-2" />
-              <span>Team Management</span>
+              <span>Team Overview</span>
             </button>
             <button
               onClick={() => navigate("/viewleads")}

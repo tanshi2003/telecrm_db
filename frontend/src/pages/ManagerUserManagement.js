@@ -61,7 +61,16 @@ const ManagerUserManagement = () => {
       <div className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Team Management</h1>
-          <BackButton />
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate("/manager/team-view")}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+            >
+              <UserCheck size={20} />
+              View Team Structure
+            </button>
+            <BackButton />
+          </div>
         </div>
 
         {/* Main Content */}
@@ -151,54 +160,6 @@ const ManagerUserManagement = () => {
                 </table>
               </div>
             )}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Lead Assignment */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <FileText className="text-green-600" size={24} />
-                <h2 className="text-xl font-semibold">Lead Assignment</h2>
-              </div>
-              <p className="text-gray-600 mb-4">Assign and manage leads for your team members.</p>
-              <button
-                onClick={() => navigate("/lead-assignment")}
-                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              >
-                Manage Leads
-              </button>
-            </div>
-
-            {/* Performance Tracking */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <BarChart2 className="text-blue-600" size={24} />
-                <h2 className="text-xl font-semibold">Performance Tracking</h2>
-              </div>
-              <p className="text-gray-600 mb-4">Monitor your team's performance and metrics.</p>
-              <button
-                onClick={() => navigate("/team-performance")}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                View Performance
-              </button>
-            </div>
-
-            {/* Team Overview */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <UserCheck className="text-purple-600" size={24} />
-                <h2 className="text-xl font-semibold">Team Overview</h2>
-              </div>
-              <p className="text-gray-600 mb-4">Get a detailed view of your team structure and assignments.</p>
-              <button
-                onClick={() => navigate("/manager/team-view")}
-                className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-              >
-                View Team Structure
-              </button>
-            </div>
           </div>
         </div>
       </div>
