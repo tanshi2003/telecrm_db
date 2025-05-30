@@ -77,6 +77,7 @@ const CallerDashboard = () => {
   const [currentCallId, setCurrentCallId] = useState(null);
   const [currentCallSid, setCurrentCallSid] = useState(null);
   const [callDisposition, setCallDisposition] = useState('pending');
+  const [showAssignedLeads, setShowAssignedLeads] = useState(false);
 
   // Add WebRTC configuration
   const configuration = {
@@ -1117,6 +1118,47 @@ const CallerDashboard = () => {
     );
   };
 
+  // Add this modal component just before the return statement
+  const AssignedLeadsModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Assigned Leads</h2>
+          <button
+            onClick={() => setShowAssignedLeads(false)}
+            className="text-gray-500 hover:text-gray-700 text-lg"
+          >✕</button>
+        </div>
+        <div className="overflow-y-auto max-h-96">
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leads.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="text-center py-4 text-gray-500">No leads assigned.</td>
+                </tr>
+              ) : (
+                leads.map(lead => (
+                  <tr key={lead.id} className="border-b">
+                    <td className="px-4 py-2">{lead.name}</td>
+                    <td className="px-4 py-2">{lead.phone_no}</td>
+                    <td className="px-4 py-2">{lead.status}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="relative flex min-h-screen">
       {/* Sidebar */}
@@ -1179,7 +1221,10 @@ const CallerDashboard = () => {
         {/* KPI Tiles Section */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
           {/* Total Assigned Leads */}
-          <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-blue-500">
+          <div
+            className="bg-white p-4 rounded-lg shadow-md border-l-4 border-blue-500 cursor-pointer hover:bg-blue-50 transition"
+            onClick={() => setShowAssignedLeads(true)}
+          >
             <div className="flex items-center">
               <UserGroupIcon className="h-8 w-8 text-blue-500 mr-3" />
               <div>
@@ -1336,6 +1381,7 @@ const CallerDashboard = () => {
 
       <ConnectionStatus />
       {showDialer && <DialerModal />}
+      {showAssignedLeads && <AssignedLeadsModal />}
     </div>
   );
 };

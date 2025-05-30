@@ -217,25 +217,36 @@ exports.getCampaignsHandledByUser = (req, res) => {
 
 // Get leads assigned to a user
 exports.getLeadsByUserId = (req, res) => {
-    const { id } = req.params;
+    const userId = req.params.id;
+    
+    // Debug log
+    console.log('Fetching leads for user:', userId);
 
     const query = `
-        SELECT 
-            l.id, l.title, l.name, l.description, l.status, l.lead_category,
-            l.phone_no, l.address, l.notes, l.created_at, l.updated_at
-        FROM 
-            leads l
-        WHERE 
-            l.assigned_to = ?
+        SELECT * FROM Leads 
+        WHERE created_by = ? 
+        OR assigned_to = ?
+        OR manager_id = ?
     `;
 
-    db.query(query, [id], (err, results) => {
-        if (err) {
-            console.error("Error fetching leads for user:", err);
-            return res.status(500).json(responseFormatter(false, "Database error", err.message));
+    db.query(query, [userId, userId, userId], (error, results) => {
+        if (error) {
+            console.error('Database error:', error);
+            return res.status(500).json({
+                success: false,
+                message: "Error fetching leads",
+                error: error.message
+            });
         }
 
-        res.json(responseFormatter(true, "Leads fetched successfully", results));
+        // Debug log
+        console.log('Query results:', results);
+
+        res.json({
+            success: true,
+            message: "Leads fetched successfully",
+            data: results
+        });
     });
 };
 

@@ -2,6 +2,7 @@ const db = require('../config/db');
 const { validationResult } = require('express-validator');
 const responseFormatter = require('../utils/responseFormatter');
 const { v4: uuidv4 } = require('uuid');
+const axios = require('axios');
 
 // Store active calls in memory (you might want to use Redis in production)
 const activeCalls = new Map();
@@ -10,61 +11,74 @@ const CallController = {
     // Initialize a new call
     initiateCall: async (req, res) => {
         try {
-            const { phoneNumber, offer, callId } = req.body;
+            const { to, from, leadId } = req.body;
             const callerId = req.user.id;
 
-            // Store call information in memory for WebRTC signaling
-            const callInfo = {
-                id: callId,
-                callerId,
-                phoneNumber,
-                offer,
-                status: 'initiated',
-                createdAt: new Date()
-            };
-            activeCalls.set(callId, callInfo);
+            // First create call record
+            const [result] = await db.promise().query(
+                `INSERT INTO calls (caller_id, lead_id, start_time, status, call_type, disposition)
+                 VALUES (?, ?, NOW(), 'initiated', 'outbound', 'pending')`,
+                [callerId, leadId]
+            );
 
-            // Create call record in database
-            const query = `
-                INSERT INTO calls 
-                (caller_id, lead_id, start_time, status, call_type, disposition)
-                VALUES (?, ?, NOW(), 'initiated', 'outbound', 'pending')
-            `;
-
-            db.query(query, [callerId, req.body.leadId || null], (err, result) => {
-                if (err) {
-                    console.error('Database error:', err);
-                    return res.status(500).json({
-                        success: false,
-                        error: 'Failed to create call record'
-                    });
+            // Return the call ID for next step
+            res.json({
+                success: true,
+                data: {
+                    callId: result.insertId,
+                    status: 'initiated'
                 }
-
-                // Forward the offer to the recipient through Socket.IO
-                const io = req.app.get('io');
-                if (io) {
-                    io.to(phoneNumber).emit('call:incoming', {
-                        offer: offer,
-                        callId: callId,
-                        from: callerId
-                    });
-                }
-
-                res.json({
-                    success: true,
-                    data: {
-                        callId,
-                        dbCallId: result.insertId,
-                        message: 'Call initiated successfully'
-                    }
-                });
             });
         } catch (error) {
             console.error('Error initiating call:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Failed to initiate call'
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    // Connect a call using Exotel API
+    connectCall: async (req, res) => {
+        try {
+            const { callId, to, from } = req.body;
+            
+            // Exotel API configuration
+            const SID = process.env.EXOTEL_SID;
+            const TOKEN = process.env.EXOTEL_TOKEN;
+            const auth = Buffer.from(`${SID}:${TOKEN}`).toString('base64');
+
+            // Make API call to Exotel
+            const response = await axios.post(
+                `https://api.exotel.com/v1/Accounts/${SID}/Calls/connect`,
+                {
+                    From: from,
+                    To: to,
+                    CallerId: process.env.EXOTEL_CALLER_ID,
+                    Record: "true"
+                },
+                {
+                    headers: {
+                        'Authorization': `Basic ${auth}`,
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                }
+            );
+
+            // Update call record with Exotel SID
+            await db.promise().query(
+                `UPDATE calls SET exotel_call_sid = ?, status = 'connected' WHERE id = ?`,
+                [response.data.Call.Sid, callId]
+            );
+
+            res.json({
+                success: true,
+                data: {
+                    callId,
+                    exotelCallSid: response.data.Call.Sid,
+                    status: 'connected'
+                }
             });
+        } catch (error) {
+            console.error('Error connecting call:', error);
+            res.status(500).json({ success: false, message: error.message });
         }
     },
 
@@ -272,7 +286,7 @@ const CallController = {
                     caller_id, 
                     start_time,
                     end_time,
-                    duration, 
+                    duration,
                     status,
                     call_type,
                     disposition,
@@ -654,4 +668,4 @@ const CallController = {
     }
 };
 
-module.exports = CallController; 
+module.exports = CallController;
