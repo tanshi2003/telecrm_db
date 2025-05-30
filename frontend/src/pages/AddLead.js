@@ -81,7 +81,7 @@ const AddLead = () => {
         });
         // Redirect to caller dashboard after adding a lead
         if (role === "caller") {
-          navigate("/caller/dashboard");
+          navigate("/caller-dashboard");
         } else {
           navigate("/leads");
         }
