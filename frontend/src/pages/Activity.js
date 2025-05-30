@@ -1,45 +1,78 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
-import { FaPhoneAlt, FaBook } from "react-icons/fa";
+import { formatDistanceToNow } from 'date-fns';
+import { 
+    FaUserEdit, FaPhone, FaMapMarker, FaCheckCircle, 
+    FaBullhorn, FaUserPlus, FaCog, FaInfoCircle,
+    FaPhoneAlt, FaBook // Add missing icons
+} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import BackButton from "../components/BackButton";
 
 const Activities = () => {
-  const [user, setUser] = useState(null);
-  const navigate = useNavigate();
+    const [user, setUser] = useState(null);
+    const [activities, setActivities] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
-  useEffect(() => {
-      console.log("AdminDashboard mounted");
-      const storedUser = JSON.parse(localStorage.getItem("user"));
-      const role = localStorage.getItem("role");
-      
-      console.log("AdminDashboard - Stored data:", {
-        storedUser,
-        role,
-        hasToken: !!localStorage.getItem("token")
-      });
-      
-      if (storedUser && role?.toLowerCase() === "admin") {
-        console.log("AdminDashboard - Setting user data");
-        setUser(storedUser);
-      } else {
-        console.error("Unauthorized access. Redirecting to login...");
-        navigate("/login");
-      }
+    // First useEffect for auth check
+    useEffect(() => {
+        const storedUser = JSON.parse(localStorage.getItem("user"));
+        const role = localStorage.getItem("role");
+        
+        if (storedUser && role?.toLowerCase() === "admin") {
+            setUser(storedUser);
+        } else {
+            navigate("/login");
+        }
     }, [navigate]);
-  
+
+    // Second useEffect for fetching activities - moved outside conditional
+    useEffect(() => {
+        const fetchActivities = async () => {
+            try {
+                const response = await fetch('http://localhost:5000/api/activities', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    setActivities(data.data);
+                }
+            } catch (error) {
+                console.error('Error fetching activities:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchActivities();
+    }, []);
+
     const handleNavigation = (path) => {
-      console.log("AdminDashboard - Navigating to:", path);
-      navigate(path);
+        navigate(path);
     };
-  
-    // If user is not set, show loading or redirect
+
+    const getIcon = (actionType) => {
+        const icons = {
+            'lead_update': FaUserEdit,
+            'call_made': FaPhone,
+            'lead_visit': FaMapMarker,
+            'lead_convert': FaCheckCircle,
+            'campaign_create': FaBullhorn,
+            'user_create': FaUserPlus,
+            'settings_update': FaCog
+        };
+        const IconComponent = icons[actionType] || FaInfoCircle;
+        return <IconComponent />;
+    };
+
+    // If user is not set, show loading
     if (!user) {
-      console.log("AdminDashboard - No user data, returning null");
-      return null;
+        return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
     }
-  
-    console.log("AdminDashboard - Rendering dashboard");
+
   return (
     <div className="flex min-h-screen overflow-hidden">
       {/* Sidebar */}
@@ -88,7 +121,31 @@ const Activities = () => {
           </div>
 
     
+        </div>
+
+        {/* Recent Activities */}
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold mb-4">Recent Activities</h2>
           
+          {loading ? (
+            <div className="text-center">Loading...</div>
+          ) : (
+            <div className="space-y-4">
+              {activities.map(activity => (
+                <div key={activity.id} className="bg-white p-4 rounded-lg shadow flex items-start">
+                  <div className="text-blue-500 mr-4">
+                    {getIcon(activity.action_type)}
+                  </div>
+                  <div>
+                    <p className="font-medium">{activity.description}</p>
+                    <p className="text-sm text-gray-500">
+                      {activity.user_name} • {activity.timeAgo}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -96,4 +153,4 @@ const Activities = () => {
 };
 
 export default Activities;
-        
+

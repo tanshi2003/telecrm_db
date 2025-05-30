@@ -5,8 +5,6 @@ import {
   FaStar,
   FaCheckCircle,
   FaPhoneAlt,
-  FaHourglassHalf,
-  FaPhoneSlash,
   FaClock,
   FaMapMarkerAlt,
 } from "react-icons/fa";
@@ -70,7 +68,7 @@ export default function CallerReport() {
           },
           {
             icon: (
-              <FaPhoneSlash
+              <FaPhoneAlt
                 className="text-red-500"
                 style={{ transform: "rotate(90deg)" }}
               />

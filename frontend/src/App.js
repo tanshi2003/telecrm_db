@@ -30,7 +30,6 @@ import FiltersComponent from "./components/Filters";
 import FiltersPage from "./pages/Filters";
 import AddUser from "./pages/Register";
 import AllUsers from "./pages/AllUsers";
-import AccessLogs from "./pages/AccessLogs";
 import ManageRoles from "./pages/ManageRoles";
 import ManageStatus from "./pages/ManageStatus";
 import AssignManager from "./pages/AssignManager"; // <-- Add this import
@@ -43,8 +42,6 @@ import CallerReport from "./pages/ReportLeaderboard";
 import Reports2 from "./pages/CallReport";
 import LeadsChartReport from "./pages/LeadsReport";
 import Activities from "./pages/Activity";
-import Activities1 from "./pages/Activitycalls";
-import Activities2 from "./pages/Activityleads";
 import ManagerUserManagement from "./pages/ManagerUserManagement";
 import TeamView from "./pages/TeamView";
 import ViewTeam from "./pages/ViewTeam";
@@ -115,7 +112,6 @@ const AppContent = () => {
             <Route path="/admin/users" element={<ManageUsers />} />
             <Route path="/admin/users/register" element={<AddUser />} />
             <Route path="/admin/users/all-user" element={<AllUsers />} />
-            <Route path="/admin/users/access-logs" element={<AccessLogs />} />
             <Route path="/admin/users/manage-roles" element={<ManageRoles />} />
             <Route path="/admin/users/manage-status" element={<ManageStatus />} />
             
@@ -401,22 +397,6 @@ const AppContent = () => {
                 element={
                      <ProtectedRoute allowedRoles={["admin"]}>
                      <Activities />
-                     </ProtectedRoute>
-                        }
-            />
-            <Route
-                path="/Activitycalls"
-                element={
-                     <ProtectedRoute allowedRoles={["admin"]}>
-                     <Activities1/>
-                     </ProtectedRoute>
-                        }
-            />
-             <Route
-                path="/Activityleads"
-                element={
-                     <ProtectedRoute allowedRoles={["admin"]}>
-                     <Activities2/>
                      </ProtectedRoute>
                         }
             />
