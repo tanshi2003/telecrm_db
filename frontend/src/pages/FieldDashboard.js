@@ -1,151 +1,680 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // added
-import { FaUser, FaTasks, FaBullhorn, FaChartLine, FaPencilAlt } from "react-icons/fa"; // added icons
+import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { FaUser, FaBullhorn, FaChartLine, FaPencilAlt, FaPhone } from "react-icons/fa";
 import Sidebar from "../components/Sidebar";
+import io from 'socket.io-client';  
+import axios from 'axios';
 
+// Add base URL constant
+const BASE_URL = "http://localhost:5000";
+
+// Update LEAD_STATUSES to match exactly with backend VALID_STATUSES
 const LEAD_STATUSES = [
   "New",
-  "Contacted",
-  "Follow-up",
-  "Meeting Scheduled",
-  "Proposal Sent",
-  "Negotiating",
-  "Won",
-  "Lost",
+  "Contacted", 
+  "Follow-Up Scheduled",
+  "Interested",
   "Not Interested",
-  "Wrong Number",
-  "Invalid Lead",
-  "Duplicate"
+  "Call Back Later",
+  "Under Review",
+  "Converted",
+  "Lost",
+  "Not Reachable",
+  "On Hold"
 ];
 
 const FieldDashboard = () => {
   const [user, setUser] = useState(null);
   const [leads, setLeads] = useState([]);
-  const [tasks, setTasks] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
-  const [stats, setStats] = useState(null);
   const [selectedLead, setSelectedLead] = useState(null);
   const [leadStatus, setLeadStatus] = useState("");
   const [leadNotes, setLeadNotes] = useState("");
   const [updateMessage, setUpdateMessage] = useState(""); // new state for success message
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Add performance metrics state
+  const [performanceData, setPerformanceData] = useState({
+    totalLeads: 0,
+    contactedToday: 0,
+    totalCalls: 0,
+    pendingFollowups: 0,
+    convertedLeads: 0  // Added back
+  });
+
   const navigate = useNavigate(); // added
+
+  // Add these state variables at the top with other states
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
+  const [showDialer, setShowDialer] = useState(false);
+  const [dialedNumber, setDialedNumber] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredLeads, setFilteredLeads] = useState([]);
+  const [showCallbook, setShowCallbook] = useState(false);
+  const [callStatus, setCallStatus] = useState('idle');
+  const [callDuration, setCallDuration] = useState(0);
+  const [currentCallId, setCurrentCallId] = useState(null);
+  const [currentCallSid, setCurrentCallSid] = useState(null);
+  const [callDisposition, setCallDisposition] = useState('pending');
+
+  // Add pagination state
+  const [displayCount, setDisplayCount] = useState(5);  // Show 5 leads initially
+  const [showingAll, setShowingAll] = useState(false);
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (storedUser) setUser(storedUser);
   }, []);
 
-  useEffect(() => {
+  // Wrap fetchData in useCallback
+  const fetchData = useCallback(async () => {
     if (!user) return;
-    // use user.token if available, otherwise get token from localStorage
-    const token = user.token || localStorage.getItem("token");
-    if (!token) {
-      console.error("Token is undefined, aborting API calls");
-      return;
-    }
-
-    // Fetch Leads with error handling
-    fetch(`/api/users/${user.id}/leads`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Error fetching leads: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then(data => {
-        setLeads(data.data || []);
-        setTasks(data.data || []); // Just using leads as dummy tasks
-      })
-      .catch(err => console.error(err));
-
-    // Fetch Campaigns with error handling
-    fetch(`/api/users/${user.id}/campaigns`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Error fetching campaigns: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then(data => setCampaigns(data.data || []))
-      .catch(err => console.error(err));
-
-    // Fetch Stats with error handling
-    fetch(`/api/users/${user.id}/stats`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Error fetching stats: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then(data => setStats(data.data || null))
-      .catch(err => console.error(err));
-  }, [user]);
-
-  const handleSelectLead = (lead) => {
-    setSelectedLead(lead);
-    setLeadStatus(lead.status);
-    setLeadNotes(lead.notes || "");
-  };
-
-  const handleUpdateLead = async () => {
-    if (!selectedLead) return;
-    
-    const token = user.token || localStorage.getItem("token");
     
     try {
-      // Include existing lead data to maintain required fields
-      const updateData = {
-        name: selectedLead.name,        // Keep existing name
-        phone_no: selectedLead.phone_no, // Keep existing phone
-        status: leadStatus,             // New status
-        notes: leadNotes,               // New notes
-        updated_by: user.id
-      };
-
-      console.log('Updating lead with data:', updateData);
-
-      const response = await fetch(`http://localhost:5000/api/leads/${selectedLead.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(updateData)
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${BASE_URL}/api/users/${user.id}/leads`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Error updating lead: ${response.status}`);
+        throw new Error('Failed to fetch leads');
       }
 
-      // Update local state
-      setLeads(leads.map(lead => 
-        lead.id === selectedLead.id 
-          ? { ...lead, status: leadStatus, notes: leadNotes }
-          : lead
-      ));
+      const data = await response.json();
       
-      setSelectedLead(null);
-      setUpdateMessage("Lead updated successfully");
-      setTimeout(() => setUpdateMessage(""), 3000);
+      if (Array.isArray(data.data)) {
+        setLeads(data.data);
+        
+        const today = new Date().toISOString().split('T')[0];
+        
+        setPerformanceData(prev => ({
+          totalLeads: data.data.length,
+          contactedToday: data.data.filter(l => 
+            l.status === "Contacted" && 
+            l.updated_at?.split('T')[0] === today
+          ).length,
+          totalCalls: data.data.filter(l => l.call_count).reduce((acc, curr) => acc + curr.call_count, 0),
+          pendingFollowups: data.data.filter(l => l.status === "Follow-Up Scheduled").length,
+          convertedLeads: data.data.filter(l => l.status === "Converted").length  // Added back
+        }));
+      }
+    } catch (err) {
+      console.error("Error fetching leads:", err);
+      setUpdateMessage("Error loading leads");
+    }
+  }, [user]); // Add user as dependency
+
+  // Update useEffect to use fetchData
+  useEffect(() => {
+    if (!user) return;
+    fetchData();
+  }, [user, fetchData]); // Added fetchData to dependencies
+
+  // Update the formatStatusDisplay function
+  const formatStatusDisplay = (status) => {
+    if (!status) return 'New';
+    
+    // Use exact status values, no formatting needed
+    return status;
+  };
+
+  // Update handleUpdateLead function
+  const handleUpdateLead = async () => {
+    if (!selectedLead) return;
+    
+    try {
+        const token = localStorage.getItem("token");
+        const updateData = {
+            name: selectedLead.name,
+            phone_no: selectedLead.phone_no,
+            status: leadStatus,
+            notes: leadNotes || "",
+            updated_by: user.id
+        };
+
+        console.log('Updating lead:', selectedLead.id, updateData); // Debug log
+
+        const response = await fetch(`${BASE_URL}/api/leads/${selectedLead.id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify(updateData)
+        });
+
+        const responseData = await response.json();
+        console.log('Update response:', responseData); // Debug log
+
+        if (!response.ok) {
+            throw new Error(responseData.message || "Failed to update lead");
+        }
+
+        // Update local state first
+        setLeads(prevLeads => 
+            prevLeads.map(lead => 
+                lead.id === selectedLead.id 
+                    ? { 
+                        ...lead,
+                        status: leadStatus,
+                        notes: leadNotes,
+                        updated_at: new Date().toISOString()
+                    }
+                    : lead
+            )
+        );
+
+        // Wait a moment before refreshing data
+        setTimeout(async () => {
+            await fetchData();
+        }, 500);
+
+        setIsModalOpen(false);
+        setSelectedLead(null);
+        setUpdateMessage("Lead updated successfully");
+        setTimeout(() => setUpdateMessage(""), 3000);
 
     } catch (err) {
-      console.error("Update error:", err);
-      setUpdateMessage(err.message || "Failed to update lead");
+        console.error("Update error:", err);
+        setUpdateMessage(err.message || "Failed to update lead");
     }
   };
 
-  const totalLeads = stats?.total_leads || 0;
-  const convertedLeads = leads.filter(l => l.status === "Converted").length;
-  const conversionRate = totalLeads ? ((convertedLeads / totalLeads) * 100).toFixed(1) : 0;
+  // Update refreshLeads function to fetch campaign data with lead counts
+  const refreshLeads = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+        const token = localStorage.getItem("token");
+        
+        // First fetch leads
+        const leadsResponse = await fetch(`${BASE_URL}/api/users/${user.id}/leads`, {
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const leadsData = await leadsResponse.json();
+        
+        // Then fetch campaigns
+        const campaignsResponse = await fetch(`${BASE_URL}/api/campaigns/${user.id}/campaigns/with-leads`, {
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log('Campaign response:', await campaignsResponse.clone().text()); // Debug log
+
+        const campaignsData = await campaignsResponse.json();
+
+        if (leadsData.success) {
+            setLeads(leadsData.data || []);
+            setPerformanceData(prev => ({
+                ...prev,
+                totalLeads: leadsData.data?.length || 0,
+                convertedLeads: leadsData.data?.filter(l => l.status === "Converted").length || 0
+            }));
+        }
+
+        if (campaignsData.success) {
+            setCampaigns(campaignsData.data || []);
+        }
+
+    } catch (err) {
+        console.error("Error refreshing data:", err);
+        // Don't clear existing data on error
+        setUpdateMessage("Error refreshing data");
+    }
+  }, [user]); // Add user as dependency
+
+  // Fix second useEffect dependencies
+  useEffect(() => {
+    if (!user) return;
+    refreshLeads();
+  }, [user, refreshLeads]); // Added refreshLeads to dependencies
+
+  // Add this component before the return statement
+  const CampaignModal = ({ campaign, onClose }) => {
+    return (
+      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div className="relative top-20 mx-auto p-6 border w-[480px] shadow-xl rounded-lg bg-white">
+          <div className="absolute top-4 right-4">
+            <button 
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-500 transition-colors"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="mt-2">
+            {/* Header */}
+            <div className="border-b pb-4 mb-4">
+              <h3 className="text-2xl font-semibold text-gray-800">
+                {campaign.name}
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {campaign.description || 'No description available'}
+              </p>
+            </div>
+
+            {/* Campaign Details Grid */}
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-500">Manager</p>
+                <div className="flex items-center mt-1">
+                  <div className="bg-blue-100 rounded-full p-2 mr-2">
+                    <FaUser className="text-blue-600 text-sm" />
+                  </div>
+                  <p className="text-base text-gray-900">{campaign.manager_name || 'Not assigned'}</p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-500">Status</p>
+                <div className="mt-1">
+                  <span className={`inline-block px-3 py-1 text-sm rounded-full font-medium ${
+                    campaign.status === 'active' ? 'bg-green-100 text-green-800' :
+                    campaign.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {campaign.status?.charAt(0).toUpperCase() + campaign.status?.slice(1)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-500">Start Date</p>
+                <p className="text-base text-gray-900 mt-1">
+                  {new Date(campaign.start_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </p>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-500">End Date</p>
+                <p className="text-base text-gray-900 mt-1">
+                  {campaign.end_date 
+                    ? new Date(campaign.end_date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })
+                    : 'Ongoing'}
+                </p>
+              </div>
+            </div>
+
+            {/* Lead Statistics */}
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-600">Total Leads</p>
+                  <p className="text-2xl font-bold text-blue-700 mt-1">{campaign.lead_count || 0}</p>
+                </div>
+                <div className="bg-blue-100 rounded-full p-3">
+                  <FaBullhorn className="text-blue-600 text-xl" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Update the DialerModal component
+  const DialerModal = () => {
+    return (
+      <div className="fixed bottom-4 right-4 z-50">
+        <div className="bg-white rounded-lg p-3 w-64 shadow-lg">
+          {/* ... existing header ... */}
+
+          {/* Call Status and Duration */}
+          <div className="mb-2 text-center">
+            {callStatus !== 'idle' && (
+              <div className={`text-sm ${
+                callStatus === 'connected' ? 'text-green-600' :
+                callStatus === 'disconnected' ? 'text-red-600' :
+                'text-blue-600'
+              }`}>
+                {callStatus.charAt(0).toUpperCase() + callStatus.slice(1)}
+                {callStatus === 'connected' && (
+                  <span className="ml-2">{formatDuration(callDuration)}</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Number Display */}
+          <div className="mb-2 p-2 bg-gray-50 rounded">
+            <div className="flex justify-between items-center">
+              <input
+                type="text"
+                value={dialedNumber}
+                onChange={(e) => {
+                  let value = e.target.value.replace(/[^0-9]/g, '');
+                  setDialedNumber(value);
+                }}
+                className="w-full bg-transparent text-lg font-mono focus:outline-none"
+                placeholder="Enter number"
+              />
+              <button
+                onClick={() => setDialedNumber('')}
+                className="px-2 py-0.5 text-xs bg-gray-200 rounded hover:bg-gray-300"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          {/* Callbook Button */}
+          <button
+            onClick={() => setShowCallbook(!showCallbook)}
+            className="w-full mb-2 p-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+          >
+            {showCallbook ? `Hide Callbook (${filteredLeads.length})` : 'Show Callbook'}
+          </button>
+
+          {/* Updated Callbook Section */}
+          {showCallbook && (
+            <div className="mb-2 max-h-48 overflow-y-auto">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search leads by name or phone..."
+                className="w-full p-2 text-xs border rounded mb-2"
+              />
+              <div className="space-y-1">
+                {filteredLeads.length > 0 ? (
+                  filteredLeads.map((lead) => (
+                    <button
+                      key={lead.id}
+                      onClick={() => {
+                        setDialedNumber(lead.phone_no);
+                        setShowCallbook(false);
+                      }}
+                      className="w-full p-2 text-left hover:bg-gray-100 rounded text-xs border-b"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="font-medium text-gray-800">{lead.name}</div>
+                          <div className="text-gray-600">{lead.phone_no}</div>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          lead.status === "New" ? "bg-blue-100 text-blue-800" :
+                          lead.status === "Contacted" ? "bg-yellow-100 text-yellow-800" :
+                          lead.status === "Converted" ? "bg-green-100 text-green-800" :
+                          "bg-gray-100 text-gray-800"
+                        }`}>
+                          {lead.status}
+                        </span>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500 py-2">
+                    {searchTerm ? 'No leads found' : 'No leads available'}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Dial Pad */}
+          <div className="grid grid-cols-3 gap-1">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, '*', 0, '#'].map((num) => (
+              <button
+                key={num}
+                onClick={() => setDialedNumber(prev => prev + num)}
+                className="p-2 text-sm font-medium bg-gray-100 rounded hover:bg-gray-200"
+              >
+                {num}
+              </button>
+            ))}
+          </div>
+
+          {/* Update Call Button */}
+          <button
+            onClick={() => {
+              if (callStatus === 'connected' || callStatus === 'dialing') {
+                handleCallEnd();
+              } else if (dialedNumber) {
+                startCall(dialedNumber);
+              }
+            }}
+            className={`w-full mt-2 p-2 text-sm text-white rounded ${
+              callStatus === 'connected' || callStatus === 'dialing'
+                ? 'bg-red-500 hover:bg-red-600'
+                : dialedNumber
+                ? 'bg-green-500 hover:bg-green-600'
+                : 'bg-gray-300 cursor-not-allowed'
+            }`}
+            disabled={!dialedNumber && callStatus === 'idle'}
+          >
+            {callStatus === 'connected' ? 'End Call' : 
+             callStatus === 'dialing' ? 'Cancel Call' : 'Call'}
+          </button>
+
+          {/* End Call Button - Show when call is active */}
+          {callStatus === 'connected' && (
+            <button
+              onClick={() => {
+                setCallStatus('disconnected');
+                stopTimer();
+                setTimeout(() => setCallStatus('idle'), 2000);
+              }}
+              className="w-full mt-2 p-2 text-sm text-white bg-red-500 hover:bg-red-600 rounded"
+            >
+              End Call
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Add this useEffect right after your state declarations
+  useEffect(() => {
+    if (showCallbook) {
+      // Initially set filtered leads to all leads when callbook opens
+      if (searchTerm) {
+        const filtered = leads.filter(lead => 
+          lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          lead.phone_no.includes(searchTerm)
+        );
+        setFilteredLeads(filtered);
+      } else {
+        setFilteredLeads(leads);
+      }
+    }
+  }, [leads, searchTerm, showCallbook]);
+
+  // Initialize socket connection
+  useEffect(() => {
+    const socket = io(BASE_URL);
+    
+    socket.on('connect', () => {
+      console.log('Connected to socket server');
+    });
+
+    socket.on('callStatus', (data) => {
+      setCallStatus(data.status);
+      if (data.status === 'connected') {
+        startTimer();
+      } else if (data.status === 'disconnected') {
+        stopTimer();
+      }
+    });
+
+    return () => socket.disconnect();
+  }, []);
+
+  // Add timer functions
+  const startTimer = () => {
+    setCallDuration(0);
+    const timer = setInterval(() => {
+      setCallDuration(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  };
+
+  const stopTimer = () => {
+    setCallDuration(0);
+  };
+
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Add this useEffect for filtering leads
+  useEffect(() => {
+    const filterLeads = () => {
+      if (!leads) return;
+      
+      const filtered = leads.filter(lead => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          lead.name.toLowerCase().includes(searchLower) ||
+          lead.phone_no.includes(searchTerm)
+        );
+      });
+      
+      setFilteredLeads(filtered);
+    };
+
+    filterLeads();
+  }, [leads, searchTerm]);
+
+  // Update the startCall function first
+  const startCall = async (phoneNumber) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // Clean the phone number
+      let cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+      if (!cleanNumber.startsWith('0')) {
+        cleanNumber = '0' + cleanNumber;
+      }
+
+      setCallStatus('dialing');
+      setCallDuration(0);
+
+      // Fallback for from number
+      const fromNumber = user?.phone_number || user?.phone || '7817822675';
+
+      const response = await axios.post(
+        'http://localhost:5000/api/calls/initiate',
+        {
+          to: cleanNumber,
+          from: fromNumber,
+          leadId: selectedLead?.id
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (response.data.success) {
+        const { dbCallId, exotelCallSid } = response.data.data;
+        setCurrentCallId(dbCallId);
+        setCurrentCallSid(exotelCallSid);
+
+        // Start polling for call status
+        const pollInterval = setInterval(async () => {
+          try {
+            const statusResponse = await axios.get(
+              `http://localhost:5000/api/calls/${dbCallId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`
+                }
+              }
+            );
+
+            if (statusResponse.data.success) {
+              const { status, disposition } = statusResponse.data.data;
+              setCallStatus(status);
+              setCallDisposition(disposition);
+
+              if (['completed', 'failed', 'busy', 'no-answer'].includes(status)) {
+                clearInterval(pollInterval);
+                stopTimer();
+              }
+            }
+          } catch (error) {
+            console.error('Error polling call status:', error);
+            clearInterval(pollInterval);
+            stopTimer();
+            setCallStatus('failed');
+          }
+        }, 2000);
+
+        // Stop polling after 30 seconds if call hasn't connected
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          if (callStatus === 'dialing') {
+            setCallStatus('failed');
+            stopTimer();
+          }
+        }, 30000);
+      }
+    } catch (error) {
+      console.error('Error starting call:', error);
+      setCallStatus('failed');
+      stopTimer();
+    }
+  };
+
+  // Update the handleCallEnd function
+  const handleCallEnd = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      if (currentCallId) {
+        await axios.post(
+          `http://localhost:5000/api/calls/${currentCallId}/end`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+      }
+
+      setCallStatus('idle');
+      stopTimer();
+      setCurrentCallId(null);
+      setCurrentCallSid(null);
+      setDialedNumber('');
+
+    } catch (error) {
+      console.error('Error ending call:', error);
+    }
+  };
 
   return (
     <div className="relative flex min-h-screen">
@@ -153,12 +682,21 @@ const FieldDashboard = () => {
       <div className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold">Field Employee Dashboard</h1>
-          <button 
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            onClick={() => navigate("/addlead")}
-          >
-            Create Lead
-          </button>
+          <div className="flex gap-4">
+            <button 
+              onClick={() => setShowDialer(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center"
+            >
+              <FaPhone className="mr-2" />
+              Make Call
+            </button>
+            <button 
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                onClick={() => navigate("/addlead")}
+            >
+                Create Lead
+            </button>
+          </div>
         </div>
         {/* Persistent Update Message */}
         {updateMessage && (
@@ -168,8 +706,8 @@ const FieldDashboard = () => {
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
-          {/* Assigned Leads Tile */}
-          <div className="bg-white rounded-lg shadow-lg p-6 col-span-2">
+          {/* Assigned Leads Tile - Full width */}
+          <div className="bg-white rounded-lg shadow-lg p-6 col-span-3">
             <h2 className="text-xl font-semibold mb-4 flex items-center text-gray-800">
               <FaUser className="mr-2 text-blue-600" />
               Assigned Leads
@@ -188,7 +726,7 @@ const FieldDashboard = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {leads.map(lead => (
+                      {leads.slice(0, displayCount).map(lead => (
                         <tr key={lead.id} className="hover:bg-gray-50">
                           <td className="py-3 px-4">
                             <div className="flex items-center">
@@ -200,8 +738,10 @@ const FieldDashboard = () => {
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                               ${lead.status === "New" ? "bg-blue-100 text-blue-800" :
                               lead.status === "Contacted" ? "bg-yellow-100 text-yellow-800" :
-                              lead.status === "Follow-up" ? "bg-purple-100 text-purple-800" :
+                              lead.status === "Follow-Up Scheduled" ? "bg-purple-100 text-purple-800" :
                               lead.status === "Converted" ? "bg-green-100 text-green-800" :
+                              lead.status === "Lost" ? "bg-red-100 text-red-800" :
+                              lead.status === "Under Review" ? "bg-indigo-100 text-indigo-800" :
                               "bg-gray-100 text-gray-800"}`}>
                               {lead.status}
                             </span>
@@ -231,100 +771,124 @@ const FieldDashboard = () => {
                   </table>
                 </div>
                 
-                {/* Removed bulk update button and logic since it's not needed */}
+                {/* Show More/Less Button */}
+                {leads.length > 5 && (
+                  <div className="mt-4 text-center">
+                    <button
+                      onClick={() => {
+                        if (showingAll) {
+                          setDisplayCount(5);
+                          setShowingAll(false);
+                        } else {
+                          setDisplayCount(leads.length);
+                          setShowingAll(true);
+                        }
+                      }}
+                      className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 
+                                 hover:text-blue-800 focus:outline-none"
+                    >
+                      {showingAll ? (
+                        <>
+                          Show Less
+                          <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" />
+                          </svg>
+                        </>
+                      ) : (
+                        <>
+                          Show More ({leads.length - displayCount} more)
+                          <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </>
             ) : (
               <p className="text-gray-500 text-center py-8">No leads assigned yet.</p>
             )}
           </div>
           
-          {/* Today's Tasks */}
-          <div className="bg-white p-4 rounded shadow-md hover:shadow-lg transition transform duration-300 col-span-1 flex flex-col">
-            <h2 className="text-xl font-semibold mb-2 flex items-center">
-              <FaTasks className="mr-2" />
-              Today's Tasks
-            </h2>
-            <p className="mb-2 text-sm text-gray-700">
-              Check your daily tasks and update progress.
-            </p>
-            {tasks.length > 0 ? (
-              <ul className="flex-grow">
-                {tasks.slice(0, 5).map(task => (
-                  <li key={task.id} className="mb-2">{task.task || task.name}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500 flex-grow">No tasks for today.</p>
-            )}
-            <div className="flex justify-center mt-4">
-              <button 
-                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                onClick={() => navigate("/tasks")}
-              >
-                Daily Tasks
-              </button>
-            </div>
-          </div>
-          
-          {/* Campaigns Tile */}
-          <div className="bg-white p-4 rounded shadow-md hover:shadow-lg transition transform duration-300 col-span-1 flex flex-col">
-            <h2 className="text-xl font-semibold mb-2 flex items-center">
-              <FaBullhorn className="mr-2" />
-              Campaigns
-            </h2>
-            <p className="mb-2 text-sm text-gray-700">
-              Create, assign, and track campaigns for optimal performance.
-            </p>
-            {campaigns.length > 0 ? (
-              <ul className="flex-grow">
-                {campaigns.slice(0, 5).map(camp => (
-                  <li key={camp.id} className="mb-2 flex justify-between">
-                    <span>{camp.name}</span>
-                    <span className="bg-blue-100 px-2 rounded text-sm">
-                      {camp.lead_count || "0"} Leads
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500 flex-grow">No campaigns assigned yet.</p>
-            )}
-            <div className="flex justify-center mt-4">
-              <button 
-                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                onClick={() => navigate("/CampaignDetails")}
-              >
-                Campaign Info
-              </button>
-            </div>
-          </div>
-          
-          {/* Performance Summary */}
-          <div className="bg-white p-4 rounded shadow-md hover:shadow-lg transition transform duration-300 col-span-1 flex flex-col">
+          {/* Performance Summary - Left side */}
+          <div className="bg-white p-4 rounded shadow-md hover:shadow-lg transition col-span-2">
             <h2 className="text-xl font-semibold mb-2 flex items-center">
               <FaChartLine className="mr-2" />
               Performance Summary
             </h2>
-            <p className="mb-2 text-sm text-gray-700">
-              Check your daily tasks and update progress.
-            </p>
-            {tasks.length > 0 ? (
-              <ul className="flex-grow">
-                {tasks.slice(0, 5).map(task => (
-                  <li key={task.id} className="mb-2">{task.task || task.name}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500 flex-grow">No tasks for today.</p>
-            )}
-            <div className="flex justify-center mt-4">
-              <button 
-                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                onClick={() => navigate("/performance")}
-              >
-                View Performance
-              </button>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="p-3 bg-blue-50 rounded">
+                <p className="text-sm text-gray-600">Total Assigned Leads</p>
+                <p className="text-xl font-bold">{performanceData.totalLeads}</p>
+              </div>
+              <div className="p-3 bg-green-50 rounded">
+                <p className="text-sm text-gray-600">Converted Leads</p>
+                <p className="text-xl font-bold">{performanceData.convertedLeads}</p>
+              </div>
+              <div className="p-3 bg-yellow-50 rounded">
+                <p className="text-sm text-gray-600">Pending Follow-ups</p>
+                <p className="text-xl font-bold">{performanceData.pendingFollowups}</p>
+              </div>
+              <div className="p-3 bg-green-50 rounded">
+                <p className="text-sm text-gray-600">Contacted Today</p>
+                <p className="text-xl font-bold">{performanceData.contactedToday}</p>
+              </div>
+              <div className="p-3 bg-purple-50 rounded">
+                <p className="text-sm text-gray-600">Total Calls</p>
+                <p className="text-xl font-bold">{performanceData.totalCalls}</p>
+              </div>
             </div>
+          </div>
+
+          {/* Campaigns Tile - Right side, more compact */}
+          <div className="bg-white p-4 rounded-lg shadow-lg col-span-1">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold flex items-center">
+                <FaBullhorn className="mr-2 text-blue-600" />
+                Active Campaigns
+              </h2>
+              <span className="text-sm bg-gray-100 px-3 py-1 rounded">
+                {campaigns?.length || 0} Total
+              </span>
+            </div>
+            
+            {campaigns && campaigns.length > 0 ? (
+              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                {campaigns.map(campaign => (
+                  <div 
+                    key={campaign.id} 
+                    className="border-b last:border-0 pb-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                    onClick={() => {
+                      setSelectedCampaign(campaign);
+                      setIsCampaignModalOpen(true);
+                    }}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium text-gray-800 text-sm">{campaign.name}</h3>
+                        {campaign.description && (
+                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                            {campaign.description}
+                          </p>
+                        )}
+                      </div>
+                      <span className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded">
+                        {campaign.lead_count || 0} Leads
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      {new Date(campaign.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-500">
+                <FaBullhorn className="mx-auto mb-2 text-gray-400 text-lg" />
+                <p className="text-sm">No active campaigns</p>
+              </div>
+            )}
           </div>
         </div>
         
@@ -346,7 +910,9 @@ const FieldDashboard = () => {
                     className="w-full p-2 border rounded-md"
                   >
                     {LEAD_STATUSES.map(status => (
-                      <option key={status} value={status}>{status}</option>
+                      <option key={status} value={status}>
+                        {formatStatusDisplay(status)}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -361,6 +927,11 @@ const FieldDashboard = () => {
                     rows="3"
                     placeholder="Add notes..."
                   />
+                </div>
+                {/* Display current lead info */}
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600">Current Name: {selectedLead?.name}</p>
+                  <p className="text-sm text-gray-600">Current Phone: {selectedLead?.phone_no}</p>
                 </div>
                 <div className="flex justify-end gap-3">
                   <button
@@ -386,6 +957,16 @@ const FieldDashboard = () => {
             </div>
           </div>
         )}
+        {isCampaignModalOpen && selectedCampaign && (
+          <CampaignModal 
+            campaign={selectedCampaign} 
+            onClose={() => {
+              setIsCampaignModalOpen(false);
+              setSelectedCampaign(null);
+            }}
+          />
+        )}
+        {showDialer && <DialerModal />}
       </div>
     </div>
   );
