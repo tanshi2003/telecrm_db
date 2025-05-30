@@ -19,7 +19,8 @@ const AllUsers = () => {
     campaigns_handled: "",
     total_working_hours: "",
     assigned_leads: [],
-    assigned_campaigns: []
+    assigned_campaigns: [],
+    status: ""
   });
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -40,7 +41,8 @@ const AllUsers = () => {
       campaigns_handled: "",
       total_working_hours: "",
       assigned_leads: [],
-      assigned_campaigns: []
+      assigned_campaigns: [],
+      status: ""
     });
     setIsEditing(false);
     setEditId(null);
@@ -119,7 +121,8 @@ const AllUsers = () => {
         campaigns_handled: user.campaigns_handled || "",
         total_working_hours: user.total_working_hours || "",
         assigned_leads: assignedLeads.map(lead => lead.id),
-        assigned_campaigns: assignedCampaigns.map(campaign => campaign.id)
+        assigned_campaigns: assignedCampaigns.map(campaign => campaign.id),
+        status: user.status || ""
       });
       setIsEditing(true);
       setEditId(id);
@@ -259,6 +262,19 @@ const AllUsers = () => {
                   <option value="caller">Caller</option>
                   <option value="field_employee">Field Employee</option>
                 </select>
+              </div>
+
+              {/* Status Field (Read Only) */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <input
+                  type="text"
+                  className="form-control bg-gray-100 cursor-not-allowed"
+                  name="status"
+                  value={formData.status || ""}
+                  readOnly
+                  disabled
+                />
               </div>
 
               {/* Leads Section */}

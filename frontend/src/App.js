@@ -30,7 +30,6 @@ import FiltersComponent from "./components/Filters";
 import FiltersPage from "./pages/Filters";
 import AddUser from "./pages/Register";
 import AllUsers from "./pages/AllUsers";
-import AccessLogs from "./pages/AccessLogs";
 import ManageRoles from "./pages/ManageRoles";
 import ManageStatus from "./pages/ManageStatus";
 import AssignManager from "./pages/AssignManager"; // <-- Add this import
@@ -38,7 +37,11 @@ import TeamsList from "./pages/TeamsList";
 // import TeamManagement from "./pages/team-management";
 import Meetings from "./pages/Meetings";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Reports from "./pages/ReportsLeaderboard";
+import Reports from "./pages/Report";
+import CallerReport from "./pages/ReportLeaderboard";
+import Reports2 from "./pages/CallReport";
+import LeadsChartReport from "./pages/LeadsReport";
+import Activities from "./pages/Activity";
 import ManagerUserManagement from "./pages/ManagerUserManagement";
 import TeamView from "./pages/TeamView";
 import ViewTeam from "./pages/ViewTeam";
@@ -93,7 +96,7 @@ const AppContent = () => {
   return (
     <div className="flex min-h-screen">
       {/* Sidebar is conditionally rendered based on user login status */}
-      {user?.isLoggedIn && <Sidebar role={user.role} />}
+      {user?.isLoggedIn && <Sidebar user={user} />}
       <div className={user?.isLoggedIn ? "ml-64 flex-grow" : "w-full"}>
         <Navbar />
         <AnimatePresence mode="wait">
@@ -109,9 +112,9 @@ const AppContent = () => {
             <Route path="/admin/users" element={<ManageUsers />} />
             <Route path="/admin/users/register" element={<AddUser />} />
             <Route path="/admin/users/all-user" element={<AllUsers />} />
-            <Route path="/admin/users/access-logs" element={<AccessLogs />} />
             <Route path="/admin/users/manage-roles" element={<ManageRoles />} />
             <Route path="/admin/users/manage-status" element={<ManageStatus />} />
+            
             <Route
               path="/admin/users/edit/:id"
               element={
@@ -361,7 +364,43 @@ const AppContent = () => {
                 </ProtectedRoute>
               }
             />
-
+             <Route
+              path="/Report"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <Reports />
+                </ProtectedRoute>
+              }
+            />
+           <Route path="/report-leaderboard/:caller_id" element={<CallerReport />} />
+                
+              
+            
+            <Route
+              path="/CallReport"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <Reports2 />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/LeadsReport"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                  <LeadsChartReport />
+                </ProtectedRoute>
+              }
+            />
+             <Route
+                path="/Activity"
+                element={
+                     <ProtectedRoute allowedRoles={["admin"]}>
+                     <Activities />
+                     </ProtectedRoute>
+                        }
+            />
+            
             {/* Add catch-all routes for old paths */}
             <Route
               path="/admin-dashboard"

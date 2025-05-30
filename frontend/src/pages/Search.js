@@ -21,7 +21,6 @@ const SearchPage = () => {
       const response = await axios.get(`http://localhost:5000/api/users/${userId}/leads`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log("Leads fetched for user:", response.data.data);
       setFilteredLeads(response.data.data); // Set the leads data
       setShowLeadsModal(true); // Open the leads modal
     } catch (error) {
@@ -36,7 +35,6 @@ const SearchPage = () => {
       const response = await axios.get(`http://localhost:5000/api/users/${userId}/campaigns`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log("Campaigns fetched for user:", response.data.data);
       setFilteredCampaigns(response.data.data); // Set the campaigns data
       setShowCampaignsModal(true); // Open the campaigns modal
     } catch (error) {
@@ -91,29 +89,12 @@ const SearchPage = () => {
           },
         }
       );
-      console.log("Search results:", response.data.results); // Debugging: Log the results
       setResults(response.data.results || []);
     } catch (error) {
       console.error("Error during search:", error);
       setErrorMessage("Failed to fetch search results.");
     } finally {
       setIsLoading(false); // Stop loading
-    }
-  };
-
-  const handleRoleUpdate = async (newRole) => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.put(
-        `http://localhost:5000/api/users/update-role/${selectedResult.id}`,
-        { role: newRole },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("Role updated successfully!");
-      setSelectedResult({ ...selectedResult, role: newRole });
-    } catch (error) {
-      console.error("Error updating role:", error.response?.data || error.message);
-      alert("Failed to update role.");
     }
   };
 
@@ -188,9 +169,21 @@ const SearchPage = () => {
                     className="p-4 border rounded-lg shadow-sm hover:shadow-md transition cursor-pointer bg-gray-50 hover:bg-gray-100"
                     onClick={() => handleUserClick(result)}
                   >
-                    <div className="flex items-center gap-2">
-                      <FaUser className="text-blue-500" />
-                      <p className="font-bold text-lg text-blue-600">{result.name}</p>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <FaUser className="text-blue-500" />
+                        <span className="font-bold text-lg text-blue-600">{result.name}</span>
+                      </div>
+                      {result.role && (
+                        <span className="text-sm text-gray-700">
+                          <strong>Role:</strong> {result.role}
+                        </span>
+                      )}
+                      {result.email && (
+                        <span className="text-sm text-gray-500">
+                          <strong>Email:</strong> {result.email}
+                        </span>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -204,8 +197,6 @@ const SearchPage = () => {
           <h2 className="text-3xl font-bold text-blue-600 mb-6">Details</h2>
           {selectedResult ? (
             <div className="space-y-4">
-              {console.log("Selected result:", selectedResult)} {/* Debugging: Log the selected result */}
-              {console.log("Selected user:", selectedResult)} {/* Debugging: Log the selected user */}
               {searchCategory === "users" ? (
                 <>
                   <p className="font-bold text-lg">
@@ -218,15 +209,7 @@ const SearchPage = () => {
                     <span className="font-semibold">Phone:</span> {selectedResult.phone_no}
                   </p>
                   <p className="text-sm text-gray-600">
-                    <span className="font-semibold">Role:</span>
-                    <select
-                      value={selectedResult.role}
-                      onChange={(e) => handleRoleUpdate(e.target.value)}
-                      className="p-2 border rounded-lg">
-                      <option value="manager">Manager</option>
-                      <option value="caller">Caller</option>
-                      <option value="field">Field Employee</option>
-                    </select>
+                    <span className="font-semibold">Role:</span> {selectedResult.role}
                   </p>
                   <p className="text-sm text-gray-600">
                     <span className="font-semibold">Location:</span> {selectedResult.location}
@@ -311,22 +294,33 @@ const SearchPage = () => {
       {/* Leads Modal */}
       {showLeadsModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-1/2 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-1/2 max-h-[80vh] overflow-y-auto relative">
             <h3 className="text-xl font-bold mb-4">Leads Assigned</h3>
+            {/* Cross (close) icon */}
             <button
-              className="absolute top-4 right-6 text-gray-500 hover:text-red-600 text-xl"
+              className="absolute top-4 right-6 text-gray-500 hover:text-red-600 text-2xl"
               onClick={() => setShowLeadsModal(false)}
+              title="Close"
             >
               &times;
             </button>
-            {console.log("Leads fetched:", filteredLeads)} {/* Debugging: Log the fetched leads */}
             {filteredLeads.length === 0 ? (
               <p className="text-gray-600">No leads assigned to this user.</p>
             ) : (
               <ul className="space-y-4">
                 {filteredLeads.map((lead, index) => (
                   <li key={index} className="p-4 border rounded-lg shadow-sm">
-                    <p className="font-semibold text-blue-600">{lead.title}</p>
+                    <div className="flex justify-between items-center">
+                      <p className="font-semibold text-blue-600">{lead.title}</p>
+                      {/* Cross/back icon for each detail (optional, can remove if not needed) */}
+                      {/* <button
+                        className="text-gray-400 hover:text-red-600 text-xl"
+                        onClick={() => setShowLeadsModal(false)}
+                        title="Close"
+                      >
+                        &times;
+                      </button> */}
+                    </div>
                     <p className="text-sm">{lead.description}</p>
                     <p className="text-sm">Category: {lead.lead_category}</p>
                     <p className="text-sm">Status: {lead.status}</p>
@@ -341,22 +335,33 @@ const SearchPage = () => {
       {/* Campaigns Modal */}
       {showCampaignsModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-1/2 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-1/2 max-h-[80vh] overflow-y-auto relative">
             <h3 className="text-xl font-bold mb-4">Campaigns Handled</h3>
+            {/* Cross (close) icon */}
             <button
-              className="absolute top-4 right-6 text-gray-500 hover:text-red-600 text-xl"
+              className="absolute top-4 right-6 text-gray-500 hover:text-red-600 text-2xl"
               onClick={() => setShowCampaignsModal(false)}
+              title="Close"
             >
               &times;
             </button>
-            {console.log("Campaigns fetched:", filteredCampaigns)} {/* Debugging: Log the fetched campaigns */}
             {filteredCampaigns.length === 0 ? (
               <p className="text-gray-600">No campaigns assigned to this user.</p>
             ) : (
               <ul className="space-y-4">
                 {filteredCampaigns.map((campaign, index) => (
                   <li key={index} className="p-4 border rounded-lg shadow-sm">
-                    <p className="font-semibold text-blue-600">{campaign.name}</p>
+                    <div className="flex justify-between items-center">
+                      <p className="font-semibold text-blue-600">{campaign.name}</p>
+                      {/* Cross/back icon for each detail (optional, can remove if not needed) */}
+                      {/* <button
+                        className="text-gray-400 hover:text-red-600 text-xl"
+                        onClick={() => setShowCampaignsModal(false)}
+                        title="Close"
+                      >
+                        &times;
+                      </button> */}
+                    </div>
                     <p className="text-sm">{campaign.description}</p>
                     <p className="text-sm">Status: {campaign.status}</p>
                     <p className="text-sm">Priority: {campaign.priority}</p>

@@ -47,9 +47,10 @@ function Login() {
       });
 
       // Store user data in localStorage
-      localStorage.setItem("token", token);
-      localStorage.setItem("role", userRole);
-      localStorage.setItem("user", JSON.stringify(user));
+      
+        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem("token", token);
+        localStorage.setItem("role", userRole);
 
       console.log("Data stored in localStorage:", {
         storedToken: !!localStorage.getItem("token"),

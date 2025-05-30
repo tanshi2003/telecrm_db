@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const db = require("./config/db");
+const viewsRoutes = require('./routes/viewsRoutes');
 const http = require('http');
 const jwt = require('jsonwebtoken');
 const morgan = require('morgan');
@@ -43,6 +44,7 @@ app.use(cors({
 }));
 
 // Middleware
+app.use('/api', viewsRoutes);
 app.use(express.json()); // Using built-in express.json instead of body-parser
 app.use(express.urlencoded({ extended: true })); // Using built-in express.urlencoded
 
@@ -54,8 +56,6 @@ app.use("/api/campaigns", campaignRoutes);
 app.use("/api/search", searchRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/managers', managerRoutes);
-app.use('/api/calls', callsRouter);
-app.use('/api/settings', settingsRoutes);
 
 // Root Endpoint
 app.get("/", (req, res) => {

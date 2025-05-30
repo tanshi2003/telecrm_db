@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { FaUser, FaBullhorn, FaChartLine, FaPencilAlt, FaPhone } from "react-icons/fa";
 import Sidebar from "../components/Sidebar";
 import io from 'socket.io-client';  
-import axios from 'axios';
 
 // Add base URL constant
 const BASE_URL = "http://localhost:5000";
@@ -54,9 +53,6 @@ const FieldDashboard = () => {
   const [showCallbook, setShowCallbook] = useState(false);
   const [callStatus, setCallStatus] = useState('idle');
   const [callDuration, setCallDuration] = useState(0);
-  const [currentCallId, setCurrentCallId] = useState(null);
-  const [currentCallSid, setCurrentCallSid] = useState(null);
-  const [callDisposition, setCallDisposition] = useState('pending');
 
   // Add pagination state
   const [displayCount, setDisplayCount] = useState(5);  // Show 5 leads initially
@@ -334,27 +330,19 @@ const FieldDashboard = () => {
     );
   };
 
-  // Update the DialerModal component
+  // Add the DialerModal component
   const DialerModal = () => {
     return (
       <div className="fixed bottom-4 right-4 z-50">
         <div className="bg-white rounded-lg p-3 w-64 shadow-lg">
-          {/* ... existing header ... */}
-
-          {/* Call Status and Duration */}
-          <div className="mb-2 text-center">
-            {callStatus !== 'idle' && (
-              <div className={`text-sm ${
-                callStatus === 'connected' ? 'text-green-600' :
-                callStatus === 'disconnected' ? 'text-red-600' :
-                'text-blue-600'
-              }`}>
-                {callStatus.charAt(0).toUpperCase() + callStatus.slice(1)}
-                {callStatus === 'connected' && (
-                  <span className="ml-2">{formatDuration(callDuration)}</span>
-                )}
-              </div>
-            )}
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-sm font-medium">Dialer</h2>
+            <button
+              onClick={() => setShowDialer(false)}
+              className="text-gray-500 hover:text-gray-700 text-sm"
+            >
+              ✕
+            </button>
           </div>
 
           {/* Number Display */}
@@ -446,41 +434,21 @@ const FieldDashboard = () => {
             ))}
           </div>
 
-          {/* Update Call Button */}
+          {/* Call Button */}
           <button
             onClick={() => {
-              if (callStatus === 'connected' || callStatus === 'dialing') {
-                handleCallEnd();
-              } else if (dialedNumber) {
-                startCall(dialedNumber);
+              if (dialedNumber) {
+                window.location.href = `tel:${dialedNumber}`;
               }
             }}
             className={`w-full mt-2 p-2 text-sm text-white rounded ${
-              callStatus === 'connected' || callStatus === 'dialing'
-                ? 'bg-red-500 hover:bg-red-600'
-                : dialedNumber
-                ? 'bg-green-500 hover:bg-green-600'
+              dialedNumber 
+                ? 'bg-green-500 hover:bg-green-600' 
                 : 'bg-gray-300 cursor-not-allowed'
             }`}
-            disabled={!dialedNumber && callStatus === 'idle'}
           >
-            {callStatus === 'connected' ? 'End Call' : 
-             callStatus === 'dialing' ? 'Cancel Call' : 'Call'}
+            Call
           </button>
-
-          {/* End Call Button - Show when call is active */}
-          {callStatus === 'connected' && (
-            <button
-              onClick={() => {
-                setCallStatus('disconnected');
-                stopTimer();
-                setTimeout(() => setCallStatus('idle'), 2000);
-              }}
-              className="w-full mt-2 p-2 text-sm text-white bg-red-500 hover:bg-red-600 rounded"
-            >
-              End Call
-            </button>
-          )}
         </div>
       </div>
     );
@@ -502,26 +470,6 @@ const FieldDashboard = () => {
     }
   }, [leads, searchTerm, showCallbook]);
 
-  // Initialize socket connection
-  useEffect(() => {
-    const socket = io(BASE_URL);
-    
-    socket.on('connect', () => {
-      console.log('Connected to socket server');
-    });
-
-    socket.on('callStatus', (data) => {
-      setCallStatus(data.status);
-      if (data.status === 'connected') {
-        startTimer();
-      } else if (data.status === 'disconnected') {
-        stopTimer();
-      }
-    });
-
-    return () => socket.disconnect();
-  }, []);
-
   // Add timer functions
   const startTimer = () => {
     setCallDuration(0);
@@ -541,140 +489,25 @@ const FieldDashboard = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Add this useEffect for filtering leads
+  // Update socket connection useEffect
   useEffect(() => {
-    const filterLeads = () => {
-      if (!leads) return;
-      
-      const filtered = leads.filter(lead => {
-        const searchLower = searchTerm.toLowerCase();
-        return (
-          lead.name.toLowerCase().includes(searchLower) ||
-          lead.phone_no.includes(searchTerm)
-        );
-      });
-      
-      setFilteredLeads(filtered);
-    };
+    const socket = io(BASE_URL);
+    
+    socket.on('connect', () => {
+      console.log('Connected to socket server');
+    });
 
-    filterLeads();
-  }, [leads, searchTerm]);
-
-  // Update the startCall function first
-  const startCall = async (phoneNumber) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
+    socket.on('callStatus', (data) => {
+      setCallStatus(data.status);
+      if (data.status === 'connected') {
+        startTimer();
+      } else if (data.status === 'disconnected') {
+        stopTimer();
       }
+    });
 
-      // Clean the phone number
-      let cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
-      if (!cleanNumber.startsWith('0')) {
-        cleanNumber = '0' + cleanNumber;
-      }
-
-      setCallStatus('dialing');
-      setCallDuration(0);
-
-      // Fallback for from number
-      const fromNumber = user?.phone_number || user?.phone || '7817822675';
-
-      const response = await axios.post(
-        'http://localhost:5000/api/calls/initiate',
-        {
-          to: cleanNumber,
-          from: fromNumber,
-          leadId: selectedLead?.id
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      if (response.data.success) {
-        const { dbCallId, exotelCallSid } = response.data.data;
-        setCurrentCallId(dbCallId);
-        setCurrentCallSid(exotelCallSid);
-
-        // Start polling for call status
-        const pollInterval = setInterval(async () => {
-          try {
-            const statusResponse = await axios.get(
-              `http://localhost:5000/api/calls/${dbCallId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`
-                }
-              }
-            );
-
-            if (statusResponse.data.success) {
-              const { status, disposition } = statusResponse.data.data;
-              setCallStatus(status);
-              setCallDisposition(disposition);
-
-              if (['completed', 'failed', 'busy', 'no-answer'].includes(status)) {
-                clearInterval(pollInterval);
-                stopTimer();
-              }
-            }
-          } catch (error) {
-            console.error('Error polling call status:', error);
-            clearInterval(pollInterval);
-            stopTimer();
-            setCallStatus('failed');
-          }
-        }, 2000);
-
-        // Stop polling after 30 seconds if call hasn't connected
-        setTimeout(() => {
-          clearInterval(pollInterval);
-          if (callStatus === 'dialing') {
-            setCallStatus('failed');
-            stopTimer();
-          }
-        }, 30000);
-      }
-    } catch (error) {
-      console.error('Error starting call:', error);
-      setCallStatus('failed');
-      stopTimer();
-    }
-  };
-
-  // Update the handleCallEnd function
-  const handleCallEnd = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      if (currentCallId) {
-        await axios.post(
-          `http://localhost:5000/api/calls/${currentCallId}/end`,
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        );
-      }
-
-      setCallStatus('idle');
-      stopTimer();
-      setCurrentCallId(null);
-      setCurrentCallSid(null);
-      setDialedNumber('');
-
-    } catch (error) {
-      console.error('Error ending call:', error);
-    }
-  };
+    return () => socket.disconnect();
+  }, []);  // No need to add startTimer/stopTimer as deps since they're stable
 
   return (
     <div className="relative flex min-h-screen">

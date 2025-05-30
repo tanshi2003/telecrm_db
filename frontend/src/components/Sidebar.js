@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import {
   LayoutDashboard,
   Search,
@@ -10,11 +10,6 @@ import {
   Menu,
   ChevronLeft,
   LogOut,
-  BarChart,
-  PhoneCall,
-  Users,
-  ClipboardList,
-  PhoneIncoming,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -22,13 +17,6 @@ const Sidebar = ({ user }) => {
   // State management
   const [isExpanded, setIsExpanded] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [showActivityOptions, setShowActivityOptions] = useState(false);
-  const [showReportOptions, setShowReportOptions] = useState(false);
-  const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0 });
-
-  // Refs
-  const reportBtnRef = useRef(null);
-  const activityBtnRef = useRef(null);
 
   // Navigation and location
   const navigate = useNavigate();
@@ -84,30 +72,6 @@ const Sidebar = ({ user }) => {
       .join(" ");
   };
 
-  // Add useEffect for positioning dropdowns
-  useEffect(() => {
-    const updateDropdownPosition = () => {
-      if (reportBtnRef.current && showReportOptions) {
-        const rect = reportBtnRef.current.getBoundingClientRect();
-        setDropdownCoords({
-          top: rect.bottom + window.scrollY,
-          left: rect.right + 10,
-        });
-      }
-      if (activityBtnRef.current && showActivityOptions) {
-        const rect = activityBtnRef.current.getBoundingClientRect();
-        setDropdownCoords({
-          top: rect.bottom + window.scrollY,
-          left: rect.right + 10,
-        });
-      }
-    };
-
-    updateDropdownPosition();
-    window.addEventListener("resize", updateDropdownPosition);
-    return () => window.removeEventListener("resize", updateDropdownPosition);
-  }, [showReportOptions, showActivityOptions]);
-
   // Move menuItems here, after handleDashboardClick is defined
   const menuItems = [
     {
@@ -130,9 +94,7 @@ const Sidebar = ({ user }) => {
     {
       icon: Activity,
       label: "Activities",
-      path: "/activities",
-      isActivity: true,
-      onClick: () => setShowActivityOptions((prev) => !prev),
+      path: "/Activity", // Direct redirect to Activities page
     },
     {
       icon: Filter,
@@ -142,9 +104,7 @@ const Sidebar = ({ user }) => {
     {
       icon: BarChart2,
       label: "Reports",
-      path: "/reports",
-      isReport: true,
-      onClick: () => setShowReportOptions((prev) => !prev),
+      path: "/Report", // Direct redirect to Reports page
     },
   ];
 
@@ -178,10 +138,9 @@ const Sidebar = ({ user }) => {
       {/* Menu Items */}
       <div className="flex-1 py-4">
         {menuItems.map(
-          ({ icon: Icon, label, path, onClick, isReport, isActivity }) => (
+          ({ icon: Icon, label, path, onClick }) => (
             <div
               key={label}
-              ref={isReport ? reportBtnRef : isActivity ? activityBtnRef : null}
               className={`group relative flex items-center ${
                 isExpanded ? "gap-4 px-4 py-3" : "justify-center p-3"
               } cursor-pointer transition-all rounded-md ${
@@ -245,79 +204,6 @@ const Sidebar = ({ user }) => {
           </div>
         )}
       </div>
-
-      {/* Reports Dropdown */}
-      {showReportOptions && (
-        <div
-          className="fixed bg-white border rounded shadow-lg z-50 w-56 p-2"
-          style={{
-            top: `${dropdownCoords.top}px`,
-            left: `${dropdownCoords.left}px`,
-          }}
-        >
-          {/* Arrow on the left */}
-          <div
-            className="absolute -left-2 top-4 w-4 h-4 bg-white border-l border-t transform rotate-45 z-40"
-          ></div>
-          <div className="text-gray-800 text-sm font-semibold mb-2">
-            Reports
-          </div>
-          <div
-            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-            onClick={() => navigate("/leader-board")}
-          >
-            <BarChart size={16} className="text-gray-500" />
-            <span className="text-sm text-gray-800">Leader Board</span>
-          </div>
-          <div
-            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-            onClick={() => navigate("/call-report")}
-          >
-            <PhoneCall size={16} className="text-gray-500" />
-            <span className="text-sm text-gray-800">Call Report</span>
-          </div>
-          <div
-            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-            onClick={() => navigate("/leads-report")}
-          >
-            <Users size={16} className="text-gray-500" />
-            <span className="text-sm text-gray-800">Leads Report</span>
-          </div>
-        </div>
-      )}
-
-      {/* Activity Dropdown */}
-      {showActivityOptions && (
-        <div
-          className="fixed bg-white border rounded shadow-lg z-50 w-56 p-2"
-          style={{
-            top: `${dropdownCoords.top}px`,
-            left: `${dropdownCoords.left}px`,
-          }}
-        >
-          {/* Arrow on the left */}
-          <div
-            className="absolute -left-2 top-4 w-4 h-4 bg-white border-l border-t transform rotate-45 z-40"
-          ></div>
-          <div className="text-gray-800 text-sm font-semibold mb-2">
-            Activities
-          </div>
-          <div
-            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-            onClick={() => navigate("/my-leads")}
-          >
-            <ClipboardList size={16} className="text-blue-500" />
-            <span className="text-sm text-gray-800">My Leads</span>
-          </div>
-          <div
-            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded cursor-pointer"
-            onClick={() => navigate("/my-calls")}
-          >
-            <PhoneIncoming size={16} className="text-green-500" />
-            <span className="text-sm text-gray-800">My Calls</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

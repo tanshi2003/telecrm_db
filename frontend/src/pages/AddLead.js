@@ -102,18 +102,20 @@ const AddLead = () => {
       });
 
       if (response.data.success) {
-        alert("Lead added successfully!");
-        
-        // Navigate based on role without clearing storage
-        switch(currentRole) {
-          case "field_employee":
-            navigate("/field_employee-dashboard");
-            break;
-          case "caller":
-            navigate("/caller-dashboard");
-            break;
-          default:
-            navigate("/leads");
+        alert("✅ Lead added successfully!");
+        setLeadData({
+          name: "",
+          phone_no: "",
+          lead_category: "Cold Lead",
+          status: "New",
+          address: "",
+          notes: "",
+        });
+        // Redirect to caller dashboard after adding a lead
+        if (role === "caller") {
+          navigate("/caller-dashboard");
+        } else {
+          navigate("/leads");
         }
       }
     } catch (error) {

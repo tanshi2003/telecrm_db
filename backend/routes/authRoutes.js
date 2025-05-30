@@ -38,10 +38,10 @@ router.post('/login', (req, res) => {
                 }
 
                 const token = jwt.sign(
-                    { id: admin.id, role: 'admin' },
-                    process.env.JWT_SECRET,
-                    { expiresIn: '24h' }
-                );
+    { id: user.id, role: user.role }, // include both id and role
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+);
 
                 // Update token and last login in database
                 db.query(
@@ -56,16 +56,15 @@ router.post('/login', (req, res) => {
                             });
                         }
 
-                        res.json({
-                            success: true,
-                            token,
-                            user: {
-                                id: admin.id,
-                                name: admin.name,
-                                email: admin.email,
-                                role: 'admin'
-                            }
-                        });
+                       res.json({
+                           success: true,
+                           token,
+                           user: {
+                               id: admin.id,
+                               role: 'admin',
+                               username: admin.name // or admin.username if you have that field
+                         }
+                     });
                     }
                 );
             });
@@ -122,16 +121,15 @@ router.post('/login', (req, res) => {
                                 });
                             }
 
-                            res.json({
-                                success: true,
-                                token,
-                                user: {
-                                    id: user.id,
-                                    name: user.name,
-                                    email: user.email,
-                                    role: user.role
-                                }
-                            });
+                         res.json({
+                         success: true,
+                         token,
+                         user: {
+                             id: user.id,
+                             role: user.role,
+                             username: user.name // or user.username if you have that field
+                      }
+          });
                         }
                     );
                 });
