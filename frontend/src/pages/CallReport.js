@@ -49,24 +49,34 @@ export default function CallReport() {
       if (!response.ok) {
         throw new Error('Failed to fetch data');
       }
-
+      
       const data = await response.json();
       
       if (!data.success) {
         throw new Error(data.message || 'Failed to fetch data');
-      }
+      }      console.log('API Response:', data); // Debug log to see data structure
 
-      // Transform data for charts
-      const transformedData = [
-        { status: 'Completed', count: data.data.completed || 0 },
-        { status: 'Missed', count: data.data.missed || 0 },
-        { status: 'Interested', count: data.data.interested || 0 },
-        { status: 'Not Interested', count: data.data.notInterested || 0 },
-        { status: 'Callback', count: data.data.callback || 0 }
-      ].filter(item => item.count > 0);
+      // Ensure data.data is an array and handle empty data
+      const responseData = Array.isArray(data.data) ? data.data : [];
+      
+      // Transform the data for combined status and disposition
+      const combinedData = responseData.map(item => ({
+        label: `${item.status}/${item.disposition}`,
+        count: item.count,
+        status: item.status,
+        disposition: item.disposition
+      }));
 
-      setBarData(transformedData);
-      setPieData(transformedData);
+      // Sort data by status and disposition
+      const sortedData = combinedData.sort((a, b) => {
+        if (a.status === b.status) {
+          return a.disposition.localeCompare(b.disposition);
+        }
+        return a.status.localeCompare(b.status);
+      });
+
+      setBarData(sortedData);
+      setPieData(sortedData);
       
     } catch (error) {
       console.error("Error fetching chart data:", error);
@@ -74,20 +84,24 @@ export default function CallReport() {
     } finally {
       setIsLoading(false);
     }
-  };
+  };  // Memoize fetchChartData to prevent infinite loops
+  const memoizedFetchChartData = React.useCallback(fetchChartData, [timeRange]);
 
   useEffect(() => {
-    fetchChartData();
-  }, [timeRange]);
+    if (user) {
+      memoizedFetchChartData();
+    }
+  }, [user, memoizedFetchChartData]);
 
   if (!user) return null;
-
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
+      const data = payload[0].payload;
       return (
         <div className="bg-white p-2 border rounded shadow-lg">
-          <p className="text-sm font-semibold">{payload[0].payload.status}</p>
-          <p className="text-sm">Count: {payload[0].value}</p>
+          <p className="text-sm font-semibold">Status: {data.status}</p>
+          <p className="text-sm">Disposition: {data.disposition}</p>
+          <p className="text-sm">Count: {data.count}</p>
         </div>
       );
     }
@@ -141,20 +155,21 @@ export default function CallReport() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-8 mb-6">
               {/* Bar Chart Card */}
               <div className="bg-white rounded-xl shadow-md p-4">
-                <h2 className="text-lg font-semibold text-gray-700 mb-4">Call Distribution</h2>
+                <h2 className="text-lg font-semibold text-gray-700 mb-4">Call Status & Disposition Distribution</h2>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart
                     data={barData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
-                    barSize={40}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                    barSize={30}
                   >
                     <XAxis 
-                      dataKey="status" 
+                      dataKey="label" 
                       angle={-45} 
                       textAnchor="end"
-                      height={60}
+                      height={80}
                       stroke="#4B5563"
-                      fontSize={12}
+                      fontSize={11}
+                      interval={0}
                     />
                     <YAxis stroke="#4B5563" />
                     <Tooltip content={<CustomTooltip />} />
@@ -169,7 +184,7 @@ export default function CallReport() {
 
               {/* Pie Chart Card */}
               <div className="bg-white rounded-xl shadow-md p-4">
-                <h2 className="text-lg font-semibold text-gray-700 mb-4">Call Status Overview</h2>
+                <h2 className="text-lg font-semibold text-gray-700 mb-4">Combined Status Report</h2>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
@@ -179,7 +194,7 @@ export default function CallReport() {
                       outerRadius={100}
                       dataKey="count"
                       labelLine={false}
-                      label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, value }) => {
+                      label={({ cx, cy, midAngle, innerRadius, outerRadius, value, payload }) => {
                         const RADIAN = Math.PI / 180;
                         const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                         const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -191,10 +206,10 @@ export default function CallReport() {
                             fill="#fff"
                             textAnchor="middle"
                             dominantBaseline="central"
-                            fontSize={12}
+                            fontSize={11}
                             fontWeight="bold"
                           >
-                            {value}
+                            {`${value}`}
                           </text>
                         ) : null;
                       }}
@@ -212,10 +227,10 @@ export default function CallReport() {
             {/* Stats Legend */}
             <div className="px-8">
               <div className="bg-white rounded-xl shadow-md p-4">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {pieData.map((entry, index) => (
                     <div 
-                      key={entry.status}
+                      key={`${entry.status}-${entry.disposition}`}
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50"
                     >
                       <div 
@@ -223,7 +238,9 @@ export default function CallReport() {
                         style={{ backgroundColor: COLORS[index % COLORS.length] }}
                       />
                       <div>
-                        <p className="text-sm font-medium text-gray-600">{entry.status}</p>
+                        <p className="text-sm font-medium text-gray-600">
+                          {entry.status}/{entry.disposition}
+                        </p>
                         <p className="text-lg font-semibold text-gray-900">{entry.count}</p>
                       </div>
                     </div>

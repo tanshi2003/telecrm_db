@@ -33,29 +33,18 @@ router.get('/stats/:timeRange', checkRole(['admin']), async (req, res) => {
                 break;
             default:
                 startDate.setDate(startDate.getDate() - 7); // Default to last 7 days
-        }
-
-        const [results] = await db.promise().query(
+        }        const [results] = await db.promise().query(
             `SELECT 
-                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
-                COUNT(CASE WHEN status = 'missed' THEN 1 END) as missed,
-                COUNT(CASE WHEN disposition = 'interested' THEN 1 END) as interested,
-                COUNT(CASE WHEN disposition = 'not_interested' THEN 1 END) as notInterested,
-                COUNT(CASE WHEN disposition = 'callback' THEN 1 END) as callback
+                status,
+                disposition,
+                COUNT(*) as count
             FROM calls 
-            WHERE created_at >= ?`,
+            WHERE created_at >= ?
+            GROUP BY status, disposition`,
             [startDate]
-        );
-
-        res.json({
+        );        res.json({
             success: true,
-            data: results[0] || {
-                completed: 0,
-                missed: 0,
-                interested: 0,
-                notInterested: 0,
-                callback: 0
-            }
+            data: results || []
         });
     } catch (error) {
         console.error('Error fetching call statistics:', error);
