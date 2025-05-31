@@ -1,9 +1,10 @@
 const db = require("../config/db");
 const responseFormatter = require("../utils/responseFormatter");
+const Activity = require("../models/Activity");  // Add Activity model import
 
 const campaignController = {
     // 📥 Create Campaign
-    createCampaign: (req, res) => {
+    createCampaign: async (req, res) => {
         const {
             name, description, status, priority,
             assigned_users = [], start_date, end_date,
@@ -18,45 +19,53 @@ const campaignController = {
             return res.status(400).json(responseFormatter(false, "All required fields must be provided"));
         }
 
-        const campaignQuery = `
-            INSERT INTO campaigns 
-            (name, description, status, lead_count, priority, start_date, end_date, created_at, updated_at, admin_id, manager_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)
-        `;
+        try {
+            // Insert campaign using promise-based query
+            const campaignQuery = `
+                INSERT INTO campaigns 
+                (name, description, status, lead_count, priority, start_date, end_date, created_at, updated_at, admin_id, manager_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)
+            `;
+            
+            const [campaignResult] = await db.promise().query(
+                campaignQuery,
+                [name, description, status, leads.length, priority, start_date, end_date || null, admin_id, manager_id]
+            );
 
-        db.query(
-            campaignQuery,
-            [name, description, status, leads.length, priority, start_date, end_date || null, admin_id, manager_id],
-            (err, campaignResult) => {
-                if (err) {
-                    console.error("Error inserting campaign:", err);
-                    return res.status(500).json(responseFormatter(false, "Server error", err.message));
-                }
+            const campaignId = campaignResult.insertId;
 
-                const campaignId = campaignResult.insertId;
+            // Insert assigned users (including the manager if they're creating the campaign)
+            const usersToAssign = Array.isArray(assigned_users) ? [...assigned_users] : [];
+            if (user.role === 'manager') {
+                usersToAssign.push(user.id);
+            }
+            
+            // Insert users if any are assigned and log each assignment
+            if (usersToAssign.length > 0) {
+                const values = usersToAssign.map(userId => [campaignId, userId]);
+                await db.promise().query(
+                    "INSERT INTO campaign_users (campaign_id, user_id) VALUES ?",
+                    [values]
+                );
 
-                // Insert assigned users (including the manager if they're creating the campaign)
-                const usersToAssign = Array.isArray(assigned_users) ? [...assigned_users] : [];
-                if (user.role === 'manager') {
-                    usersToAssign.push(user.id);
-                }
-                
-                if (usersToAssign.length > 0) {
-                    const values = usersToAssign.map(userId => [campaignId, userId]);
-                    db.query(
-                        "INSERT INTO campaign_users (campaign_id, user_id) VALUES ?",
-                        [values],
-                        (err) => {
-                            if (err) {
-                                console.error("Error assigning users:", err);
-                            }
-                        }
+                // Log user assignments
+                for (const userId of usersToAssign) {
+                    await Activity.logActivity(
+                        user.id,
+                        user.role,
+                        'campaign_user_assign',
+                        `User ${userId} assigned to campaign ${name}`,
+                        'campaign',
+                        campaignId,
+                        null
                     );
                 }
+            }
 
-                // Insert leads
-                leads.forEach((lead) => {
-                    db.query(
+            // Insert leads using Promise.all for parallel execution
+            if (leads.length > 0) {
+                const leadInsertPromises = leads.map(lead => 
+                    db.promise().query(
                         `INSERT INTO leads 
                         (title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, created_at, updated_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
@@ -64,18 +73,38 @@ const campaignController = {
                             lead.title, lead.description, lead.status, lead.lead_category, lead.name,
                             lead.phone_no, lead.address, lead.assigned_to, admin_id, campaignId, lead.notes || null
                         ]
-                    );
-                });
-
-                // Log campaign creation
-                db.query(
-                    "INSERT INTO campaign_logs (campaign_id, action, performed_by, created_at) VALUES (?, ?, ?, NOW())",
-                    [campaignId, "Campaign created", user.id]
+                    )
                 );
+                await Promise.all(leadInsertPromises);
 
-                res.status(201).json(responseFormatter(true, "Campaign created successfully", { campaign_id: campaignId }));
+                // Log lead assignment to campaign
+                await Activity.logActivity(
+                    user.id,
+                    user.role,
+                    'campaign_leads_add',
+                    `Added ${leads.length} leads to campaign ${name}`,
+                    'campaign',
+                    campaignId,
+                    null
+                );
             }
-        );
+
+            // Log campaign creation activity
+            await Activity.logActivity(
+                user.id,
+                user.role,
+                'campaign_create',
+                `Created new campaign: ${name} (${status})`,
+                'campaign',
+                campaignId,
+                null
+            );
+
+            res.status(201).json(responseFormatter(true, "Campaign created successfully", { campaign_id: campaignId }));
+        } catch (error) {
+            console.error("Error creating campaign:", error);
+            res.status(500).json(responseFormatter(false, "Failed to create campaign", error.message));
+        }
     },
 
     // 📤 Get All Campaigns (with assigned users and progress/statistics)
@@ -167,77 +196,85 @@ const campaignController = {
     },
 
     // 🧾 Update Campaign
-    updateCampaign: (req, res) => {
-        const { id } = req.params;
-        const {
-            name, description, status, priority,
-            start_date, end_date, assigned_users = []
-        } = req.body;
+    updateCampaign: async (req, res) => {
+        const { campaign_id } = req.params;
+        const updates = req.body;
+        const user = req.user;
 
-        db.query(
-            `UPDATE campaigns 
-             SET name = ?, description = ?, status = ?, priority = ?, start_date = ?, end_date = ?, updated_at = NOW() 
-             WHERE id = ?`,
-            [name, description, status, priority, start_date, end_date, id],
-            (err, updateResult) => {
-                if (err) {
-                    console.error("Error updating campaign:", err);
-                    return res.status(500).json(responseFormatter(false, "Database error", err.message));
-                }
-
-                if (updateResult.affectedRows === 0) {
-                    return res.status(404).json(responseFormatter(false, "Campaign not found"));
-                }
-
-                // Delete previous assigned users
-                db.query("DELETE FROM campaign_users WHERE campaign_id = ?", [id], (err) => {
-                    if (err) {
-                        console.error("Error deleting campaign users:", err);
-                        return res.status(500).json(responseFormatter(false, "Failed to remove old users"));
-                    }
-
-                    // Insert new assigned users
-                    const values = assigned_users.map(uid => [id, uid]);
-                    if (values.length > 0) {
-                        db.query("INSERT INTO campaign_users (campaign_id, user_id) VALUES ?", [values], (err) => {
-                            if (err) {
-                                console.error("Error inserting new campaign users:", err);
-                                return res.status(500).json(responseFormatter(false, "Failed to add new users"));
-                            }
-
-                            db.query(
-                                "INSERT INTO campaign_logs (campaign_id, action, performed_by, created_at) VALUES (?, ?, ?, NOW())",
-                                [id, "Campaign updated", req.user.id],
-                                () => {
-                                    res.json(responseFormatter(true, "Campaign updated successfully"));
-                                }
-                            );
-                        });
-                    } else {
-                        res.json(responseFormatter(true, "Campaign updated (no users assigned)"));
-                    }
-                });
+        try {
+            // Check if campaign exists
+            const [campaign] = await db.promise().query('SELECT * FROM campaigns WHERE id = ?', [campaign_id]);
+            if (!campaign[0]) {
+                return res.status(404).json(responseFormatter(false, "Campaign not found"));
             }
-        );
-    },
 
-    // ❌ Delete Campaign
-    deleteCampaign: (req, res) => {
+            // Build update query dynamically from provided fields
+            const allowedFields = ['name', 'description', 'status', 'priority', 'start_date', 'end_date'];
+            const updateFields = Object.keys(updates).filter(key => allowedFields.includes(key));
+            
+            if (updateFields.length === 0) {
+                return res.status(400).json(responseFormatter(false, "No valid fields to update"));
+            }
+
+            const query = `
+                UPDATE campaigns 
+                SET ${updateFields.map(field => `${field} = ?`).join(', ')}, 
+                updated_at = NOW()
+                WHERE id = ?
+            `;
+
+            const values = [...updateFields.map(field => updates[field]), campaign_id];
+            await db.promise().query(query, values);
+
+            // Log changes in activity
+            const changes = updateFields.map(field => 
+                `${field}: ${campaign[0][field]} → ${updates[field]}`
+            ).join(', ');
+
+            await Activity.logActivity(
+                user.id,
+                user.role,
+                'campaign_update',
+                `Updated campaign: ${changes}`,
+                'campaign',
+                campaign_id,
+                null
+            );
+
+            res.json(responseFormatter(true, "Campaign updated successfully"));
+        } catch (error) {
+            console.error("Error updating campaign:", error);
+            res.status(500).json(responseFormatter(false, "Failed to update campaign", error.message));
+        }
+    },    // ❌ Delete Campaign 
+    deleteCampaign: async (req, res) => {
         const { id } = req.params;
 
-        db.query("DELETE FROM campaign_users WHERE campaign_id = ?", [id], (err) => {
-            if (err) return res.status(500).json(responseFormatter(false, "Failed to delete campaign users"));
+        try {
+            await db.promise().query("DELETE FROM campaign_users WHERE campaign_id = ?", [id]);
+            
+            const [result] = await db.promise().query("DELETE FROM campaigns WHERE id = ?", [id]);
+            
+            if (result.affectedRows === 0) {
+                return res.status(404).json(responseFormatter(false, "Campaign not found"));
+            }
 
-            db.query("DELETE FROM campaigns WHERE id = ?", [id], (err, result) => {
-                if (err) return res.status(500).json(responseFormatter(false, "Failed to delete campaign"));
+            // Log campaign deletion activity
+            await Activity.logActivity(
+                req.user.id,
+                req.user.role,
+                'campaign_delete',
+                `Deleted campaign #${id}`,
+                'campaign',
+                id,
+                null
+            );
 
-                if (result.affectedRows === 0) {
-                    return res.status(404).json(responseFormatter(false, "Campaign not found"));
-                }
-
-                res.json(responseFormatter(true, "Campaign deleted successfully"));
-            });
-        });
+            res.json(responseFormatter(true, "Campaign deleted successfully"));
+        } catch (error) {
+            console.error("Error deleting campaign:", error);
+            res.status(500).json(responseFormatter(false, "Failed to delete campaign", error.message));
+        }
     },
 
     // 📊 Campaign Progress
@@ -334,10 +371,8 @@ const campaignController = {
                 });
             });
         });
-    },
-
-    // 👥 Assign users to campaign
-    assignUsersToCampaign: (req, res) => {
+    },    // 👥 Assign users to campaign
+    assignUsersToCampaign: async (req, res) => {
         const { id } = req.params;
         const { user_ids } = req.body;
 
@@ -345,42 +380,39 @@ const campaignController = {
             return res.status(400).json(responseFormatter(false, "User IDs array is required"));
         }
 
-        // First verify the campaign exists
-        db.query("SELECT id FROM campaigns WHERE id = ?", [id], (err, results) => {
-            if (err) {
-                console.error("Error checking campaign:", err);
-                return res.status(500).json(responseFormatter(false, "Database error", err.message));
-            }
+        try {
+            // First verify the campaign exists
+            const [campaigns] = await db.promise().query("SELECT id FROM campaigns WHERE id = ?", [id]);
 
-            if (results.length === 0) {
+            if (campaigns.length === 0) {
                 return res.status(404).json(responseFormatter(false, "Campaign not found"));
             }
 
             // Insert new user assignments
             const values = user_ids.map(userId => [id, userId]);
-            db.query(
+            await db.promise().query(
                 "INSERT INTO campaign_users (campaign_id, user_id) VALUES ?",
-                [values],
-                (err) => {
-                    if (err) {
-                        console.error("Error assigning users to campaign:", err);
-                        return res.status(500).json(responseFormatter(false, "Failed to assign users", err.message));
-                    }
-
-                    // Log the assignment action
-                    db.query(
-                        "INSERT INTO campaign_logs (campaign_id, action, performed_by, created_at) VALUES (?, ?, ?, NOW())",
-                        [id, "Users assigned to campaign", req.user.id]
-                    );
-
-                    res.json(responseFormatter(true, "Users assigned to campaign successfully"));
-                }
+                [values]
             );
-        });
-    },
 
-    // 🗑 Remove users from campaign
-    removeUsersFromCampaign: (req, res) => {
+            // Log user assignment activity
+            await Activity.logActivity(
+                req.user.id,
+                req.user.role,
+                'campaign_user',
+                `Assigned ${user_ids.length} users to campaign #${id}`,
+                'campaign',
+                id,
+                null
+            );
+
+            res.json(responseFormatter(true, "Users assigned to campaign successfully"));
+        } catch (error) {
+            console.error("Error assigning users to campaign:", error);
+            res.status(500).json(responseFormatter(false, "Failed to assign users", error.message));
+        }
+    },    // 🗑 Remove users from campaign
+    removeUsersFromCampaign: async (req, res) => {
         const { id } = req.params;
         const { user_ids } = req.body;
 
@@ -388,37 +420,36 @@ const campaignController = {
             return res.status(400).json(responseFormatter(false, "User IDs array is required"));
         }
 
-        // First verify the campaign exists
-        db.query("SELECT id FROM campaigns WHERE id = ?", [id], (err, results) => {
-            if (err) {
-                console.error("Error checking campaign:", err);
-                return res.status(500).json(responseFormatter(false, "Database error", err.message));
-            }
+        try {
+            // First verify the campaign exists
+            const [campaigns] = await db.promise().query("SELECT id FROM campaigns WHERE id = ?", [id]);
 
-            if (results.length === 0) {
+            if (campaigns.length === 0) {
                 return res.status(404).json(responseFormatter(false, "Campaign not found"));
             }
 
             // Remove user assignments
-            db.query(
+            await db.promise().query(
                 "DELETE FROM campaign_users WHERE campaign_id = ? AND user_id IN (?)",
-                [id, user_ids],
-                (err) => {
-                    if (err) {
-                        console.error("Error removing users from campaign:", err);
-                        return res.status(500).json(responseFormatter(false, "Failed to remove users", err.message));
-                    }
-
-                    // Log the removal action
-                    db.query(
-                        "INSERT INTO campaign_logs (campaign_id, action, performed_by, created_at) VALUES (?, ?, ?, NOW())",
-                        [id, "Users removed from campaign", req.user.id]
-                    );
-
-                    res.json(responseFormatter(true, "Users removed from campaign successfully"));
-                }
+                [id, user_ids]
             );
-        });
+
+            // Log user removal activity
+            await Activity.logActivity(
+                req.user.id,
+                req.user.role,
+                'campaign_user',
+                `Removed ${user_ids.length} users from campaign #${id}`,
+                'campaign',
+                id,
+                null
+            );
+
+            res.json(responseFormatter(true, "Users removed from campaign successfully"));
+        } catch (error) {
+            console.error("Error removing users from campaign:", error);
+            res.status(500).json(responseFormatter(false, "Failed to remove users", error.message));
+        }
     },
 
     // Get campaigns for a caller
@@ -620,52 +651,52 @@ const campaignController = {
     },
 
     // Unassign user from campaign
-    unassignUserFromCampaign: (req, res) => {
+    unassignUserFromCampaign: async (req, res) => {
         const { campaign_id, user_id } = req.body;
 
-        // First check if user is assigned
-        db.query(
-          'SELECT * FROM campaign_users WHERE campaign_id = ? AND user_id = ?',
-          [campaign_id, user_id],
-          (err, results) => {
-            if (err) {
-              console.error('Database error:', err);
-              return res.status(500).json({
-                success: false,
-                message: 'Database error',
-                error: err.message
-              });
-            }
+        try {
+            // First check if user is assigned
+            const [results] = await db.promise().query(
+                'SELECT * FROM campaign_users WHERE campaign_id = ? AND user_id = ?',
+                [campaign_id, user_id]
+            );
 
             if (!results.length) {
-              return res.status(404).json({
-                success: false,
-                message: 'User is not assigned to this campaign'
-              });
+                return res.status(404).json({
+                    success: false,
+                    message: 'User is not assigned to this campaign'
+                });
             }
 
             // If user is assigned, remove them
-            db.query(
-              'DELETE FROM campaign_users WHERE campaign_id = ? AND user_id = ?',
-              [campaign_id, user_id],
-              (err, result) => {
-                if (err) {
-                  console.error('Database error:', err);
-                  return res.status(500).json({
-                    success: false,
-                    message: 'Failed to unassign user',
-                    error: err.message
-                  });
-                }
-
-                res.json({
-                  success: true,
-                  message: 'User unassigned successfully'
-                });
-              }
+            await db.promise().query(
+                'DELETE FROM campaign_users WHERE campaign_id = ? AND user_id = ?',
+                [campaign_id, user_id]
             );
-          }
-        );
+
+            // Log unassignment activity
+            await Activity.logActivity(
+                req.user.id,
+                req.user.role,
+                'campaign_user',
+                `Unassigned user #${user_id} from campaign #${campaign_id}`,
+                'campaign',
+                campaign_id,
+                null
+            );
+
+            res.json({
+                success: true,
+                message: 'User unassigned successfully'
+            });
+        } catch (error) {
+            console.error('Database error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to unassign user',
+                error: error.message
+            });
+        }
     }
 };
 

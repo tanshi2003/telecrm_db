@@ -7,6 +7,7 @@ const checkRole = require('../middleware/checkRole');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const ExotelConfig = require('../models/ExotelConfig');
+const Activity = require('../models/Activity');
 
 // Protected routes - require authentication
 router.use(authenticateToken);
@@ -75,6 +76,17 @@ router.post('/initiate', async (req, res) => {
              VALUES (?, ?, ?, 'initiated', NOW())`,
             [callerId, leadId, to]
         );
+        
+        // Log the call activity
+        await Activity.logActivity(
+            callerId,
+            req.user.role,
+            'call_made',
+            `Initiated call to ${to}`,
+            'call',
+            result.insertId,
+            null
+        );
 
         // Additional call handling logic here...
         
@@ -97,15 +109,24 @@ router.post('/initiate', async (req, res) => {
 router.put('/:callId/status', async (req, res) => {
     try {
         const { callId } = req.params;
-        const { status, disposition } = req.body;
-
-        await db.promise().query(
+        const { status, disposition } = req.body;        await db.promise().query(
             `UPDATE calls 
              SET status = ?, 
                  disposition = ?,
                  updated_at = NOW()
              WHERE id = ?`,
             [status, disposition, callId]
+        );
+
+        // Log the status update activity
+        await Activity.logActivity(
+            req.user.id,
+            req.user.role,
+            'call_update',
+            `Updated call ${callId} status to ${status} with disposition ${disposition}`,
+            'call',
+            callId,
+            null
         );
 
         res.json({

@@ -1,131 +1,388 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
-import { formatDistanceToNow } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { 
-    FaUserEdit, FaPhone, FaMapMarker, FaCheckCircle, 
+    FaUserEdit, FaPhone, FaCheckCircle, 
     FaBullhorn, FaUserPlus, FaCog, FaInfoCircle,
-    FaPhoneAlt, FaBook, FaClipboard, FaMapMarkedAlt,
-    FaChartLine // Add this import
+    FaBook,
+    FaSearch, FaCalendarAlt, FaUser
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import BackButton from "../components/BackButton";
+import Navbar from "../components/Navbar";
+
+const roleColors = {
+    'manager': 'bg-blue-100 text-blue-800 border-blue-200',
+    'caller': 'bg-green-100 text-green-800 border-green-200',
+    'field_employee': 'bg-orange-100 text-orange-800 border-orange-200',
+    'system': 'bg-gray-100 text-gray-800 border-gray-200'
+};
 
 const Activities = () => {
     const [user, setUser] = useState(null);
     const [activities, setActivities] = useState([]);
+    const [filteredActivities, setFilteredActivities] = useState([]);
     const [loading, setLoading] = useState(true);
-    const navigate = useNavigate();
-
-    useEffect(() => {
+    const [searchTerm, setSearchTerm] = useState("");
+    const [filters, setFilters] = useState({
+        role: "all",
+        type: "all",
+        date: "all"
+    });
+    const navigate = useNavigate();    useEffect(() => {
         const storedUser = JSON.parse(localStorage.getItem("user"));
         if (storedUser) {
-            setUser(storedUser);
-            fetchActivities(storedUser.id, storedUser.role);
+            // Set complete user object with name and role
+            setUser({
+                ...storedUser,
+                name: storedUser.name,
+                role: localStorage.getItem("role")
+            });
+            fetchActivities();
         } else {
             navigate("/login");
         }
     }, [navigate]);
 
-    const fetchActivities = async (userId, role) => {
+    const fetchActivities = async () => {
         try {
-            // If admin, fetch all activities, otherwise fetch user-specific activities
-            const endpoint = role === 'admin' 
-                ? 'http://localhost:5000/api/activities/all'
-                : `http://localhost:5000/api/activities/user/${userId}`;
-
-            const response = await fetch(endpoint, {
+            const response = await fetch('http://localhost:5000/api/activities/all', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
+            
+            if (!response.ok) throw new Error('Failed to fetch activities');
+            
             const data = await response.json();
             if (data.success) {
-                setActivities(data.data);
+                const sortedActivities = data.data.sort(
+                    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+                );
+                setActivities(sortedActivities);
+                setFilteredActivities(sortedActivities);
             }
         } catch (error) {
-            console.error('Error fetching activities:', error);
+            console.error('Error:', error);
         } finally {
             setLoading(false);
         }
-    };
+    };    useEffect(() => {
+        let result = [...activities];
 
-    const getActivityIcon = (type, role) => {
-        const icons = {
-            admin: {
-                'user_create': FaUserPlus,
-                'settings_update': FaCog,
-                'analytics_view': FaChartLine
-            },
-            manager: {
-                'lead_assign': FaUserEdit,
-                'campaign_create': FaBullhorn,
-                'report_view': FaClipboard
-            },
-            caller: {
-                'call_made': FaPhone,
-                'lead_update': FaUserEdit,
-                'note_add': FaBook
-            },
-            field: {
-                'location_update': FaMapMarkedAlt,
-                'lead_convert': FaCheckCircle,
-                'client_visit': FaMapMarker
+        // Apply search
+        if (searchTerm) {
+            result = result.filter(activity => 
+                activity.activity_description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                activity.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                activity.user_role?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+
+        // Apply role filter
+        if (filters.role !== "all") {
+            switch (filters.role) {
+                case 'admin':
+                    // Admin sees everything
+                    break;
+                case 'manager':
+                    // Show all campaign activities plus manager's own activities
+                    result = result.filter(activity => 
+                        activity.activity_type.includes('campaign_') || 
+                        (activity.user_role === 'manager' &&
+                        ['lead_assign', 'user_create', 'settings_update'].includes(activity.activity_type))
+                    );
+                    break;
+                case 'caller':
+                    result = result.filter(activity => 
+                        activity.user_role === 'caller' && 
+                        ['lead_create', 'lead_update', 'call_made'].includes(activity.activity_type)
+                    );
+                    break;
+                case 'field_employee':
+                    result = result.filter(activity => 
+                        activity.user_role === 'field_employee' && 
+                        ['lead_create', 'lead_update', 'location_update', 'client_visit'].includes(activity.activity_type)
+                    );
+                    break;
+                case 'system':
+                    result = result.filter(activity => 
+                        !activity.user_role || activity.user_role === 'system'
+                    );
+                    break;
+                default:
+                    result = result.filter(activity => activity.user_role === filters.role);
+                    break;
             }
+        }        // Apply activity type filter
+        if (filters.type !== "all") {
+            if (filters.type === 'campaign_all') {
+                // Show all campaign-related activities
+                result = result.filter(activity => 
+                    activity.activity_type.includes('campaign_') ||
+                    activity.reference_type === 'campaign'
+                );
+            } else if (filters.type.startsWith('campaign_')) {
+                // Show specific campaign activity type
+                result = result.filter(activity => 
+                    activity.activity_type === filters.type ||
+                    (activity.reference_type === 'campaign' && activity.activity_type.includes(filters.type))
+                );
+            } else {
+                // For all other activity types
+                result = result.filter(activity => activity.activity_type === filters.type);
+            }
+        }        if (filters.date !== "all") {
+            const now = new Date();
+            now.setHours(0, 0, 0, 0); // Set to start of day for consistent comparison
+            const dayInMs = 24 * 60 * 60 * 1000;
+            switch (filters.date) {
+                case "today":
+                    result = result.filter(activity => {
+                        const activityDate = parseISO(activity.created_at);
+                        return activityDate >= now;
+                    });
+                    break;
+                case "week":
+                    result = result.filter(activity => {
+                        const activityDate = parseISO(activity.created_at);
+                        return activityDate >= new Date(now.getTime() - 7 * dayInMs);
+                    });
+                    break;
+                case "month":
+                    result = result.filter(activity => {
+                        const activityDate = parseISO(activity.created_at);
+                        return activityDate >= new Date(now.getTime() - 30 * dayInMs);
+                    });
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        setFilteredActivities(result);
+    }, [searchTerm, filters, activities]);    const getActivityIcon = (type, role) => {
+        const icons = {
+            // Lead Activities
+            'lead_create': FaUserPlus,
+            'lead_update': FaUserEdit,
+            'lead_assign': FaUserEdit,
+            'lead_convert': FaCheckCircle,
+            // Call Activities
+            'call_made': FaPhone,            // Campaign Activities
+            'campaign_create': FaBullhorn,
+            'campaign_update': FaCog,
+            'campaign_assign': FaUserEdit,
+            'campaign_all': FaBullhorn,
+            'campaign_status': FaCheckCircle,
+            'campaign_delete': FaInfoCircle,
+            // Other Activities
+            'user_create': FaUserPlus,
+            'settings_update': FaCog,
+            'note_add': FaBook
         };
 
-        return (icons[role]?.[type] || FaInfoCircle);
+        return icons[type] || FaInfoCircle;
     };
 
-    const getActivityCard = (activity) => {
-        const IconComponent = getActivityIcon(activity.activity_type, activity.role);
-        
+    const getStatusColor = (type) => {
+        const colors = {
+            'lead_create': 'bg-green-100 text-green-800',
+            'lead_update': 'bg-blue-100 text-blue-800',
+            'lead_assign': 'bg-purple-100 text-purple-800',
+            'campaign_create': 'bg-indigo-100 text-indigo-800',
+            'campaign_update': 'bg-violet-100 text-violet-800',
+            'campaign_assign': 'bg-fuchsia-100 text-fuchsia-800',
+            'campaign_status': 'bg-purple-100 text-purple-800',
+            'campaign_delete': 'bg-rose-100 text-rose-800',
+            'user_create': 'bg-pink-100 text-pink-800',
+            'settings_update': 'bg-gray-100 text-gray-800',
+            'note_add': 'bg-teal-100 text-teal-800',
+            'location_update': 'bg-orange-100 text-orange-800',
+            'lead_convert': 'bg-emerald-100 text-emerald-800'
+        };
+        return colors[type] || 'bg-gray-100 text-gray-800';
+    };
+
+    const getRoleColor = (role) => {
+        return roleColors[role] || 'bg-gray-100 text-gray-800 border-gray-200';
+    };
+
+    if (loading) {
         return (
-            <div key={activity.id} className="bg-white p-4 rounded-lg shadow-md mb-4">
-                <div className="flex items-start">
-                    <div className="p-2 rounded-full bg-blue-100">
-                        <IconComponent className="text-blue-600" />
-                    </div>
-                    <div className="ml-4">
-                        {/* Add user name for admin view */}
-                        {user?.role === 'admin' && (
-                            <p className="text-sm font-semibold text-blue-600">
-                                {activity.user_name} ({activity.user_role})
-                            </p>
-                        )}
-                        <p className="font-medium">{activity.activity_description}</p>
-                        <p className="text-sm text-gray-500">
-                            {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
-                        </p>
-                        {activity.location && (
-                            <p className="text-xs text-gray-400 mt-1">
-                                <FaMapMarker className="inline mr-1" />
-                                {activity.location}
-                            </p>
-                        )}
+            <div className="flex min-h-screen bg-gray-50">
+                <Sidebar user={user} />
+                <div className="flex-1 ml-64">
+                    <div className="flex items-center justify-center h-screen">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                     </div>
                 </div>
             </div>
         );
-    };
-
-    if (loading) {
-        return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
     }
 
     return (
-        <div className="flex min-h-screen overflow-hidden">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+            <Navbar />
             <Sidebar user={user} />
-            <div className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold">My Activities</h1>
-                    <BackButton />
-                </div>
+            <div className="lg:ml-64 pt-16">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    {/* Header Section */}
+                    <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border border-gray-100">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                            <div className="flex-1">
+                                <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Activity Dashboard</h1>
+                                <div className="mt-3 flex items-center">                                    <div className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                        <FaUser className="mr-2" />
+                                        {user?.name || localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user"))?.name : "User"} • {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)} View
+                                    </div>
+                                    <span className="ml-4 text-gray-500">
+                                        {filteredActivities.length} Activities
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="mt-6 md:mt-0">
+                                <div className="inline-flex shadow-sm rounded-lg">
+                                    {['today', 'week', 'month'].map((period, i) => (
+                                        <button
+                                            key={period}
+                                            onClick={() => setFilters({...filters, date: period})}
+                                            className={[
+                                                "px-4 py-2 text-sm font-medium",
+                                                filters.date === period ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-50",
+                                                i === 0 ? "rounded-l-lg" : "",
+                                                i === 2 ? "rounded-r-lg" : "",
+                                                "border border-gray-200"
+                                            ].join(" ")}
+                                        >
+                                            {period.charAt(0).toUpperCase() + period.slice(1)}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div className="grid grid-cols-1 gap-4">
-                    {activities.map(activity => getActivityCard(activity))}
-                    {activities.length === 0 && (
-                        <p className="text-center text-gray-500">No recent activities</p>
-                    )}
+                    {/* Filters Section */}
+                    <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <FaSearch className="text-gray-400 h-4 w-4" />
+                                </div>
+                                <input
+                                    type="text"
+                                    className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150 ease-in-out sm:text-sm"
+                                    placeholder="Search activities..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <select
+                                className="block w-full px-4 py-3 border border-gray-200 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150 ease-in-out sm:text-sm"
+                                value={filters.role}
+                                onChange={(e) => setFilters({...filters, role: e.target.value})}
+                            >
+                                <option value="all">All Roles</option>
+                                <option value="manager">Manager</option>
+                                <option value="caller">Caller</option>
+                                <option value="field_employee">Field Employee</option>
+                                <option value="system">System</option>
+                            </select>
+                            <select
+                                className="block w-full px-4 py-3 border border-gray-200 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150 ease-in-out sm:text-sm"
+                                value={filters.type}
+                                onChange={(e) => setFilters({...filters, type: e.target.value})}
+                            >
+                                <option value="all">All Activities</option>
+                                <optgroup label="Lead Activities">
+                                    <option value="lead_create">Lead Creation</option>
+                                    <option value="lead_update">Lead Updates</option>
+                                    <option value="lead_assign">Lead Assignments</option>
+                                    <option value="lead_convert">Lead Conversion</option>
+                                </optgroup>
+                                <optgroup label="Campaign Activities">
+                                    <option value="campaign_all">All Campaign Activities</option>
+                                    <option value="campaign_create">Campaign Creation</option>
+                                    <option value="campaign_update">Campaign Updates</option>
+                                    <option value="campaign_assign">Campaign Assignments</option>
+                                    <option value="campaign_status">Campaign Status Changes</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Activity Timeline */}
+                    <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+                        <div className="divide-y divide-gray-100">
+                            {filteredActivities.map((activity, index) => {
+                                const IconComponent = getActivityIcon(activity.activity_type);
+                                const statusColor = getStatusColor(activity.activity_type);
+                                const roleColor = getRoleColor(activity.user_role);
+                                
+                                return (
+                                    <div 
+                                        key={activity.id} 
+                                        className={[
+                                            "p-6 hover:bg-gray-50 transition-all duration-200",
+                                            index === 0 ? "border-t-4 border-t-blue-500" : ""
+                                        ].join(" ")}
+                                    >
+                                        <div className="flex space-x-6">
+                                            <div className={[
+                                                "flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center shadow-md transform transition-transform duration-200 hover:scale-110",
+                                                statusColor.split(" ")[0]
+                                            ].join(" ")}>
+                                                <IconComponent className={[
+                                                    "w-7 h-7",
+                                                    statusColor.split(" ")[1]
+                                                ].join(" ")} />
+                                            </div>
+                                            <div className="flex-grow min-w-0">
+                                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                                                    <div className="flex items-center space-x-3">
+                                                        <p className="text-base font-semibold text-gray-900">
+                                                            {activity.user_name || 'System'}
+                                                        </p>
+                                                        <span className={[
+                                                            "px-3 py-1.5 rounded-lg text-xs font-medium border shadow-sm",
+                                                            roleColor
+                                                        ].join(" ")}>
+                                                            {activity.user_role || 'System'}
+                                                        </span>
+                                                    </div>                                                    <div className="flex items-center mt-2 sm:mt-0 text-sm text-gray-500">
+                                                        <FaCalendarAlt className="mr-2 h-4 w-4 text-gray-400" />
+                                                        {activity.created_at ? format(parseISO(activity.created_at), "d MMM yyyy 'at' h:mm a") : 'No date'}
+                                                    </div>
+                                                </div>
+                                                <p className="mt-3 text-base text-gray-600 leading-relaxed">
+                                                    {activity.activity_description}
+                                                </p>
+                                                {activity.reference_type && (
+                                                    <div className="mt-3">
+                                                        <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 border border-blue-100 shadow-sm">
+                                                            {activity.reference_type} #{activity.reference_id}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        
+                        {filteredActivities.length === 0 && (
+                            <div className="p-16 text-center">
+                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-6">
+                                    <FaInfoCircle className="h-10 w-10 text-gray-400" />
+                                </div>
+                                <h3 className="text-lg font-medium text-gray-900">No activities found</h3>
+                                <p className="mt-2 text-base text-gray-500 max-w-sm mx-auto">
+                                    Try adjusting your search or filter criteria to find what you're looking for
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

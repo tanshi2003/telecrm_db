@@ -1,10 +1,11 @@
 // Import database connection at the top
-const db = require('../config/db').promise(); // Add .promise()
+const db = require('../config/db').promise();
 const express = require("express");
 const router = express.Router();
 const campaignController = require("../controllers/campaignController");
 const { authenticateToken } = require("../middleware/auth");
 const roleMiddleware = require("../middleware/checkRole");
+const Activity = require("../models/Activity");
 
 // Protected routes - require authentication
 router.use(authenticateToken);
@@ -19,7 +20,29 @@ router.get("/manager/:id", roleMiddleware(["manager"]), campaignController.getCa
 router.get("/user/:id/campaigns", roleMiddleware(["admin", "manager", "caller"]), campaignController.getCampaignsByUserId);
 
 // Create a new campaign (Admin and Manager only)
-router.post("/", roleMiddleware(["admin", "manager"]), campaignController.createCampaign);
+router.post("/", roleMiddleware(["admin", "manager"]), async (req, res) => {
+    try {
+        const result = await campaignController.createCampaign(req.body);
+        
+        // Log campaign creation activity
+        await Activity.logActivity(
+            req.user.id,
+            req.user.role,
+            'campaign_create',
+            `Created new campaign: ${req.body.name}`,
+            'campaign',
+            result.id,
+            null
+        );
+
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
 
 // Get a specific campaign
 router.get("/:id", roleMiddleware(["admin", "manager"]), campaignController.getCampaignById);
@@ -33,7 +56,29 @@ router.put("/:id", roleMiddleware(["admin", "manager"]), campaignController.upda
 router.delete('/:id', roleMiddleware(["admin"]), campaignController.deleteCampaign);
 
 // Assign users to campaign
-router.post("/:id/assign-users", roleMiddleware(["admin", "manager"]), campaignController.assignUsersToCampaign);
+router.post("/:id/assign-users", roleMiddleware(["admin", "manager"]), async (req, res) => {
+    try {
+        const result = await campaignController.assignUsersToCampaign(req.params.id, req.body.userIds);
+        
+        // Log user assignment activity
+        await Activity.logActivity(
+            req.user.id,
+            req.user.role,
+            'campaign_assign_users',
+            `Assigned ${req.body.userIds.length} users to campaign #${req.params.id}`,
+            'campaign',
+            req.params.id,
+            null
+        );
+
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
 
 // Remove users from campaign
 router.delete("/:id/remove-users", roleMiddleware(["admin", "manager"]), campaignController.removeUsersFromCampaign);

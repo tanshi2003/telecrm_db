@@ -19,6 +19,7 @@ const authRoutes = require('./routes/authRoutes');
 const managerRoutes = require('./routes/managerRoutes');
 const callRoutes = require('./routes/callRoutes');
 const settingsRoutes = require('./routes/settings');
+const activityRoutes = require('./routes/activityRoutes');
 
 // Load environment variables
 dotenv.config();
@@ -48,6 +49,9 @@ app.use(cors({
 app.use('/api', viewsRoutes);
 app.use(express.json()); // Using built-in express.json instead of body-parser
 app.use(express.urlencoded({ extended: true })); // Using built-in express.urlencoded
+
+// Activity Routes
+app.use('/api/activities', activityRoutes);
 
 // Use Routes
 app.use("/api/admins", adminRoutes);

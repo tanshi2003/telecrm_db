@@ -1,5 +1,6 @@
 const db = require("../config/db");
 const responseFormatter = require("../utils/responseFormatter");
+const Activity = require('../models/Activity');
 
 const VALID_LEAD_CATEGORIES = [
     "Fresh Lead", "Bulk Lead", "Cold Lead", "Warm Lead", "Hot Lead",
@@ -107,6 +108,17 @@ exports.createLead = (req, res) => {
                     return res.status(500).json(responseFormatter(false, "Database error", err.message));
                 }
 
+                // Log the activity
+                Activity.logActivity(
+                    admin_id || manager_id, // user_id
+                    req.user.role || 'system', // role
+                    'lead_create', // action_type
+                    `Created new lead: ${name}`, // action_description
+                    'lead', // reference_type
+                    insertResult.insertId, // reference_id
+                    null // location (optional)
+                ).catch(logErr => console.error('Error logging activity:', logErr));
+
                 db.query("SELECT * FROM Leads WHERE id = ?", [insertResult.insertId], (err, lead) => {
                     if (err) {
                         return res.status(500).json(responseFormatter(false, "Fetch new lead failed", err.message));
@@ -126,99 +138,76 @@ exports.getLeads = async (req, res) => {
     const userRole = req.user.role;
     const userId = req.user.id;
 
+    console.log('GetLeads request:', { selectedUser, role, userRole, userId }); // Debug log
+
     let query = `
-      WITH UserLeads AS (
-        SELECT 
-          l.*,
-          u.name as assigned_to_name,
-          CASE 
-            WHEN l.created_by = ? THEN 'self-created'
-            WHEN l.assigned_to = ? THEN 'assigned'
-            ELSE 'other'
-          END as lead_source
-        FROM leads l
-        LEFT JOIN users u ON l.assigned_to = u.id
-        WHERE 
-          CASE
-            WHEN ? = 'all' THEN TRUE
-            ELSE (
-              l.assigned_to = ? OR
-              l.created_by = ? OR
-              (? = 'admin') OR
-              (? = 'manager' AND (l.manager_id = ? OR l.assigned_to IN (SELECT id FROM Users WHERE manager_id = ?)))
-            )
-          END
-      )
-      SELECT 
-        status,
-        COUNT(*) as count,
-        ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as percentage,
-        MAX(assigned_to_name) as assigned_to_name,
-        assigned_to,
-        created_by,
-        GROUP_CONCAT(DISTINCT lead_source) as sources
-      FROM UserLeads
-      GROUP BY status, assigned_to, created_by
-      ORDER BY count DESC`;
+      SELECT DISTINCT
+        l.*,
+        u.name as assigned_to_name,
+        cr.name as creator_name,
+        ca.name as campaign_name,
+        CASE 
+          WHEN l.created_by = ? THEN 'self-created'
+          WHEN l.assigned_to = ? THEN 'assigned'
+          ELSE 'other'
+        END as lead_source
+      FROM leads l
+      LEFT JOIN users u ON l.assigned_to = u.id
+      LEFT JOIN users cr ON l.created_by = cr.id
+      LEFT JOIN campaigns ca ON l.campaign_id = ca.id
+      WHERE 1=1
+    `;
 
-    const queryParams = [
-      userId, userId, // For lead source CASE
-      selectedUser,  // For WHERE CASE
-      selectedUser !== 'all' ? selectedUser : userId, // assigned_to check
-      userId, // created_by check
-      userRole, // admin check
-      userRole, // manager check
-      userId,   // manager_id
-      userId    // manager's team
-    ];
+    const params = [userId, userId];
 
-    const [leads] = await db.promise().query(query, queryParams);
+    // Add role-based conditions
+    if (userRole === 'admin') {
+      // Admin sees all leads
+    } else if (userRole === 'manager') {
+      // Manager sees:
+      // 1. Leads they created
+      // 2. Leads assigned to their team members
+      // 3. Leads in their campaigns
+      // 4. Leads where they are the manager
+      query += ` AND (
+        l.created_by = ? 
+        OR l.assigned_to IN (SELECT id FROM users WHERE manager_id = ?)
+        OR l.campaign_id IN (SELECT id FROM campaigns WHERE manager_id = ?)
+        OR l.manager_id = ?
+      )`;
+      params.push(userId, userId, userId, userId);
+    } else {
+      // Callers and field employees only see their own leads
+      query += ` AND (l.assigned_to = ? OR l.created_by = ?)`;
+      params.push(userId, userId);
+    }
+
+    // Add filters if a specific user is selected
+    if (selectedUser && selectedUser !== 'all') {
+      query += ` AND l.assigned_to = ?`;
+      params.push(selectedUser);
+    }
+
+    query += ` ORDER BY l.created_at DESC`;
+
+    console.log('Executing query:', query);
+    console.log('With params:', params);
+
+    const [leads] = await db.promise().query(query, params);
     
-    // Process the results into a structured format
+    // Structure the response
     const response = {
       success: true,
       message: "Leads fetched successfully",
-      data: {
-        statusDistribution: leads.reduce((acc, row) => {
-          const userId = row.assigned_to || 'unassigned';
-          if (!acc[userId]) {
-            acc[userId] = {
-              assigned_to: row.assigned_to,
-              assigned_to_name: row.assigned_to_name,
-              statuses: []
-            };
-          }
-          acc[userId].statuses.push({
-            status: row.status,
-            count: row.count,
-            percentage: row.percentage,
-            sources: row.sources?.split(',') || []
-          });
-          return acc;
-        }, {})
-      }
+      data: leads.map(lead => ({
+        ...lead,
+        sources: [lead.lead_source]
+      }))
     };
 
-    // If looking at all users, include overall distribution
-    if (!selectedUser || selectedUser === 'all') {
-      response.data.overallDistribution = Object.values(leads.reduce((acc, row) => {
-        if (!acc[row.status]) {
-          acc[row.status] = {
-            status: row.status,
-            count: 0,
-            percentage: 0
-          };
-        }
-        acc[row.status].count += row.count;
-        // Recalculate overall percentage
-        const total = leads.reduce((sum, r) => sum + r.count, 0);
-        acc[row.status].percentage = Number(((row.count / total) * 100).toFixed(2));
-        return acc;
-      }, {}));
-    }
-
-    res.json(response);
+    console.log(`Found ${leads.length} leads`);
     
+    res.json(response);
   } catch (error) {
     console.error('Error fetching leads:', error);
     res.status(500).json({
@@ -338,19 +327,16 @@ exports.updateLead = (req, res) => {
 
                     // Log the activity
                     const activityDescription = `Updated lead ${name} (ID: ${leadId}) - Status: ${status}`;
-                    db.query(
-                        `INSERT INTO activity_logs 
-                         (user_id, action_type, action_description, reference_type, reference_id)
-                         VALUES (?, 'lead_update', ?, 'lead', ?)`,
-                        [userId, activityDescription, leadId],
-                        (logError) => {
-                            if (logError) {
-                                console.error('Error logging activity:', logError);
-                            }
+                    Activity.logActivity(
+                        userId,
+                        userRole,
+                        'lead_update',
+                        activityDescription,
+                        'lead',
+                        leadId
+                    ).catch(logError => console.error('Error logging activity:', logError));
 
-                            res.json(responseFormatter(true, "Lead updated successfully", { id: leadId }));
-                        }
-                    );
+                    res.json(responseFormatter(true, "Lead updated successfully", { id: leadId }));
                 }
             );
         }
