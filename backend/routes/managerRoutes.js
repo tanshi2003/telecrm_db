@@ -324,7 +324,12 @@ router.get('/dashboard-stats', authenticateToken, checkManagerAccess, (req, res)
         totalCampaigns: `
             SELECT COUNT(DISTINCT c.id) as total 
             FROM campaigns c
-            WHERE LOWER(c.status) != 'archived'
+            WHERE (c.manager_id = ? OR c.id IN (
+                SELECT campaign_id 
+                FROM campaign_users 
+                WHERE user_id = ?
+            ))
+            AND LOWER(c.status) != 'archived'
         `,
         activeCampaigns: `
             SELECT COUNT(DISTINCT c.id) as total 
@@ -352,7 +357,7 @@ router.get('/dashboard-stats', authenticateToken, checkManagerAccess, (req, res)
             });
         }),
         new Promise((resolve, reject) => {
-            db.query(queries.totalCampaigns, [], (err, results) => {
+            db.query(queries.totalCampaigns, [req.user.id, req.user.id], (err, results) => {
                 if (err) reject(err);
                 resolve(results[0].total);
             });
