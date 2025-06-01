@@ -23,6 +23,20 @@ import {
   getTeams,
 } from "../services/managerService";
 
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  try {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'N/A';
+  }
+};
+
 const ManagerDashboard = () => {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({
@@ -317,9 +331,7 @@ const ManagerDashboard = () => {
                                 <div className="flex items-center">
                                   <Calendar className="w-4 h-4 mr-2" />
                                   Joined:{" "}
-                                  {new Date(
-                                    member.created_at
-                                  ).toLocaleDateString()}
+                                  {formatDate(member.created_at)}
                                 </div>
                               </div>
                             </div>
@@ -445,9 +457,7 @@ const ManagerDashboard = () => {
                                 <div className="flex items-center">
                                   <Calendar className="w-4 h-4 mr-2" />
                                   Joined:{" "}
-                                  {new Date(
-                                    member.created_at
-                                  ).toLocaleDateString()}
+                                  {formatDate(member.created_at)}
                                 </div>
                               </div>
                             </div>

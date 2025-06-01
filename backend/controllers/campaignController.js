@@ -532,9 +532,7 @@ const campaignController = {
         });
     },    // Get campaigns by manager ID
     getCampaignsByManagerId: (req, res) => {
-        const managerId = req.params.id;
-        
-        // Query to get both created and assigned campaigns
+        // Query to get ALL campaigns in the system
         const query = `
             SELECT c.*, 
                    COUNT(DISTINCT l.id) as lead_count,
@@ -544,17 +542,13 @@ const campaignController = {
             LEFT JOIN leads l ON c.id = l.campaign_id
             LEFT JOIN campaign_users cu ON c.id = cu.campaign_id
             LEFT JOIN users u ON cu.user_id = u.id
-            WHERE c.manager_id = ? OR c.id IN (
-                SELECT campaign_id 
-                FROM campaign_users 
-                WHERE user_id = ?
-            )
             GROUP BY c.id
+            ORDER BY c.created_at DESC
         `;
 
-        db.query(query, [managerId, managerId], (err, results) => {
+        db.query(query, [], (err, results) => {
             if (err) {
-                console.error("Error fetching manager's campaigns:", err);
+                console.error("Error fetching campaigns:", err);
                 return res.status(500).json(responseFormatter(false, "Database error", err.message));
             }
 

@@ -45,19 +45,9 @@ export const getTeamPerformance = async () => {
 // Get campaign performance for specific manager
 export const getCampaignPerformance = async (managerId) => {
     try {
-        if (!managerId) {
-            const user = JSON.parse(localStorage.getItem('user'));
-            managerId = user?.id;
-        }
-
-        if (!managerId) {
-            console.error('No manager ID available');
-            return { data: [] };
-        }
-
         const token = localStorage.getItem('token');
         const response = await fetch(
-            `http://localhost:5000/api/campaigns/manager/${managerId}`,
+            `http://localhost:5000/api/campaigns`,
             {
                 headers: { 
                     Authorization: `Bearer ${token}`,
@@ -74,17 +64,15 @@ export const getCampaignPerformance = async (managerId) => {
             id: campaign.id,
             name: campaign.name,
             status: campaign.status,
-            total_leads: campaign.lead_count || 0,
+            total_leads: campaign.total_leads || 0,
             assigned_users: campaign.assigned_users || [],
             team_size: (campaign.assigned_users || []).length,
-            assigned_user_names: campaign.assigned_user_names,
-            assigned_user_ids: campaign.assigned_user_ids,
             description: campaign.description,
             priority: campaign.priority,
             start_date: campaign.start_date,
             end_date: campaign.end_date,
             created_at: campaign.created_at,
-            conversion_rate: 0 // Add if available from API
+            conversion_rate: campaign.conversion_rate || 0
         })) || [];
 
         console.log('Processed Campaign Data:', processedData); // Debug log
