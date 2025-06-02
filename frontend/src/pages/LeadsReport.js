@@ -15,15 +15,18 @@ export default function LeadsChartReport() {
   const navigate = useNavigate();
 
   // Calculate total for percentages
-  const total = barData.reduce((sum, d) => sum + d.count, 0);
-
-  useEffect(() => {
+  const total = barData.reduce((sum, d) => sum + d.count, 0);  useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
-    const role = localStorage.getItem("role");    if (storedUser) {
-      setUser(storedUser);
-    } else {
-      alert("Please login to access reports.");
+    const role = localStorage.getItem("role");
+    if (!storedUser || !role) {
       navigate("/login");
+      return;
+    }
+    
+    setUser(storedUser);
+    // For non-admin/manager roles, automatically set selectedUser to their own ID
+    if (role.toLowerCase() !== 'admin' && role.toLowerCase() !== 'manager') {
+      setSelectedUser(storedUser.id.toString());
     }
   }, [navigate]);
 
@@ -44,19 +47,18 @@ export default function LeadsChartReport() {
           (user.role?.toLowerCase() === 'field_employee' || user.role?.toLowerCase() === 'caller')
         );
         setUsers(relevantUsers);
-      }    } catch (error) {
+      }
+    } catch (error) {
       console.error("Error fetching users:", error);
     }
-  };
-  // Fetch chart data from backend
+  };  // Fetch chart data from backend
   const fetchChartData = React.useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      
-      // Send role and selectedUser info in URL for proper filtering
+        // Use the /api/leads/stats/distribution endpoint for all users view
       const url = selectedUser === "all" 
-        ? `http://localhost:5000/api/leads?selectedUser=all` 
+        ? `http://localhost:5000/api/leads/stats/distribution` 
         : `http://localhost:5000/api/users/${selectedUser}/leads`;
       
       const response = await fetch(url, {
@@ -68,27 +70,31 @@ export default function LeadsChartReport() {
       
       const data = await response.json();
       console.log("API Response:", data);
-      
-      if (!data.success) {
+        if (!data.success) {
         console.error("Error fetching leads:", data.message);
         setBarData([{ status: "Error", count: 0 }]);
         return;
-      }      let chartData = [];
-      // let params = []; // Initialize params array
-      
-      if (selectedUser === "all") {
-        // Process aggregated data for all users
+      }
+
+      let chartData = [];
+        if (selectedUser === "all") {
+        // Process overall distribution data
         if (data.data.overallDistribution) {
-          chartData = Object.values(data.data.overallDistribution)
-            .map(item => ({
-              status: item.status || 'Unknown',
-              count: parseInt(item.count) || 0,
-              assigned_users: Array.isArray(item.assigned_users) ? item.assigned_users : [],
-              campaigns: Array.isArray(item.campaigns) ? item.campaigns : []
-            }));
+          chartData = Object.entries(data.data.overallDistribution).map(([status, count]) => ({
+            status,
+            count: parseInt(count),
+            percentage: 0 // Will be calculated once we have total
+          }));
+          
+          // Calculate total and percentages
+          const total = chartData.reduce((sum, item) => sum + item.count, 0);
+          chartData = chartData.map(item => ({
+            ...item,
+            percentage: ((item.count / total) * 100).toFixed(1)
+          }));
         }
       } else {
-        // Process leads data for individual user
+        // Process leads data from /users/{id}/leads endpoint
         const leadsData = data.data || [];
         
         // Create a map to count leads by status

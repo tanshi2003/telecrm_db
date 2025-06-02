@@ -21,45 +21,102 @@ export default function CallReport() {
   const [timeRange, setTimeRange] = useState(timeRangeOptions[1]); // Default to "This Week"
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userOptions, setUserOptions] = useState([]);
   const navigate = useNavigate();
-
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
-    const role = localStorage.getItem("role");    if (storedUser) {
-      setUser(storedUser);
-    } else {
+    if (!storedUser) {
       alert("Please login to access reports.");
       navigate("/login");
+      return;
     }
+    setUser(storedUser);
   }, [navigate]);
+
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const userRole = localStorage.getItem("role");
+      const userId = JSON.parse(localStorage.getItem("user"))?.id;
+
+      // Only admin and managers can select users
+      if (userRole !== 'admin' && userRole !== 'manager') {
+        return;
+      }
+
+      const endpoint = userRole === 'admin'
+        ? "http://localhost:5000/api/users"
+        : `http://localhost:5000/api/users/team/${userId}`;
+
+      const response = await fetch(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        const options = data.data
+          .filter(user => user.role?.toLowerCase() === 'caller')
+          .map(user => ({
+            value: { id: user.id, name: user.name },
+            label: user.name
+          }));
+        setUserOptions(options);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchUsers();
+    }
+  }, [user]);
 
   const fetchChartData = async () => {
     try {
       setIsLoading(true);
       setError(null);
       const token = localStorage.getItem("token");
-      
-      const response = await fetch(`http://localhost:5000/api/calls/stats/${timeRange.value}`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
+      const userRole = localStorage.getItem("role");
+      const userId = JSON.parse(localStorage.getItem("user"))?.id;
+
+      // For non-admin/manager roles, always use their own ID
+      const effectiveUserId = (userRole === 'caller' || userRole === 'field_employee')
+        ? userId
+        : selectedUser?.value;
+
+      const response = await fetch(
+        `http://localhost:5000/api/calls/stats/${timeRange.value}${effectiveUserId ? `/${effectiveUserId}` : ''}`,
+        {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
         }
-      });
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to fetch data');
+        throw new Error('Failed to fetch call statistics');
       }
-      
+
       const data = await response.json();
       
       if (!data.success) {
         throw new Error(data.message || 'Failed to fetch data');
-      }      console.log('API Response:', data); // Debug log to see data structure
+      }
 
-      // Ensure data.data is an array and handle empty data
       const responseData = Array.isArray(data.data) ? data.data : [];
       
-      // Transform the data for combined status and disposition
       const combinedData = responseData.map(item => ({
         label: `${item.status}/${item.disposition}`,
         count: item.count,
@@ -67,7 +124,6 @@ export default function CallReport() {
         disposition: item.disposition
       }));
 
-      // Sort data by status and disposition
       const sortedData = combinedData.sort((a, b) => {
         if (a.status === b.status) {
           return a.disposition.localeCompare(b.disposition);
@@ -85,7 +141,7 @@ export default function CallReport() {
       setIsLoading(false);
     }
   };  // Memoize fetchChartData to prevent infinite loops
-  const memoizedFetchChartData = React.useCallback(fetchChartData, [timeRange]);
+  const memoizedFetchChartData = React.useCallback(fetchChartData, [timeRange, selectedUser]);
 
   useEffect(() => {
     if (user) {
@@ -106,6 +162,26 @@ export default function CallReport() {
       );
     }
     return null;
+  };
+
+  const renderUserFilter = () => {
+    if (user?.role === 'caller') return null;
+    
+    return (
+      <div className="mb-4">
+        <Select
+          value={selectedUser}
+          onChange={value => {
+            setSelectedUser(value);
+            fetchChartData();
+          }}
+          options={userOptions}
+          isClearable={user?.role === 'admin' || user?.role === 'manager'}
+          placeholder="Filter by user..."
+          className="w-64"
+        />
+      </div>
+    );
   };
 
   return (

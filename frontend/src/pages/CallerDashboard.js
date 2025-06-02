@@ -73,7 +73,8 @@ const CallerDashboard = () => {
         localStorage.removeItem("user");
         navigate("/login");
         throw new Error('No authentication token found');
-      }      const response = await fetch(`${BASE_URL}/api/leads/assigned/${user.id}`, {
+      }      
+      const response = await fetch(`${BASE_URL}/api/leads/assigned/${user.id}`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -129,19 +130,28 @@ const CallerDashboard = () => {
     // Use exact status values, no formatting needed
     return status;
   };
-
   // Update handleUpdateLead function
   const handleUpdateLead = async () => {
-    if (!selectedLead) return;
-    
+    if (!selectedLead || !selectedLead.id) {
+        setUpdateMessage("Error: Invalid lead data");
+        return;
+    }
+
     try {
         const token = localStorage.getItem("token");
+        if (!token) {
+            setUpdateMessage("Error: Authentication required");
+            navigate("/login");
+            return;
+        }
+
         const updateData = {
+            id: selectedLead.id,
             name: selectedLead.name,
             phone_no: selectedLead.phone_no,
-            status: leadStatus,
-            notes: leadNotes || "",
-            updated_by: user.id
+            status: leadStatus || selectedLead.status,
+            notes: leadNotes || selectedLead.notes || "",
+            updated_by: user?.id
         };
 
         console.log('Updating lead:', selectedLead.id, updateData); // Debug log
@@ -155,10 +165,15 @@ const CallerDashboard = () => {
             body: JSON.stringify(updateData)
         });
 
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Server error: ${response.status}`);
+        }
+
         const responseData = await response.json();
         console.log('Update response:', responseData); // Debug log
 
-        if (!response.ok) {
+        if (!responseData.success) {
             throw new Error(responseData.message || "Failed to update lead");
         }
 
@@ -168,8 +183,8 @@ const CallerDashboard = () => {
                 lead.id === selectedLead.id 
                     ? { 
                         ...lead,
-                        status: leadStatus,
-                        notes: leadNotes,
+                        status: leadStatus || lead.status,
+                        notes: leadNotes || lead.notes,
                         updated_at: new Date().toISOString()
                     }
                     : lead
@@ -188,9 +203,9 @@ const CallerDashboard = () => {
 
     } catch (err) {
         console.error("Update error:", err);
-        setUpdateMessage(err.message || "Failed to update lead");
+        setUpdateMessage(`Error: ${err.message || "Failed to update lead"}`);
     }
-  };
+};
   // Update refreshLeads function to fetch campaign data with lead counts
   const refreshLeads = useCallback(async () => {
     if (!user) return;

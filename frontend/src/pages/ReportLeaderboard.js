@@ -15,48 +15,59 @@ import { IoCallOutline } from "react-icons/io5";
 import BackButton from "../components/BackButton";
 import Select from 'react-select';
 
-export default function CallerReport() {  const { caller_id } = useParams();
+export default function CallerReport() {
+  const { caller_id } = useParams();
   const [user, setUser] = useState(null);
   const [caller, setCaller] = useState({});
   const [callStats, setCallStats] = useState([]);
-  const [leads, setLeads] = useState([]);  const [users, setUsers] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
-  const navigate = useNavigate();  useEffect(() => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
     // Auth logic and fetch user data
     const storedUser = JSON.parse(localStorage.getItem("user"));
     const role = localStorage.getItem("role");
     const token = localStorage.getItem("token");
 
-    if (
-      storedUser &&
-      (role?.toLowerCase() === "admin" || role?.toLowerCase() === "caller")
-    ) {
-      setUser(storedUser);
-      
-      // Fetch all users if admin
-      if (role?.toLowerCase() === "admin") {
-        fetch("http://localhost:5000/api/users", {
+    if (!storedUser || !role || !token) {
+      navigate("/login");
+      return;
+    }
+
+    setUser(storedUser);
+    
+    // Fetch users based on role
+    const fetchUsers = async () => {
+      try {
+        const endpoint = role === "admin"
+          ? "http://localhost:5000/api/users"
+          : `http://localhost:5000/api/users/team/${storedUser.id}`;
+
+        const response = await fetch(endpoint, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            const callers = data.data.filter(user => user.role.toLowerCase() === 'caller');
-            setUsers(callers.map(user => ({
-              value: user.id,
-              label: user.name,
-              email: user.email
-            })));
-          }
-        })
-        .catch(err => console.error("Error fetching users:", err));
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch users');
+
+        const data = await response.json();
+        if (data.success) {
+          setUsers(data.data.map(user => ({
+            value: user.id,
+            label: user.name,
+            email: user.email
+          })));
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
       }
-    } else {
-      navigate("/login");
-    }
+    };
+
+    fetchUsers();
   }, [navigate]);
 
   useEffect(() => {

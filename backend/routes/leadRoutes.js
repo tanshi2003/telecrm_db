@@ -9,7 +9,52 @@ const Activity = require("../models/Activity"); // Import Activity model
 // Protected routes - require authentication
 router.use(authenticateToken);
 
-// 🆕 Create a new lead
+// Get lead distribution statistics
+router.get("/stats/distribution", authenticateToken, async (req, res) => {
+    try {
+        // Query to get overall lead distribution
+        const query = `
+            SELECT status, COUNT(*) as count
+            FROM leads
+            WHERE 1=1
+            ${req.user.role === 'manager' 
+                ? 'AND (manager_id = ? OR assigned_to IN (SELECT id FROM users WHERE manager_id = ?))' 
+                : req.user.role !== 'admin' 
+                    ? 'AND assigned_to = ?' 
+                    : ''}
+            GROUP BY status
+        `;
+
+        const params = req.user.role === 'manager' 
+            ? [req.user.id, req.user.id]
+            : req.user.role !== 'admin' 
+                ? [req.user.id]
+                : [];
+
+        const [results] = await db.promise().query(query, params);
+        
+        // Format the response
+        res.json({
+            success: true,
+            message: "Lead distribution fetched successfully",
+            data: {
+                overallDistribution: results.reduce((acc, curr) => ({
+                    ...acc,
+                    [curr.status]: curr.count
+                }), {})
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching lead distribution:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching lead distribution",
+            error: error.message
+        });
+    }
+});
+
+// Create a new lead
 router.post("/", roleMiddleware(['admin', 'user', 'caller', 'manager', 'field_employee']), async (req, res) => {
     try {
         const result = await leadController.createLead(req.body);

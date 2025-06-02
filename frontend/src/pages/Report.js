@@ -8,50 +8,35 @@ const Reports = () => {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
   useEffect(() => {
-      console.log("Reports page mounted");
-      const storedUser = JSON.parse(localStorage.getItem("user"));
-      const role = localStorage.getItem("role");
-      
-      console.log("Reports - Stored data:", {
-        storedUser,
-        role,
-        hasToken: !!localStorage.getItem("token")
-      });
-        if (storedUser) {
-        console.log("Reports - Setting user data");
-        setUser(storedUser);
-      } else {
-        alert("Please login to access reports.");
-        navigate("/login");
-      }
-    }, [navigate]);
-  
-    const handleNavigation = (path) => {
-      console.log("AdminDashboard - Navigating to:", path);
-      navigate(path);
-    };
-  
-    // If user is not set, show loading or redirect
-    if (!user) {
-      console.log("AdminDashboard - No user data, returning null");
-      return null;
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    if (storedUser) {
+      setUser(storedUser);
+    } else {
+      alert("Please login to access reports.");
+      navigate("/login");
     }
-  
-    console.log("AdminDashboard - Rendering dashboard");
+  }, [navigate]);
+
+  const handleNavigation = (path) => {
+    navigate(path);
+  };
+
+  if (!user) return null;
+
   return (
     <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar */}      <Sidebar user={user} />
+      <Sidebar user={user} />
       <div className="flex-1 p-8 ml-64 mt-16">
-        {/* Header Section */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Reports</h1>
           <BackButton/>
-          </div>        
-        {/* Dashboard Cards */}        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Leaderboard */}
           <div 
             className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg cursor-pointer transition-all duration-300 transform hover:-translate-y-1"
-            onClick={() => handleNavigation(`/report-leaderboard/42`)}
+            onClick={() => handleNavigation(`/report-leaderboard/${user?.id}`)}
           >
             <div className="flex items-center mb-4">
               <div className="bg-blue-50 p-3 rounded-lg">
@@ -60,7 +45,7 @@ const Reports = () => {
             </div>
             <h3 className="text-lg font-semibold mb-2">Leaderboard</h3>
             <p className="text-gray-600 text-sm">
-              Monitor top-performing employees across roles — real-time rankings based on lead conversions and campaign contributions.
+              Monitor team performance and rankings based on lead conversions and campaign contributions.
             </p>
           </div>
 
@@ -76,11 +61,11 @@ const Reports = () => {
             </div>
             <h3 className="text-lg font-semibold mb-2">Calls Report</h3>
             <p className="text-gray-600 text-sm">
-              Total calls, connection rates, and talk performance — analyze caller productivity and campaign engagement.
+              View call statistics and performance metrics.
             </p>
           </div>
 
-          {/* Leads Reports */}
+          {/* Leads Report */}
           <div 
             className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg cursor-pointer transition-all duration-300 transform hover:-translate-y-1"
             onClick={() => handleNavigation("/LeadsReport")}
@@ -92,7 +77,7 @@ const Reports = () => {
             </div>
             <h3 className="text-lg font-semibold mb-2">Leads Report</h3>
             <p className="text-gray-600 text-sm">
-              Track lead progress, status distribution, and conversion trends — gain clarity on the health of your sales funnel.
+              Track lead progress and conversion trends.
             </p>
           </div>
         </div>

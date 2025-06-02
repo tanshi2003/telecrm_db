@@ -31,6 +31,58 @@ const Activities = () => {
     });
     const navigate = useNavigate();
 
+    const fetchActivities = React.useCallback(async () => {
+        try {
+            setLoading(true);
+            const userRole = localStorage.getItem('role');
+            const userId = JSON.parse(localStorage.getItem('user'))?.id;
+            
+            let endpoint = 'all';
+            if (userRole === 'manager') {
+                endpoint = `team/${userId}`;
+            } else if (userRole === 'caller' || userRole === 'field_employee') {
+                endpoint = `user/${userId}`;
+            }
+
+            const response = await fetch(`http://localhost:5000/api/activities/${endpoint}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to fetch activities');
+            
+            const data = await response.json();
+            if (data.success) {
+                const sortedActivities = data.data.sort(
+                    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+                );
+
+                // Filter activities based on role
+                let filteredData = sortedActivities;
+                if (userRole === 'manager') {
+                    // Managers see their team's activities
+                    filteredData = sortedActivities.filter(activity => 
+                        activity.user_id === userId || // Their own activities
+                        activity.manager_id === userId // Their team members' activities
+                    );
+                } else if (userRole === 'caller' || userRole === 'field_employee') {
+                    // Callers and field employees only see their own activities
+                    filteredData = sortedActivities.filter(activity => 
+                        activity.user_id === userId
+                    );
+                }
+                
+                setActivities(filteredData);
+                setFilteredActivities(filteredData);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, []); // Memoize the function
+
     useEffect(() => {
         const storedUser = JSON.parse(localStorage.getItem("user"));
         const role = localStorage.getItem("role");
@@ -49,32 +101,9 @@ const Activities = () => {
             setFilters(prev => ({...prev, role: "field_employee"}));
         }
         // Admin and manager can see all activities by default
-    }, [navigate]);
-
-    const fetchActivities = async () => {
-        try {
-            const response = await fetch('http://localhost:5000/api/activities/all', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            
-            if (!response.ok) throw new Error('Failed to fetch activities');
-            
-            const data = await response.json();
-            if (data.success) {
-                const sortedActivities = data.data.sort(
-                    (a, b) => new Date(b.created_at) - new Date(a.created_at)
-                );
-                setActivities(sortedActivities);
-                setFilteredActivities(sortedActivities);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        } finally {
-            setLoading(false);
-        }
-    };    useEffect(() => {
+    }, [navigate, fetchActivities]); // Fix dependency array    useEffect(() => {
+        if (!activities.length) return; // Avoid unnecessary filtering on empty activities
+        
         let result = [...activities];
 
         // Apply search
@@ -167,8 +196,7 @@ const Activities = () => {
             }
         }
 
-        setFilteredActivities(result);
-    }, [searchTerm, filters, activities]);    const getActivityIcon = (type, role) => {
+    const getActivityIcon = (type, role) => {
         const icons = {
             // Lead Activities
             'lead_create': FaUserPlus,
@@ -213,6 +241,26 @@ const Activities = () => {
 
     const getRoleColor = (role) => {
         return roleColors[role] || 'bg-gray-100 text-gray-800 border-gray-200';
+    };
+
+    // Update the role filter options based on user role
+    const getRoleFilterOptions = () => {
+        const userRole = localStorage.getItem('role');
+        if (userRole === 'admin') {
+            return [
+                { value: 'all', label: 'All Roles' },
+                { value: 'manager', label: 'Manager' },
+                { value: 'caller', label: 'Caller' },
+                { value: 'field_employee', label: 'Field Employee' }
+            ];
+        } else if (userRole === 'manager') {
+            return [
+                { value: 'all', label: 'All Team Members' },
+                { value: 'caller', label: 'Caller' },
+                { value: 'field_employee', label: 'Field Employee' }
+            ];
+        }
+        return []; // Callers and field employees don't need role filters
     };
 
     if (loading) {
@@ -288,11 +336,9 @@ const Activities = () => {
                                 value={filters.role}
                                 onChange={(e) => setFilters({...filters, role: e.target.value})}
                             >
-                                <option value="all">All Roles</option>
-                                <option value="manager">Manager</option>
-                                <option value="caller">Caller</option>
-                                <option value="field_employee">Field Employee</option>
-                                <option value="system">System</option>
+                                {getRoleFilterOptions().map(role => (
+                                    <option key={role.value} value={role.value}>{role.label}</option>
+                                ))}
                             </select>
                             <select
                                 className="block w-full px-4 py-3 border border-gray-200 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150 ease-in-out sm:text-sm"

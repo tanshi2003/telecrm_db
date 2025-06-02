@@ -33,12 +33,10 @@ import ManageRoles from "./pages/ManageRoles";
 import ManageStatus from "./pages/ManageStatus";
 import AssignManager from "./pages/AssignManager"; // <-- Add this import
 import TeamsList from "./pages/TeamsList";
-// import TeamManagement from "./pages/team-management";
-import Meetings from "./pages/Meetings";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Reports from "./pages/Report";
 import CallerReport from "./pages/ReportLeaderboard";
-import Reports2 from "./pages/CallReport";
+
 import LeadsChartReport from "./pages/LeadsReport";
 import Activities from "./pages/Activity";
 import ManagerUserManagement from "./pages/ManagerUserManagement";
@@ -52,6 +50,7 @@ import "./styles/global.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Toaster } from 'react-hot-toast';
 import AddLead from "./pages/AddLead";
+import CallReport from "./pages/CallReport"; // Add this import
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -267,24 +266,6 @@ const AppContent = () => {
                 </ProtectedRoute>
               }
             />
-            {/* <Route
-                path="/team-management"
-                element={
-                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
-                    <TeamManagement />
-                  </ProtectedRoute>
-                }
-              /> */}
-              <Route
-                path="/meetings"
-                element={
-                  <ProtectedRoute allowedRoles={["admin", "manager"]}>
-                    <Meetings />
-                  </ProtectedRoute>
-                }
-              />
-              
-           
              <Route
               path="/ReportsLeaderboard"
               element={
@@ -374,11 +355,11 @@ const AppContent = () => {
                 </ProtectedRoute>
               } 
             />
-              <Route
-              path="/CallReport"
+            <Route              
+            path="/CallReport"
               element={
                 <ProtectedRoute allowedRoles={["admin", "manager", "caller", "field_employee"]}>
-                  <Reports2 />
+                  <CallReport />
                 </ProtectedRoute>
               }
             />
@@ -389,13 +370,14 @@ const AppContent = () => {
                   <LeadsChartReport />
                 </ProtectedRoute>
               }
-            /><Route
-                path="/activities"
-                element={
-                     <ProtectedRoute allowedRoles={["admin", "manager", "caller", "field_employee"]}>
-                     <Activities />
-                     </ProtectedRoute>
-                        }
+            />
+            <Route
+              path="/activities"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager", "caller", "field_employee"]}>
+                  <Activities />
+                </ProtectedRoute>
+              }
             />
             
             {/* Add catch-all routes for old paths */}
