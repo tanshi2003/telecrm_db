@@ -133,13 +133,59 @@ exports.createLead = (req, res) => {
 
 // 📌 Get all leads
 exports.getLeads = async (req, res) => {
-  try {
-    const { selectedUser, role } = req.query;
+
+    try {    const { selectedUser, role } = req.query;
     const userRole = req.user.role;
     const userId = req.user.id;
+    
+    // Debug log
+    console.log('GetLeads request:', { selectedUser, role, userRole, userId });    // Define params array once at the start
+    let params = [];
 
-    console.log('GetLeads request:', { selectedUser, role, userRole, userId }); // Debug log
+    // If "all" users are selected, return aggregated data
+    if (selectedUser === 'all') {
+      let query = `
+        SELECT 
+          COALESCE(l.status, 'Unknown') as status,
+          COUNT(*) as count,
+          GROUP_CONCAT(DISTINCT l.assigned_to) as assigned_users,
+          GROUP_CONCAT(DISTINCT l.campaign_id) as campaigns
+        FROM leads l
+        WHERE 1=1
+      `;
 
+      // Role-based filtering
+      if (userRole === 'manager') {
+    query += ` AND (l.manager_id = ? OR l.assigned_to IN (SELECT id FROM users WHERE manager_id = ?))`;
+        params.push(userId, userId);
+      } else if (userRole !== 'admin') {
+        query += ` AND l.assigned_to = ?`;
+        params.push(userId);
+      }
+
+      query += ` GROUP BY l.status`;
+
+      const [leads] = await db.promise().query(query, params);
+      const response = {
+        success: true,
+        message: "Leads fetched successfully",
+        data: {
+          overallDistribution: leads.reduce((acc, curr) => ({
+            ...acc,
+            [curr.status]: {
+              status: curr.status,
+              count: curr.count,
+              assigned_users: curr.assigned_users?.split(',') || [],
+              campaigns: curr.campaigns?.split(',') || []
+            }
+          }), {})
+        }
+      };
+
+      return res.json(response);
+    }
+
+    // For individual user selection, use the detailed query
     let query = `
       SELECT DISTINCT
         l.*,
@@ -150,15 +196,14 @@ exports.getLeads = async (req, res) => {
           WHEN l.created_by = ? THEN 'self-created'
           WHEN l.assigned_to = ? THEN 'assigned'
           ELSE 'other'
-        END as lead_source
-      FROM leads l
+        END as lead_source      FROM leads l
       LEFT JOIN users u ON l.assigned_to = u.id
       LEFT JOIN users cr ON l.created_by = cr.id
       LEFT JOIN campaigns ca ON l.campaign_id = ca.id
       WHERE 1=1
     `;
 
-    const params = [userId, userId];
+    params.push(userId, userId);
 
     // Add role-based conditions
     if (userRole === 'admin') {
@@ -186,10 +231,9 @@ exports.getLeads = async (req, res) => {
     if (selectedUser && selectedUser !== 'all') {
       query += ` AND l.assigned_to = ?`;
       params.push(selectedUser);
-    }
+    }    query += ` ORDER BY l.created_at DESC`;
 
-    query += ` ORDER BY l.created_at DESC`;
-
+    // Debug logs
     console.log('Executing query:', query);
     console.log('With params:', params);
 

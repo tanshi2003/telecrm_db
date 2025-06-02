@@ -44,19 +44,19 @@ export default function LeadsChartReport() {
           (user.role?.toLowerCase() === 'field_employee' || user.role?.toLowerCase() === 'caller')
         );
         setUsers(relevantUsers);
-      }
-    } catch (error) {
+      }    } catch (error) {
       console.error("Error fetching users:", error);
     }
-  };  // Fetch chart data from backend
+  };
+  // Fetch chart data from backend
   const fetchChartData = React.useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
       
-      // Use the /api/users/{userId}/leads endpoint for better lead fetching
+      // Send role and selectedUser info in URL for proper filtering
       const url = selectedUser === "all" 
-        ? `http://localhost:5000/api/leads` 
+        ? `http://localhost:5000/api/leads?selectedUser=all` 
         : `http://localhost:5000/api/users/${selectedUser}/leads`;
       
       const response = await fetch(url, {
@@ -68,21 +68,27 @@ export default function LeadsChartReport() {
       
       const data = await response.json();
       console.log("API Response:", data);
-        if (!data.success) {
+      
+      if (!data.success) {
         console.error("Error fetching leads:", data.message);
         setBarData([{ status: "Error", count: 0 }]);
         return;
-      }
-
-      let chartData = [];
+      }      let chartData = [];
+      // let params = []; // Initialize params array
       
       if (selectedUser === "all") {
-        // Use overall distribution for all users
+        // Process aggregated data for all users
         if (data.data.overallDistribution) {
-          chartData = Object.values(data.data.overallDistribution);
+          chartData = Object.values(data.data.overallDistribution)
+            .map(item => ({
+              status: item.status || 'Unknown',
+              count: parseInt(item.count) || 0,
+              assigned_users: Array.isArray(item.assigned_users) ? item.assigned_users : [],
+              campaigns: Array.isArray(item.campaigns) ? item.campaigns : []
+            }));
         }
       } else {
-        // Process leads data from /users/{id}/leads endpoint
+        // Process leads data for individual user
         const leadsData = data.data || [];
         
         // Create a map to count leads by status
@@ -132,9 +138,6 @@ export default function LeadsChartReport() {
     }
   }, [user, selectedUser, fetchChartData]);
 
-  function handleNavigation(path) {
-    navigate(path);
-  }
 
   if (!user) return null;
 
@@ -166,22 +169,7 @@ export default function LeadsChartReport() {
                     ))}
                   </select>
                 )}
-                <button
-                  onClick={fetchChartData}
-                  disabled={loading}
-                  className={`px-4 py-2 text-white rounded-md transition-colors duration-200 ${
-                    loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
-                  }`}
-                >
-                  {loading ? 'Loading...' : 'Show Report'}
-                </button>
               </div>
-              <button
-                onClick={() => handleNavigation("/leads")}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
-              >
-                Show All Leads
-              </button>
             </div>
           </div>
           <div className="flex items-center gap-4">
