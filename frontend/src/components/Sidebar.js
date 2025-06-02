@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   LayoutDashboard,
   Search,
@@ -10,11 +10,6 @@ import {
   Menu,
   ChevronLeft,
   LogOut,
-  BarChart,
-  PhoneCall,
-  Users,
-  ClipboardList,
-  PhoneIncoming,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -22,9 +17,6 @@ const Sidebar = ({ user }) => {
   // State management
   const [isExpanded, setIsExpanded] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [showActivityOptions, setShowActivityOptions] = useState(false);
-  const [showReportOptions, setShowReportOptions] = useState(false);
-  const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0 });
 
   // Refs
   const reportBtnRef = useRef(null);

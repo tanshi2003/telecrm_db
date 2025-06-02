@@ -4,7 +4,7 @@ const Activity = require("../models/Activity");  // Add Activity model import
 
 const campaignController = {
     // 📥 Create Campaign
-    createCampaign: async (req, res) => {
+    createCampaign: (req, res) => {
         const {
             name, description, status, priority,
             assigned_users = [], start_date, end_date,
@@ -19,92 +19,179 @@ const campaignController = {
             return res.status(400).json(responseFormatter(false, "All required fields must be provided"));
         }
 
-        try {
-            // Insert campaign using promise-based query
-            const campaignQuery = `
-                INSERT INTO campaigns 
-                (name, description, status, lead_count, priority, start_date, end_date, created_at, updated_at, admin_id, manager_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)
-            `;
-            
-            const [campaignResult] = await db.promise().query(
-                campaignQuery,
-                [name, description, status, leads.length, priority, start_date, end_date || null, admin_id, manager_id]
-            );
+        // Insert campaign using callback-based query
+        const campaignQuery = `
+            INSERT INTO campaigns 
+            (name, description, status, lead_count, priority, start_date, end_date, created_at, updated_at, admin_id, manager_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)
+        `;
+        
+        db.query(
+            campaignQuery,
+            [name, description, status, leads.length, priority, start_date, end_date || null, admin_id, manager_id],
+            (err, campaignResult) => {
+                if (err) {
+                    console.error("Error creating campaign:", err);
+                    return res.status(500).json(responseFormatter(false, "Failed to create campaign", err.message));
+                }
 
-            const campaignId = campaignResult.insertId;
+                const campaignId = campaignResult.insertId;
 
-            // Insert assigned users (including the manager if they're creating the campaign)
-            const usersToAssign = Array.isArray(assigned_users) ? [...assigned_users] : [];
-            if (user.role === 'manager') {
-                usersToAssign.push(user.id);
-            }
-            
-            // Insert users if any are assigned and log each assignment
-            if (usersToAssign.length > 0) {
-                const values = usersToAssign.map(userId => [campaignId, userId]);
-                await db.promise().query(
-                    "INSERT INTO campaign_users (campaign_id, user_id) VALUES ?",
-                    [values]
-                );
+                // Insert assigned users (including the manager if they're creating the campaign)
+                const usersToAssign = Array.isArray(assigned_users) ? [...assigned_users] : [];
+                if (user.role === 'manager') {
+                    usersToAssign.push(user.id);
+                }
+                
+                // Insert users if any are assigned
+                if (usersToAssign.length > 0) {
+                    const values = usersToAssign.map(userId => [campaignId, userId]);
+                    db.query(
+                        "INSERT INTO campaign_users (campaign_id, user_id) VALUES ?",
+                        [values],
+                        (err) => {
+                            if (err) {
+                                console.error("Error assigning users:", err);
+                                return res.status(500).json(responseFormatter(false, "Failed to assign users", err.message));
+                            }
 
-                // Log user assignments
-                for (const userId of usersToAssign) {
-                    await Activity.logActivity(
-                        user.id,
-                        user.role,
-                        'campaign_user_assign',
-                        `User ${userId} assigned to campaign ${name}`,
-                        'campaign',
-                        campaignId,
-                        null
+                            // Log user assignments
+                            usersToAssign.forEach(userId => {
+                                Activity.logActivity(
+                                    user.id,
+                                    user.role,
+                                    'campaign_user_assign',
+                                    `User ${userId} assigned to campaign ${name}`,
+                                    'campaign',
+                                    campaignId,
+                                    null
+                                );
+                            });
+
+                            // Insert leads if any
+                            if (leads.length > 0) {
+                                let completedLeads = 0;
+                                leads.forEach(lead => {
+                                    db.query(
+                                        `INSERT INTO leads 
+                                        (title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, created_at, updated_at)
+                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+                                        [
+                                            lead.title, lead.description, lead.status, lead.lead_category, lead.name,
+                                            lead.phone_no, lead.address, lead.assigned_to, admin_id, campaignId, lead.notes || null
+                                        ],
+                                        (err) => {
+                                            if (err) {
+                                                console.error("Error inserting lead:", err);
+                                            }
+                                            completedLeads++;
+                                            
+                                            // If all leads are processed
+                                            if (completedLeads === leads.length) {
+                                                // Log lead assignment to campaign
+                                                Activity.logActivity(
+                                                    user.id,
+                                                    user.role,
+                                                    'campaign_leads_add',
+                                                    `Added ${leads.length} leads to campaign ${name}`,
+                                                    'campaign',
+                                                    campaignId,
+                                                    null
+                                                );
+
+                                                // Log campaign creation activity
+                                                Activity.logActivity(
+                                                    user.id,
+                                                    user.role,
+                                                    'campaign_create',
+                                                    `Created new campaign: ${name} (${status})`,
+                                                    'campaign',
+                                                    campaignId,
+                                                    null
+                                                );
+
+                                                // Send final success response
+                                                res.status(201).json(responseFormatter(true, "Campaign created successfully", { campaign_id: campaignId }));
+                                            }
+                                        }
+                                    );
+                                });
+                            } else {
+                                // If no leads to insert, log creation and send response
+                                Activity.logActivity(
+                                    user.id,
+                                    user.role,
+                                    'campaign_create',
+                                    `Created new campaign: ${name} (${status})`,
+                                    'campaign',
+                                    campaignId,
+                                    null
+                                );
+                                res.status(201).json(responseFormatter(true, "Campaign created successfully", { campaign_id: campaignId }));
+                            }
+                        }
                     );
+                } else {
+                    // If no users to assign, proceed with leads
+                    if (leads.length > 0) {
+                        let completedLeads = 0;
+                        leads.forEach(lead => {
+                            db.query(
+                                `INSERT INTO leads 
+                                (title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, created_at, updated_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+                                [
+                                    lead.title, lead.description, lead.status, lead.lead_category, lead.name,
+                                    lead.phone_no, lead.address, lead.assigned_to, admin_id, campaignId, lead.notes || null
+                                ],
+                                (err) => {
+                                    if (err) {
+                                        console.error("Error inserting lead:", err);
+                                    }
+                                    completedLeads++;
+                                    
+                                    if (completedLeads === leads.length) {
+                                        Activity.logActivity(
+                                            user.id,
+                                            user.role,
+                                            'campaign_leads_add',
+                                            `Added ${leads.length} leads to campaign ${name}`,
+                                            'campaign',
+                                            campaignId,
+                                            null
+                                        );
+
+                                        Activity.logActivity(
+                                            user.id,
+                                            user.role,
+                                            'campaign_create',
+                                            `Created new campaign: ${name} (${status})`,
+                                            'campaign',
+                                            campaignId,
+                                            null
+                                        );
+
+                                        res.status(201).json(responseFormatter(true, "Campaign created successfully", { campaign_id: campaignId }));
+                                    }
+                                }
+                            );
+                        });
+                    } else {
+                        // No users and no leads
+                        Activity.logActivity(
+                            user.id,
+                            user.role,
+                            'campaign_create',
+                            `Created new campaign: ${name} (${status})`,
+                            'campaign',
+                            campaignId,
+                            null
+                        );
+                        res.status(201).json(responseFormatter(true, "Campaign created successfully", { campaign_id: campaignId }));
+                    }
                 }
             }
-
-            // Insert leads using Promise.all for parallel execution
-            if (leads.length > 0) {
-                const leadInsertPromises = leads.map(lead => 
-                    db.promise().query(
-                        `INSERT INTO leads 
-                        (title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-                        [
-                            lead.title, lead.description, lead.status, lead.lead_category, lead.name,
-                            lead.phone_no, lead.address, lead.assigned_to, admin_id, campaignId, lead.notes || null
-                        ]
-                    )
-                );
-                await Promise.all(leadInsertPromises);
-
-                // Log lead assignment to campaign
-                await Activity.logActivity(
-                    user.id,
-                    user.role,
-                    'campaign_leads_add',
-                    `Added ${leads.length} leads to campaign ${name}`,
-                    'campaign',
-                    campaignId,
-                    null
-                );
-            }
-
-            // Log campaign creation activity
-            await Activity.logActivity(
-                user.id,
-                user.role,
-                'campaign_create',
-                `Created new campaign: ${name} (${status})`,
-                'campaign',
-                campaignId,
-                null
-            );
-
-            res.status(201).json(responseFormatter(true, "Campaign created successfully", { campaign_id: campaignId }));
-        } catch (error) {
-            console.error("Error creating campaign:", error);
-            res.status(500).json(responseFormatter(false, "Failed to create campaign", error.message));
-        }
+        );
     },
 
     // 📤 Get All Campaigns (with assigned users and progress/statistics)
@@ -530,41 +617,46 @@ const campaignController = {
             console.log("Processed campaign results:", processedResults);
             res.json(responseFormatter(true, "Campaigns fetched successfully", processedResults));
         });
-    },    // Get campaigns for a specific manager
-    getCampaignsByManagerId: async (req, res) => {
+    },    // Get campaigns by manager ID
+    getCampaignsByManagerId: (req, res) => {
         const managerId = req.params.id;
         
-        try {
-            const query = `
-                SELECT 
-                    c.*,
-                    COUNT(DISTINCT l.id) as total_leads,
-                    COUNT(DISTINCT cu.user_id) as total_users
-                FROM campaigns c
-                LEFT JOIN leads l ON c.id = l.campaign_id
-                LEFT JOIN campaign_users cu ON c.id = cu.campaign_id
-                WHERE (c.manager_id = ? OR c.id IN (
-                    SELECT campaign_id 
-                    FROM campaign_users 
-                    WHERE user_id = ?
-                ))
-                GROUP BY c.id
-                ORDER BY c.created_at DESC
-            `;
+        // Query to get both created and assigned campaigns
+        const query = `
+            SELECT c.*, 
+                   COUNT(DISTINCT l.id) as lead_count,
+                   GROUP_CONCAT(DISTINCT u.id) as assigned_user_ids,
+                   GROUP_CONCAT(DISTINCT u.name) as assigned_user_names
+            FROM campaigns c
+            LEFT JOIN leads l ON c.id = l.campaign_id
+            LEFT JOIN campaign_users cu ON c.id = cu.campaign_id
+            LEFT JOIN users u ON cu.user_id = u.id
+            WHERE c.manager_id = ? OR c.id IN (
+                SELECT campaign_id 
+                FROM campaign_users 
+                WHERE user_id = ?
+            )
+            GROUP BY c.id
+        `;
 
-            const [campaigns] = await db.promise().query(query, [managerId, managerId]);
-            
-            res.json({
-                success: true,
-                data: campaigns
-            });
-        } catch (err) {
-            console.error('Error fetching campaigns:', err);
-            res.status(500).json({
-                success: false,
-                message: 'Error fetching campaigns'
-            });
-        }
+        db.query(query, [managerId, managerId], (err, results) => {
+            if (err) {
+                console.error("Error fetching manager's campaigns:", err);
+                return res.status(500).json(responseFormatter(false, "Database error", err.message));
+            }
+
+            // Process the results to format assigned users
+            const processedResults = results.map(campaign => ({
+                ...campaign,
+                assigned_users: campaign.assigned_user_ids ? 
+                    campaign.assigned_user_ids.split(',').map((id, index) => ({
+                        id: parseInt(id),
+                        name: campaign.assigned_user_names.split(',')[index]
+                    })) : []
+            }));
+
+            res.json(responseFormatter(true, "Campaigns fetched successfully", processedResults));
+        });
     },
 
     // Get active campaigns count

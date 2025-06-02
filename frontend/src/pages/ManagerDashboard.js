@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
-import {
-  Users,
+import {  Users,
   Phone,
   Mail,
   Calendar,
@@ -11,7 +10,6 @@ import {
   BarChart2,
   UserCheck,
   Target,
-  UserCog,
   MapPin,
   FileText,
   Plus

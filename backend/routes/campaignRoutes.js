@@ -20,29 +20,7 @@ router.get("/manager/:id", roleMiddleware(["manager"]), campaignController.getCa
 router.get("/user/:id/campaigns", roleMiddleware(["admin", "manager", "caller"]), campaignController.getCampaignsByUserId);
 
 // Create a new campaign (Admin and Manager only)
-router.post("/", roleMiddleware(["admin", "manager"]), async (req, res) => {
-    try {
-        const result = await campaignController.createCampaign(req.body);
-        
-        // Log campaign creation activity
-        await Activity.logActivity(
-            req.user.id,
-            req.user.role,
-            'campaign_create',
-            `Created new campaign: ${req.body.name}`,
-            'campaign',
-            result.id,
-            null
-        );
-
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-});
+router.post("/", roleMiddleware(["admin", "manager"]), campaignController.createCampaign);
 
 // Get a specific campaign
 router.get("/:id", roleMiddleware(["admin", "manager"]), campaignController.getCampaignById);
