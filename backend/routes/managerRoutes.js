@@ -27,7 +27,8 @@ router.get('/teams', authenticateToken, checkManagerAccess, (req, res) => {
             u.name as member_name,
             u.email as member_email,
             u.role as member_role,
-            u.status as member_status
+            u.status as member_status,
+            COALESCE(DATE_FORMAT(u.created_at, '%Y-%m-%d %H:%i:%s'), DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s')) as created_at
         FROM users m
         LEFT JOIN users u ON m.id = u.manager_id
         WHERE m.role = 'manager'
@@ -69,7 +70,8 @@ router.get('/teams', authenticateToken, checkManagerAccess, (req, res) => {
                     name: row.member_name,
                     email: row.member_email,
                     role: row.member_role,
-                    status: row.member_status
+                    status: row.member_status,
+                    created_at: row.created_at
                 });
                 acc[row.manager_id].team_size = acc[row.manager_id].team_members.length;
             }
@@ -105,7 +107,8 @@ router.get('/teams/:id', authenticateToken, checkManagerAccess, (req, res) => {
             u.name as member_name,
             u.email as member_email,
             u.role as member_role,
-            u.status as member_status
+            u.status as member_status,
+            COALESCE(DATE_FORMAT(u.created_at, '%Y-%m-%d %H:%i:%s'), DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s')) as created_at
         FROM users m
         LEFT JOIN users u ON m.id = u.manager_id
         WHERE m.role = 'manager' AND m.id = ?
@@ -146,7 +149,8 @@ router.get('/teams/:id', authenticateToken, checkManagerAccess, (req, res) => {
                     name: row.member_name,
                     email: row.member_email,
                     role: row.member_role,
-                    status: row.member_status
+                    status: row.member_status,
+                    created_at: row.created_at
                 });
                 acc.team_size = acc.team_members.length;
             }
@@ -320,12 +324,22 @@ router.get('/dashboard-stats', authenticateToken, checkManagerAccess, (req, res)
         totalCampaigns: `
             SELECT COUNT(DISTINCT c.id) as total 
             FROM campaigns c
-            WHERE LOWER(c.status) != 'archived'
+            WHERE (c.manager_id = ? OR c.id IN (
+                SELECT campaign_id 
+                FROM campaign_users 
+                WHERE user_id = ?
+            ))
+            AND LOWER(c.status) != 'archived'
         `,
         activeCampaigns: `
             SELECT COUNT(DISTINCT c.id) as total 
             FROM campaigns c
-            WHERE LOWER(c.status) = 'active'
+            WHERE (c.manager_id = ? OR c.id IN (
+                SELECT campaign_id 
+                FROM campaign_users 
+                WHERE user_id = ?
+            ))
+            AND LOWER(c.status) = 'active'
         `
     };
 
@@ -343,13 +357,13 @@ router.get('/dashboard-stats', authenticateToken, checkManagerAccess, (req, res)
             });
         }),
         new Promise((resolve, reject) => {
-            db.query(queries.totalCampaigns, [], (err, results) => {
+            db.query(queries.totalCampaigns, [req.user.id, req.user.id], (err, results) => {
                 if (err) reject(err);
                 resolve(results[0].total);
             });
         }),
         new Promise((resolve, reject) => {
-            db.query(queries.activeCampaigns, [], (err, results) => {
+            db.query(queries.activeCampaigns, [req.user.id, req.user.id], (err, results) => {
                 if (err) reject(err);
                 resolve(results[0].total);
             });

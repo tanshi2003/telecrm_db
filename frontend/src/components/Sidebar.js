@@ -127,6 +127,18 @@ const Sidebar = ({ user }) => {
   // Function to check if menu item is active
   const isMenuItemActive = (itemPath) => {
     if (!itemPath) return false;
+    
+    // Exact match for dashboard paths
+    if (itemPath.includes('dashboard') || itemPath === getDashboardPath(role)) {
+      return location.pathname === itemPath;
+    }
+    
+    // For campaigns, only match if it's exactly the campaigns path or a sub-path
+    if (itemPath.includes('campaigns')) {
+      return location.pathname.startsWith('/admin/campaigns') || location.pathname.startsWith('/campaigns');
+    }
+    
+    // For other paths, keep the existing behavior
     return location.pathname === itemPath || location.pathname.startsWith(itemPath + '/');
   };
 

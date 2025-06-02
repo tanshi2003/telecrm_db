@@ -530,46 +530,41 @@ const campaignController = {
             console.log("Processed campaign results:", processedResults);
             res.json(responseFormatter(true, "Campaigns fetched successfully", processedResults));
         });
-    },    // Get campaigns by manager ID
-    getCampaignsByManagerId: (req, res) => {
+    },    // Get campaigns for a specific manager
+    getCampaignsByManagerId: async (req, res) => {
         const managerId = req.params.id;
         
-        // Query to get both created and assigned campaigns
-        const query = `
-            SELECT c.*, 
-                   COUNT(DISTINCT l.id) as lead_count,
-                   GROUP_CONCAT(DISTINCT u.id) as assigned_user_ids,
-                   GROUP_CONCAT(DISTINCT u.name) as assigned_user_names
-            FROM campaigns c
-            LEFT JOIN leads l ON c.id = l.campaign_id
-            LEFT JOIN campaign_users cu ON c.id = cu.campaign_id
-            LEFT JOIN users u ON cu.user_id = u.id
-            WHERE c.manager_id = ? OR c.id IN (
-                SELECT campaign_id 
-                FROM campaign_users 
-                WHERE user_id = ?
-            )
-            GROUP BY c.id
-        `;
+        try {
+            const query = `
+                SELECT 
+                    c.*,
+                    COUNT(DISTINCT l.id) as total_leads,
+                    COUNT(DISTINCT cu.user_id) as total_users
+                FROM campaigns c
+                LEFT JOIN leads l ON c.id = l.campaign_id
+                LEFT JOIN campaign_users cu ON c.id = cu.campaign_id
+                WHERE (c.manager_id = ? OR c.id IN (
+                    SELECT campaign_id 
+                    FROM campaign_users 
+                    WHERE user_id = ?
+                ))
+                GROUP BY c.id
+                ORDER BY c.created_at DESC
+            `;
 
-        db.query(query, [managerId, managerId], (err, results) => {
-            if (err) {
-                console.error("Error fetching manager's campaigns:", err);
-                return res.status(500).json(responseFormatter(false, "Database error", err.message));
-            }
-
-            // Process the results to format assigned users
-            const processedResults = results.map(campaign => ({
-                ...campaign,
-                assigned_users: campaign.assigned_user_ids ? 
-                    campaign.assigned_user_ids.split(',').map((id, index) => ({
-                        id: parseInt(id),
-                        name: campaign.assigned_user_names.split(',')[index]
-                    })) : []
-            }));
-
-            res.json(responseFormatter(true, "Campaigns fetched successfully", processedResults));
-        });
+            const [campaigns] = await db.promise().query(query, [managerId, managerId]);
+            
+            res.json({
+                success: true,
+                data: campaigns
+            });
+        } catch (err) {
+            console.error('Error fetching campaigns:', err);
+            res.status(500).json({
+                success: false,
+                message: 'Error fetching campaigns'
+            });
+        }
     },
 
     // Get active campaigns count

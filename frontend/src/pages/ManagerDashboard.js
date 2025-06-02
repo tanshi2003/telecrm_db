@@ -23,6 +23,20 @@ import {
   getTeams,
 } from "../services/managerService";
 
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  try {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'N/A';
+  }
+};
+
 const ManagerDashboard = () => {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({
@@ -183,7 +197,7 @@ const ManagerDashboard = () => {
                 <p className="text-sm text-gray-600">Total Campaigns</p>
               </div>
               <p className="text-2xl font-semibold mt-1">
-                {stats.totalCampaigns}
+                {campaignStats.length}
               </p>
             </div>
             {/* Active Campaigns */}
@@ -197,7 +211,7 @@ const ManagerDashboard = () => {
                 <p className="text-sm text-gray-600">Active Campaigns</p>
               </div>
               <p className="text-2xl font-semibold mt-1">
-                {stats.activeCampaigns}
+                {campaignStats.filter(campaign => campaign.status?.toLowerCase() === 'active').length}
               </p>
             </div>
           </div>
@@ -317,9 +331,7 @@ const ManagerDashboard = () => {
                                 <div className="flex items-center">
                                   <Calendar className="w-4 h-4 mr-2" />
                                   Joined:{" "}
-                                  {new Date(
-                                    member.created_at
-                                  ).toLocaleDateString()}
+                                  {formatDate(member.created_at)}
                                 </div>
                               </div>
                             </div>
@@ -445,9 +457,7 @@ const ManagerDashboard = () => {
                                 <div className="flex items-center">
                                   <Calendar className="w-4 h-4 mr-2" />
                                   Joined:{" "}
-                                  {new Date(
-                                    member.created_at
-                                  ).toLocaleDateString()}
+                                  {formatDate(member.created_at)}
                                 </div>
                               </div>
                             </div>
@@ -641,7 +651,9 @@ const ManagerDashboard = () => {
               <h3 className="text-lg font-bold text-gray-800">Campaign Stats</h3>
             </div>
             <div className="space-y-2">
-              {campaignStats.slice(0, 2).map((campaign) => (
+              {campaignStats
+                .slice(0, 2)
+                .map((campaign) => (
                 <div key={campaign.id} className="bg-gray-50 rounded p-2">
                   <div className="flex justify-between items-center mb-2">
                     <h4 className="font-medium text-sm truncate mr-2">{campaign.name}</h4>
