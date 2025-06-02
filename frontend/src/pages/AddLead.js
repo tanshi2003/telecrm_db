@@ -62,7 +62,6 @@ const AddLead = () => {
 
     return () => clearInterval(interval);
   }, []);
-
   // Update handleAddLead function
   const handleAddLead = async () => {
     const { name, phone_no, lead_category, status, address, notes } = leadData;
@@ -75,7 +74,6 @@ const AddLead = () => {
     try {
       const token = localStorage.getItem("token");
       const storedUser = JSON.parse(localStorage.getItem("user"));
-      const currentRole = localStorage.getItem("role");
 
       if (!token || !storedUser) {
         alert("Session expired. Please login again.");
@@ -109,11 +107,13 @@ const AddLead = () => {
           lead_category: "Cold Lead",
           status: "New",
           address: "",
-          notes: "",
+          notes: ""
         });
-        // Redirect to caller dashboard after adding a lead
+        
         if (role === "caller") {
           navigate("/caller-dashboard");
+        } else if (role === "field_employee") {
+          navigate("/field-dashboard");
         } else {
           navigate("/leads");
         }
@@ -129,7 +129,6 @@ const AddLead = () => {
       <Sidebar />
       <div className="flex-grow bg-gray-100 ml-64 mt-16 p-6">
         <div className="flex justify-between items-center mb-4">
-          <div className="text-lg font-semibold">Engineering Techno World 🛠️</div>
           <BackButton />
         </div>
 
