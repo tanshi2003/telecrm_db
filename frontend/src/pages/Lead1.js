@@ -218,20 +218,19 @@ const Lead1 = () => {
 
   return (
     <div className="flex min-h-screen overflow-hidden">
-      <Sidebar />
-
-      <div className="flex-grow bg-gray-100 ml-64 mt-16 p-6">
-        <div className="flex justify-between items-center mb-4">
-          <div className="company-box text-lg font-semibold">
-            Engineering Techno World 🛠️
+      <Sidebar />      <div className="flex-grow bg-gray-100 ml-64 mt-16 p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">Add New Lead</h1>
+            <p className="text-gray-600">Create a new lead and assign it to your team members</p>
           </div>
           <BackButton />
         </div>
 
         {/* Welcome Message */}
-        <p className="text-gray-800 text-sm font-semibold truncate">
-          Hey, {userName}!
-        </p>
+          <p className="text-gray-800 text-sm font-semibold">
+            Hey, {userName}! 👋
+          </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
           <div>

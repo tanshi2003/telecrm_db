@@ -7,23 +7,21 @@ import BackButton from "../components/BackButton";
 const Reports = () => {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
-
   useEffect(() => {
-      console.log("AdminDashboard mounted");
+      console.log("Reports page mounted");
       const storedUser = JSON.parse(localStorage.getItem("user"));
       const role = localStorage.getItem("role");
       
-      console.log("AdminDashboard - Stored data:", {
+      console.log("Reports - Stored data:", {
         storedUser,
         role,
         hasToken: !!localStorage.getItem("token")
       });
-      
-      if (storedUser && role?.toLowerCase() === "admin") {
-        console.log("AdminDashboard - Setting user data");
+        if (storedUser) {
+        console.log("Reports - Setting user data");
         setUser(storedUser);
       } else {
-        console.error("Unauthorized access. Redirecting to login...");
+        alert("Please login to access reports.");
         navigate("/login");
       }
     }, [navigate]);

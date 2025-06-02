@@ -45,7 +45,7 @@ const Sidebar = ({ user }) => {
       case "caller":
         return "/caller-dashboard";
       case "field_employee":
-        return "/field-dashboard";
+        return "/field_employee-dashboard";
       default:
         return "/";
     }
@@ -64,7 +64,6 @@ const Sidebar = ({ user }) => {
       .toUpperCase()
       .slice(0, 2);
   };
-
   const formatRole = (role) => {
     if (!role) return "";
     return role
@@ -75,6 +74,19 @@ const Sidebar = ({ user }) => {
       )
       .join(" ");
   };
+
+  // Handler for Campaigns click
+  const handleCampaignsClick = () => {
+    if (role === "caller" || role === "field_employee") {
+      alert("You are not allowed to access the campaigns.");
+      // Or use a toast library if you prefer
+    } else if (role === "admin") {
+      navigate("/admin/campaigns1");
+    } else if (role === "manager") {
+      navigate("/manager/campaigns");
+    } else {
+      navigate("/admin/campaigns1"); // Default fallback
+    }  };
 
   // Update menuItems array
   const menuItems = [
@@ -87,50 +99,42 @@ const Sidebar = ({ user }) => {
     { 
       icon: Search, 
       label: "Search", 
-      path: "/search" 
-    },
-    {
+      path: "/search",
+      allowedRoles: ["admin", "manager", "caller", "field_employee"]
+    },    {
       icon: PlusCircle,
       label: "Add Leads",
-      path: "/Lead1",
+      path: role === "caller" || role === "field_employee" ? "/addlead" : "/Lead1",
+      allowedRoles: ["admin", "manager", "caller", "field_employee"]
     },
     {
       icon: FileText,
       label: "Campaigns",
-      path: "/admin/campaigns1",
-    },
-    {
+      onClick: handleCampaignsClick,
+      allowedRoles: ["admin", "manager"]
+    },    {
       icon: Activity,
       label: "Activities",
-      path: "/activities", // Updated path
+      path: "/activities",
+      allowedRoles: ["admin", "manager", "caller", "field_employee"]
     },
     {
       icon: Filter,
       label: "Filters",
       path: "/filters",
+      allowedRoles: ["admin", "manager"]
     },
     {
       icon: BarChart2,
       label: "Reports",
-      path: "/reports", // Updated path
+      path: "/reports",
+      allowedRoles: ["admin", "manager", "caller", "field_employee"]
     },
   ];
 
   // Function to check if menu item is active
   const isMenuItemActive = (itemPath) => {
     if (!itemPath) return false;
-    
-    // Exact match for dashboard paths
-    if (itemPath.includes('dashboard') || itemPath === getDashboardPath(role)) {
-      return location.pathname === itemPath;
-    }
-    
-    // For campaigns, only match if it's exactly the campaigns path or a sub-path
-    if (itemPath.includes('campaigns')) {
-      return location.pathname.startsWith('/admin/campaigns') || location.pathname.startsWith('/campaigns');
-    }
-    
-    // For other paths, keep the existing behavior
     return location.pathname === itemPath || location.pathname.startsWith(itemPath + '/');
   };
 
@@ -157,8 +161,9 @@ const Sidebar = ({ user }) => {
 
       {/* Menu Items */}
       <div className="flex-1 py-4">
-        {menuItems.map(
-          ({ icon: Icon, label, path, onClick, isReport, isActivity }) => (
+        {menuItems
+          .filter(item => !item.allowedRoles || item.allowedRoles.includes(role?.toLowerCase()))
+          .map(({ icon: Icon, label, path, onClick, isReport, isActivity }) => (
             <div
               key={label}
               ref={isReport ? reportBtnRef : isActivity ? activityBtnRef : null}

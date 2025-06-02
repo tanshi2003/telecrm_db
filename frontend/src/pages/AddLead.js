@@ -128,7 +128,7 @@ const AddLead = () => {
     <div className="flex min-h-screen overflow-hidden">
       <Sidebar />
       <div className="flex-grow bg-gray-100 ml-64 mt-16 p-6">
-        <div className="flex justify-between items-center mb-4">
+       <div className="mt-6 md:mt-0 flex flex-col items-end gap-4">
           <BackButton />
         </div>
 

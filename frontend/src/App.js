@@ -26,7 +26,6 @@ import ManageCampaigns from "./pages/ManageCampaigns";
 import Campaign from "./pages/Campaign";
 import ManageUsers from "./pages/ManageUser";
 import Search from "./pages/Search";
-import FiltersComponent from "./components/Filters";
 import FiltersPage from "./pages/Filters";
 import AddUser from "./pages/Register";
 import AllUsers from "./pages/AllUsers";
@@ -76,9 +75,7 @@ const AppContent = () => {
     if (location.pathname === "/admin-dashboard") {
       navigate("/admin");
     }
-  }, [location, user, navigate]);
-
-  useEffect(() => {
+  }, [location, user, navigate]);  useEffect(() => {
     // Redirect based on role when app loads
     if (user) {
       switch (user.role) {
@@ -88,10 +85,12 @@ const AppContent = () => {
         case 'caller':
           window.location.pathname === '/' && navigate('/caller-dashboard');
           break;
-        // ...other roles
+        default:
+          // Default case: do nothing or handle unknown roles
+          break;
       }
     }
-  }, [user]);
+  }, [user, navigate]);
 
   return (
     <div className="flex min-h-screen">
@@ -212,28 +211,25 @@ const AppContent = () => {
                   <Campaign />
                 </ProtectedRoute>
               }
-            />
-            <Route
+            />            <Route
               path="/assignuser"
               element={
-                <ProtectedRoute allowedRoles={["admin"]}>
+                <ProtectedRoute allowedRoles={["admin", "manager"]}>
                   <AssignUser />
                 </ProtectedRoute>
               }
-            />
-           <Route 
+            />           <Route 
            path="/admin/UpdateCampaign/:id" 
            element={
-             <ProtectedRoute allowedRoles={["admin"]}>
+             <ProtectedRoute allowedRoles={["admin", "manager"]}>
            <UpdateCampaign /> 
            
 </ProtectedRoute>
               }
-            />
-            <Route 
+            />            <Route 
            path="/admin/EditCampaign/:id" 
            element={
-             <ProtectedRoute allowedRoles={["admin"]}>
+             <ProtectedRoute allowedRoles={["admin", "manager"]}>
            <EditCampaign /> 
            
 </ProtectedRoute>
@@ -363,23 +359,25 @@ const AppContent = () => {
                   <LeadAssignment />
                 </ProtectedRoute>
               }
-            />
-             <Route
+            />             <Route
               path="/reports"
               element={
-                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                <ProtectedRoute allowedRoles={["admin", "manager", "caller", "field_employee"]}>
                   <Reports />
                 </ProtectedRoute>
               }
+            />           <Route 
+              path="/report-leaderboard/:caller_id" 
+              element={
+                <ProtectedRoute allowedRoles={["admin", "manager", "caller", "field_employee"]}>
+                  <CallerReport />
+                </ProtectedRoute>
+              } 
             />
-           <Route path="/report-leaderboard/:caller_id" element={<CallerReport />} />
-                
-              
-            
-            <Route
+              <Route
               path="/CallReport"
               element={
-                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                <ProtectedRoute allowedRoles={["admin", "manager", "caller", "field_employee"]}>
                   <Reports2 />
                 </ProtectedRoute>
               }
@@ -387,15 +385,14 @@ const AppContent = () => {
             <Route
               path="/LeadsReport"
               element={
-                <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                <ProtectedRoute allowedRoles={["admin", "manager", "caller", "field_employee"]}>
                   <LeadsChartReport />
                 </ProtectedRoute>
               }
-            />
-             <Route
+            /><Route
                 path="/activities"
                 element={
-                     <ProtectedRoute allowedRoles={["admin", "manager"]}>
+                     <ProtectedRoute allowedRoles={["admin", "manager", "caller", "field_employee"]}>
                      <Activities />
                      </ProtectedRoute>
                         }

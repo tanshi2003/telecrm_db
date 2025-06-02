@@ -25,10 +25,10 @@ export default function CallReport() {
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
-    const role = localStorage.getItem("role");
-    if (storedUser && role?.toLowerCase() === "admin") {
+    const role = localStorage.getItem("role");    if (storedUser) {
       setUser(storedUser);
     } else {
+      alert("Please login to access reports.");
       navigate("/login");
     }
   }, [navigate]);
