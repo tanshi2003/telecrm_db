@@ -100,17 +100,9 @@ const AssignUser = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem("token");
-      await axios.put(
-        `http://localhost:5000/api/campaigns/${selectedCampaign.id}`,
-        {
-          name: selectedCampaign.name,
-          description: selectedCampaign.description,
-          status: selectedCampaign.status,
-          priority: selectedCampaign.priority,
-          start_date: selectedCampaign.start_date,
-          end_date: selectedCampaign.end_date,
-          assigned_users: assignForm.userIds
-        },
+      await axios.post(
+        `http://localhost:5000/api/campaigns/${selectedCampaign.id}/assign-users`,
+        { user_ids: assignForm.userIds },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       alert("User(s) assigned successfully!");

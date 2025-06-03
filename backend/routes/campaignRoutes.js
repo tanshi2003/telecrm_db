@@ -34,29 +34,7 @@ router.put("/:id", roleMiddleware(["admin", "manager"]), campaignController.upda
 router.delete('/:id', roleMiddleware(["admin"]), campaignController.deleteCampaign);
 
 // Assign users to campaign
-router.post("/:id/assign-users", roleMiddleware(["admin", "manager"]), async (req, res) => {
-    try {
-        const result = await campaignController.assignUsersToCampaign(req.params.id, req.body.userIds);
-        
-        // Log user assignment activity
-        await Activity.logActivity(
-            req.user.id,
-            req.user.role,
-            'campaign_assign_users',
-            `Assigned ${req.body.userIds.length} users to campaign #${req.params.id}`,
-            'campaign',
-            req.params.id,
-            null
-        );
-
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-});
+router.post("/:id/assign-users", roleMiddleware(["admin", "manager"]), campaignController.assignUsersToCampaign);
 
 // Remove users from campaign
 router.delete("/:id/remove-users", roleMiddleware(["admin", "manager"]), campaignController.removeUsersFromCampaign);

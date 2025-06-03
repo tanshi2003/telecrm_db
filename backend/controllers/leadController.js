@@ -13,121 +13,125 @@ const VALID_STATUSES = [
 ];
 
 // 📌 Create a new lead
-exports.createLead = (req, res) => {
-    const {
-        title, description, status, lead_category,
-        name, phone_no, address = "", assigned_to = null,
-        admin_id, campaign_id = null, notes = "", manager_id = null
-    } = req.body;    if (!title || !status || !name || !phone_no) {
-        return res.status(400).json(responseFormatter(false, "Missing required fields: title, status, name, and phone number are required"));
-    }
-    
-    // For manager role, admin_id is not required
-    if (!admin_id && !manager_id) {
-        return res.status(400).json(responseFormatter(false, "Either admin_id or manager_id is required"));
-    }
+exports.createLead = async (req, res) => {
+    try {
+        const {
+            title, description, status, lead_category,
+            name, phone_no, address = "", assigned_to = null,
+            admin_id, campaign_id = null, notes = "", manager_id = null
+        } = req.body;
 
-    if (!VALID_STATUSES.includes(status)) {
-        return res.status(400).json(responseFormatter(false, `Invalid status: ${status}`));
-    }
+        if (!title || !status || !name || !phone_no) {
+            return res.status(400).json(responseFormatter(false, "Missing required fields: title, status, name, and phone number are required"));
+        }
+        
+        // For manager role, admin_id is not required
+        if (!admin_id && !manager_id) {
+            return res.status(400).json(responseFormatter(false, "Either admin_id or manager_id is required"));
+        }
 
-    if (lead_category && !VALID_LEAD_CATEGORIES.includes(lead_category)) {
-        return res.status(400).json(responseFormatter(false, `Invalid lead category: ${lead_category}`));
-    }
+        if (!VALID_STATUSES.includes(status)) {
+            return res.status(400).json(responseFormatter(false, `Invalid status: ${status}`));
+        }
 
-    // Check if manager exists if manager_id is provided
-    if (manager_id) {
-        db.query("SELECT id, role FROM Users WHERE id = ?", [manager_id], (err, result) => {
-            if (err) {
-                console.error("Manager check error:", err);
-                return res.status(500).json(responseFormatter(false, "Database error", err.message));
-            }
+        if (lead_category && !VALID_LEAD_CATEGORIES.includes(lead_category)) {
+            return res.status(400).json(responseFormatter(false, `Invalid lead category: ${lead_category}`));
+        }
 
-            if (result.length === 0) {
-                return res.status(400).json(responseFormatter(false, "Manager does not exist"));
-            }
-
-            if (result[0].role !== 'manager') {
-                return res.status(400).json(responseFormatter(false, "User is not a manager"));
-            }
-
-            // If assigned_to is provided, check if user exists and belongs to this manager
-            if (assigned_to) {
-                db.query(
-                    "SELECT id FROM Users WHERE id = ? AND manager_id = ?",
-                    [assigned_to, manager_id],
-                    (err, userResult) => {
-                        if (err) {
-                            console.error("User check error:", err);
-                            return res.status(500).json(responseFormatter(false, "Database error", err.message));
-                        }
-
-                        if (userResult.length === 0) {
-                            return res.status(400).json(responseFormatter(false, "Assigned user does not exist or does not belong to this manager"));
-                        }
-
-                        insertLead();
-                    }
-                );
-            } else {
-                insertLead();
-            }
-        });
-    } else {
-        // If no manager_id, just check assigned_to if provided
-        if (assigned_to) {
-            db.query("SELECT id FROM Users WHERE id = ?", [assigned_to], (err, result) => {
+        // Check if manager exists if manager_id is provided
+        if (manager_id) {
+            db.query("SELECT id, role FROM Users WHERE id = ?", [manager_id], (err, result) => {
                 if (err) {
-                    console.error("User check error:", err);
+                    console.error("Manager check error:", err);
                     return res.status(500).json(responseFormatter(false, "Database error", err.message));
                 }
 
                 if (result.length === 0) {
-                    return res.status(400).json(responseFormatter(false, "Assigned user does not exist"));
+                    return res.status(400).json(responseFormatter(false, "Manager does not exist"));
                 }
 
-                insertLead();
+                if (result[0].role !== 'manager') {
+                    return res.status(400).json(responseFormatter(false, "User is not a manager"));
+                }
+
+                // If assigned_to is provided, check if user exists and belongs to this manager
+                if (assigned_to) {
+                    db.query(
+                        "SELECT id FROM Users WHERE id = ? AND manager_id = ?",
+                        [assigned_to, manager_id],
+                        (err, userResult) => {
+                            if (err) {
+                                console.error("User check error:", err);
+                                return res.status(500).json(responseFormatter(false, "Database error", err.message));
+                            }
+
+                            if (userResult.length === 0) {
+                                return res.status(400).json(responseFormatter(false, "Assigned user does not exist or does not belong to this manager"));
+                            }
+
+                            insertLead();
+                        }
+                    );
+                } else {
+                    insertLead();
+                }
             });
         } else {
-            insertLead();
-        }
-    }
-
-    function insertLead() {
-        const created_at = new Date();
-        const updated_at = new Date();
-
-        db.query(
-            `INSERT INTO Leads 
-            (title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, manager_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, manager_id, created_at, updated_at],
-            (err, insertResult) => {
-                if (err) {
-                    console.error("Insert lead error:", err);
-                    return res.status(500).json(responseFormatter(false, "Database error", err.message));
-                }
-
-                // Log the activity
-                Activity.logActivity(
-                    admin_id || manager_id, // user_id
-                    req.user.role || 'system', // role
-                    'lead_create', // action_type
-                    `Created new lead: ${name}`, // action_description
-                    'lead', // reference_type
-                    insertResult.insertId, // reference_id
-                    null // location (optional)
-                ).catch(logErr => console.error('Error logging activity:', logErr));
-
-                db.query("SELECT * FROM Leads WHERE id = ?", [insertResult.insertId], (err, lead) => {
+            // If no manager_id, just check assigned_to if provided
+            if (assigned_to) {
+                db.query("SELECT id FROM Users WHERE id = ?", [assigned_to], (err, result) => {
                     if (err) {
-                        return res.status(500).json(responseFormatter(false, "Fetch new lead failed", err.message));
+                        console.error("User check error:", err);
+                        return res.status(500).json(responseFormatter(false, "Database error", err.message));
                     }
 
-                    res.status(201).json(responseFormatter(true, "Lead created successfully", lead[0]));
+                    if (result.length === 0) {
+                        return res.status(400).json(responseFormatter(false, "Assigned user does not exist"));
+                    }
+
+                    insertLead();
                 });
+            } else {
+                insertLead();
             }
-        );
+        }
+
+        async function insertLead() {
+            const created_at = new Date();
+            const updated_at = new Date();
+
+            const [result] = await db.promise().query(
+                `INSERT INTO Leads 
+                (title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, manager_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, manager_id, created_at, updated_at]
+            );
+            const leadId = result.insertId;
+
+            // Log lead creation activity
+            await Activity.logActivity(
+                req.user.id,
+                req.user.role,
+                'lead_create',
+                `Created new lead: ${req.body.name || 'Unnamed'}`,
+                'lead',
+                leadId,
+                req.body.location
+            );
+
+            db.query("SELECT * FROM Leads WHERE id = ?", [leadId], (err, lead) => {
+                if (err) {
+                    return res.status(500).json(responseFormatter(false, "Fetch new lead failed", err.message));
+                }
+
+                res.status(201).json(responseFormatter(true, "Lead created successfully", lead[0]));
+            });
+        }
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
     }
 };
 
@@ -346,7 +350,7 @@ exports.updateLead = (req, res) => {
             }
 
             // Proceed with update if authorized
-            const { name, phone_no, status, notes } = req.body;
+            const { name, phone_no, status, notes, lead_category, assigned_to, address } = req.body;
 
             // Validate required fields
             if (!name || !phone_no || !status) {
@@ -360,25 +364,32 @@ exports.updateLead = (req, res) => {
                      phone_no = ?, 
                      status = ?, 
                      notes = ?,
+                     lead_category = ?,
+                     assigned_to = ?,
+                     address = ?,
                      updated_by = ?,
                      updated_at = NOW()
                  WHERE id = ?`,
-                [name, phone_no, status, notes, userId, leadId],
-                (updateError) => {
+                [name, phone_no, status, notes, lead_category, assigned_to, address, userId, leadId],
+                async (updateError) => {
                     if (updateError) {
                         return res.status(500).json(responseFormatter(false, "Database error", updateError.message));
                     }
 
                     // Log the activity
-                    const activityDescription = `Updated lead ${name} (ID: ${leadId}) - Status: ${status}`;
-                    Activity.logActivity(
-                        userId,
-                        userRole,
-                        'lead_update',
-                        activityDescription,
-                        'lead',
-                        leadId
-                    ).catch(logError => console.error('Error logging activity:', logError));
+                    try {
+                        await Activity.logActivity(
+                            userId,
+                            userRole,
+                            'lead_update',
+                            `Updated lead #${leadId}`,
+                            'lead',
+                            leadId,
+                            req.body.location
+                        );
+                    } catch (logError) {
+                        console.error('Error logging activity:', logError);
+                    }
 
                     res.json(responseFormatter(true, "Lead updated successfully", { id: leadId }));
                 }

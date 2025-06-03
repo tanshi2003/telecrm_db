@@ -369,27 +369,15 @@ exports.updateUser = (req, res) => {
 };
 
 // Update User role
-exports.updateUserRole = (req, res) => {
-    const { id } = req.params;
-    const { role } = req.body;
-
-    if (!role) {
-        return res.status(400).json({ message: "Role is required" });
+exports.updateUserRole = async (id, role) => {
+    const [result] = await db.promise().query(
+        "UPDATE Users SET role = ? WHERE id = ?",
+        [role, id]
+    );
+    if (result.affectedRows === 0) {
+        throw new Error("User not found");
     }
-
-    db.query("UPDATE Users SET role = ? WHERE id = ?", [role, id], (err, result) => {
-        if (err) return res.status(500).json({ message: "Database error", error: err });
-        if (result.affectedRows === 0) return res.status(404).json({ message: "User not found" });
-
-        db.query("SELECT * FROM Users WHERE id = ?", [id], (err, rows) => {
-            if (err) return res.status(500).json({ message: "Error fetching updated user", error: err });
-            res.status(200).json({
-                 success: true,
-                message: "User role updated successfully",
-                updatedUser: rows[0]
-            });
-        });
-    });
+    return { success: true, message: "User role updated successfully" };
 };
 
 // Delete user

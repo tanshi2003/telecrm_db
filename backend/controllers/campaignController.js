@@ -284,13 +284,13 @@ const campaignController = {
 
     // 🧾 Update Campaign
     updateCampaign: async (req, res) => {
-        const { campaign_id } = req.params;
+        const { id } = req.params; // <-- use id here
         const updates = req.body;
         const user = req.user;
 
         try {
             // Check if campaign exists
-            const [campaign] = await db.promise().query('SELECT * FROM campaigns WHERE id = ?', [campaign_id]);
+            const [campaign] = await db.promise().query('SELECT * FROM campaigns WHERE id = ?', [id]);
             if (!campaign[0]) {
                 return res.status(404).json(responseFormatter(false, "Campaign not found"));
             }
@@ -310,7 +310,7 @@ const campaignController = {
                 WHERE id = ?
             `;
 
-            const values = [...updateFields.map(field => updates[field]), campaign_id];
+            const values = [...updateFields.map(field => updates[field]), id];
             await db.promise().query(query, values);
 
             // Log changes in activity
@@ -324,7 +324,7 @@ const campaignController = {
                 'campaign_update',
                 `Updated campaign: ${changes}`,
                 'campaign',
-                campaign_id,
+                id,
                 null
             );
 
@@ -470,17 +470,21 @@ const campaignController = {
         try {
             // First verify the campaign exists
             const [campaigns] = await db.promise().query("SELECT id FROM campaigns WHERE id = ?", [id]);
-
             if (campaigns.length === 0) {
                 return res.status(404).json(responseFormatter(false, "Campaign not found"));
             }
 
+            // Remove all current assignments for this campaign
+            await db.promise().query("DELETE FROM campaign_users WHERE campaign_id = ?", [id]);
+
             // Insert new user assignments
             const values = user_ids.map(userId => [id, userId]);
-            await db.promise().query(
-                "INSERT INTO campaign_users (campaign_id, user_id) VALUES ?",
-                [values]
-            );
+            if (values.length > 0) {
+                await db.promise().query(
+                    "INSERT INTO campaign_users (campaign_id, user_id) VALUES ?",
+                    [values]
+                );
+            }
 
             // Log user assignment activity
             await Activity.logActivity(

@@ -20,29 +20,9 @@ router.get("/unassigned", roleMiddleware(['admin', 'manager']), userController.g
 router.get("/managers", roleMiddleware(['admin']), userController.getManagers);
 
 // Admin only routes
-router.post("/register", roleMiddleware(['admin']), async (req, res) => {
-    try {
-        const result = await userController.registerUser(req.body);
-        
-        // Log user creation activity
-        await Activity.logActivity(
-            req.user.id,
-            req.user.role,
-            'user_create',
-            `Created new user: ${req.body.name} (${req.body.role})`,
-            'user',
-            result.id,
-            null
-        );
+router.post("/register", roleMiddleware(['admin']), userController.registerUser);
 
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-});
+// User management
 router.get("/", roleMiddleware(['admin', 'manager', 'caller', 'field_employee']), userController.getUsers);
 
 // Routes with :id parameter
@@ -58,7 +38,7 @@ router.put("/:id/status", roleMiddleware(['admin']), userController.updateUserSt
 router.put("/:id/role", roleMiddleware(['admin']), async (req, res) => {
     try {
         const result = await userController.updateUserRole(req.params.id, req.body.role);
-        
+
         // Log role update activity
         await Activity.logActivity(
             req.user.id,

@@ -55,29 +55,11 @@ router.get("/stats/distribution", authenticateToken, async (req, res) => {
 });
 
 // Create a new lead
-router.post("/", roleMiddleware(['admin', 'user', 'caller', 'manager', 'field_employee']), async (req, res) => {
-    try {
-        const result = await leadController.createLead(req.body);
-        
-        // Log lead creation activity
-        await Activity.logActivity(
-            req.user.id,
-            req.user.role,
-            'lead_create',
-            `Created new lead: ${req.body.name || 'Unnamed'}`,
-            'lead',
-            result.id,
-            req.body.location
-        );
-
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-});
+router.post(
+    "/",
+    roleMiddleware(['admin', 'user', 'caller', 'manager', 'field_employee']),
+    leadController.createLead
+);
 
 // 📋 Get all leads
 router.get("/", roleMiddleware(['admin', 'user', 'caller', 'manager', 'field_employee']), leadController.getLeads);
@@ -86,29 +68,11 @@ router.get("/", roleMiddleware(['admin', 'user', 'caller', 'manager', 'field_emp
 router.get("/:id", roleMiddleware(['admin', 'user', 'caller', 'field_employee']), leadController.getLeadById);
 
 // ✏️ Update a lead
-router.put("/:id", roleMiddleware(['admin', 'user', 'caller', 'field_employee', 'manager']), async (req, res) => {
-    try {
-        const result = await leadController.updateLead(req.params.id, req.body);
-        
-        // Log lead update activity
-        await Activity.logActivity(
-            req.user.id,
-            req.user.role,
-            'lead_update',
-            `Updated lead #${req.params.id}`,
-            'lead',
-            req.params.id,
-            req.body.location
-        );
-
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-});
+router.put(
+    "/:id",
+    roleMiddleware(['admin', 'user', 'caller', 'field_employee', 'manager']),
+    leadController.updateLead
+);
 
 // ❌ Delete a lead (Admins only)
 router.delete("/:id", roleMiddleware(['admin', 'manager']), leadController.deleteLead);
