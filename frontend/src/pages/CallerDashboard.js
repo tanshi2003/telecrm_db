@@ -131,145 +131,117 @@ const CallerDashboard = () => {
     return status;
   };
   // Update handleUpdateLead function
-  const handleUpdateLead = async () => {
-    if (!selectedLead || !selectedLead.id) {
-        setUpdateMessage("Error: Invalid lead data");
-        return;
-    }
-
-    try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-            setUpdateMessage("Error: Authentication required");
-            navigate("/login");
-            return;
-        }
-
-        const updateData = {
-            id: selectedLead.id,
-            name: selectedLead.name,
-            phone_no: selectedLead.phone_no,
-            status: leadStatus || selectedLead.status,
-            notes: leadNotes || selectedLead.notes || "",
-            updated_by: user?.id
-        };
-
-        console.log('Updating lead:', selectedLead.id, updateData); // Debug log
-
-        const response = await fetch(`${BASE_URL}/api/leads/${selectedLead.id}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify(updateData)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `Server error: ${response.status}`);
-        }
-
-        const responseData = await response.json();
-        console.log('Update response:', responseData); // Debug log
-
-        if (!responseData.success) {
-            throw new Error(responseData.message || "Failed to update lead");
-        }
-
-        // Update local state first
-        setLeads(prevLeads => 
-            prevLeads.map(lead => 
-                lead.id === selectedLead.id 
-                    ? { 
-                        ...lead,
-                        status: leadStatus || lead.status,
-                        notes: leadNotes || lead.notes,
-                        updated_at: new Date().toISOString()
-                    }
-                    : lead
-            )
-        );
-
-        // Wait a moment before refreshing data
-        setTimeout(async () => {
-            await fetchData();
-        }, 500);
-
-        setIsModalOpen(false);
-        setSelectedLead(null);
-        setUpdateMessage("Lead updated successfully");
-        setTimeout(() => setUpdateMessage(""), 3000);
-
-    } catch (err) {
-        console.error("Update error:", err);
-        setUpdateMessage(`Error: ${err.message || "Failed to update lead"}`);
-    }
-};
-  // Update refreshLeads function to fetch campaign data with lead counts
-  const refreshLeads = useCallback(async () => {
-    if (!user) return;
-    
-    try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          localStorage.removeItem("user");
-          navigate("/login");
-          throw new Error('No authentication token found');
-        }
-
-        const leadsResponse = await fetch(`${BASE_URL}/api/leads/assigned/${user.id}`, {
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const leadsData = await leadsResponse.json();
-          // Fetch campaigns with manager details
-        const campaignsResponse = await fetch(`${BASE_URL}/api/campaigns/${user.id}/campaigns/with-leads`, {
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        // Debug log raw response
-        const rawResponse = await campaignsResponse.clone().text();
-        console.log('Raw campaign response:', rawResponse);
-
-        console.log('Campaign response:', await campaignsResponse.clone().text()); // Debug log
-
-        const campaignsData = await campaignsResponse.json();
-
-        if (leadsData.success) {
-            setLeads(leadsData.data || []);
-            setPerformanceData(prev => ({
-                ...prev,
-                totalLeads: leadsData.data?.length || 0,
-                convertedLeads: leadsData.data?.filter(l => l.status === "Converted").length || 0
-            }));
-        }        if (campaignsData.success) {
-            // Process campaign data to ensure manager_name is properly set
-            const processedCampaigns = (campaignsData.data || []).map(campaign => {
-                // Debug log each campaign object
-                console.log('Processing campaign:', campaign);
-                
-                return {
-                    ...campaign,
-                    manager_name: campaign.manager_name || campaign.manager?.name || 'Not assigned',
-                    lead_count: campaign.lead_count || campaign.total_leads || 0
-                };
-            });
-            console.log('Processed campaigns:', processedCampaigns);
-            setCampaigns(processedCampaigns);
-        }
-
-    } catch (err) {
-        console.error("Error refreshing data:", err);
-        setUpdateMessage("Error refreshing data");
-    }
-  }, [user, navigate]); // Add user as dependency
+ const handleUpdateLead = async () => {
+     if (!selectedLead) return;
+     
+     try {
+         const token = localStorage.getItem("token");
+         const updateData = {
+             name: selectedLead.name,
+             phone_no: selectedLead.phone_no,
+             status: leadStatus,
+             notes: leadNotes || "",
+             assigned_to: selectedLead.assigned_to, // <-- Add this line!
+             updated_by: user.id
+         };
+ 
+         console.log('Updating lead:', selectedLead.id, updateData); // Debug log
+ 
+         const response = await fetch(`${BASE_URL}/api/leads/${selectedLead.id}`, {
+             method: "PUT",
+             headers: {
+                 "Content-Type": "application/json",
+                 Authorization: `Bearer ${token}`
+             },
+             body: JSON.stringify(updateData)
+         });
+ 
+         const responseData = await response.json();
+         console.log('Update response:', responseData); // Debug log
+ 
+         if (!response.ok) {
+             throw new Error(responseData.message || "Failed to update lead");
+         }
+ 
+         // Update local state first
+         setLeads(prevLeads => 
+             prevLeads.map(lead => 
+                 lead.id === selectedLead.id 
+                     ? { 
+                         ...lead,
+                         status: leadStatus,
+                         notes: leadNotes,
+                         updated_at: new Date().toISOString()
+                     }
+                     : lead
+             )
+         );
+ 
+         // Wait a moment before refreshing data
+         setTimeout(async () => {
+             await fetchData();
+         }, 500);
+ 
+         setIsModalOpen(false);
+         setSelectedLead(null);
+         setUpdateMessage("Lead updated successfully");
+         setTimeout(() => setUpdateMessage(""), 3000);
+ 
+     } catch (err) {
+         console.error("Update error:", err);
+         setUpdateMessage(err.message || "Failed to update lead");
+     }
+   };
+ 
+   // Update refreshLeads function to fetch campaign data with lead counts
+   const refreshLeads = useCallback(async () => {
+     if (!user) return;
+     
+     try {
+         const token = localStorage.getItem("token");
+         
+         // First fetch leads
+         const leadsResponse = await fetch(`${BASE_URL}/api/users/${user.id}/leads`, {
+             headers: { 
+                 'Authorization': `Bearer ${token}`,
+                 'Content-Type': 'application/json'
+             }
+         });
+ 
+         const leadsData = await leadsResponse.json();
+         
+         // Then fetch campaigns
+         const campaignsResponse = await fetch(`${BASE_URL}/api/campaigns/${user.id}/campaigns/with-leads`, {
+             headers: { 
+                 'Authorization': `Bearer ${token}`,
+                 'Content-Type': 'application/json'
+             }
+         });
+ 
+         console.log('Campaign response:', await campaignsResponse.clone().text()); // Debug log
+ 
+         const campaignsData = await campaignsResponse.json();
+ 
+         if (leadsData.success) {
+             setLeads(leadsData.data || []);
+             setPerformanceData(prev => ({
+                 ...prev,
+                 totalLeads: leadsData.data?.length || 0,
+                 convertedLeads: leadsData.data?.filter(l => l.status === "Converted").length || 0
+             }));
+         }
+ 
+         if (campaignsData.success) {
+             setCampaigns(campaignsData.data || []);
+         }
+ 
+     } catch (err) {
+         console.error("Error refreshing data:", err);
+         // Don't clear existing data on error
+         setUpdateMessage("Error refreshing data");
+     }
+   }, [user]); // Add user as dependency
+ // Add user as dependency
 
   // Fix second useEffect dependencies
   useEffect(() => {

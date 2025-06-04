@@ -388,9 +388,25 @@ exports.deleteUser = (req, res) => {
         if (err) return res.status(500).json(responseFormatter(false, "Database error", err));
         if (results.length === 0) return res.status(404).json(responseFormatter(false, "User not found"));
 
-        db.query("DELETE FROM Users WHERE id = ?", [id], (err) => {
-            if (err) return res.status(500).json(responseFormatter(false, "Database error", err));
-            res.json(responseFormatter(true, "User deleted successfully"));
+        // Remove or update all related records
+        db.query("DELETE FROM activity_logs WHERE user_id = ?", [id], err => {
+            if (err) return res.status(500).json(responseFormatter(false, "Error deleting activity logs", err));
+
+            db.query("DELETE FROM campaign_users WHERE user_id = ?", [id], err => {
+                if (err) return res.status(500).json(responseFormatter(false, "Error deleting campaign assignments", err));
+
+                db.query("UPDATE leads SET assigned_to = NULL WHERE assigned_to = ?", [id], err => {
+                    if (err) return res.status(500).json(responseFormatter(false, "Error updating leads", err));
+
+                    // ...repeat for other tables as needed...
+
+                    // Now delete the user
+                    db.query("DELETE FROM Users WHERE id = ?", [id], (err) => {
+                        if (err) return res.status(500).json(responseFormatter(false, "Database error", err));
+                        res.json(responseFormatter(true, "User deleted successfully"));
+                    });
+                });
+            });
         });
     });
 };

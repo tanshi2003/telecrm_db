@@ -113,7 +113,7 @@ const AddLead = () => {
         if (role === "caller") {
           navigate("/caller-dashboard");
         } else if (role === "field_employee") {
-          navigate("/field-dashboard");
+          navigate("/field_employee-dashboard");
         } else {
           navigate("/leads");
         }
