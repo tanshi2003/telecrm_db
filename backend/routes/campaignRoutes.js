@@ -3,6 +3,7 @@ const db = require('../config/db').promise();
 const express = require("express");
 const router = express.Router();
 const campaignController = require("../controllers/campaignController");
+const leadController = require("../controllers/leadController"); // Import leadController
 const { authenticateToken } = require("../middleware/auth");
 const roleMiddleware = require("../middleware/checkRole");
 const Activity = require("../models/Activity");
@@ -134,5 +135,8 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         });
     }
 });
+
+// Get leads for a campaign
+router.get("/:campaignId/leads/assigned", authenticateToken, roleMiddleware(["admin", "manager", "caller"]), leadController.getCampaignLeads);
 
 module.exports = router;

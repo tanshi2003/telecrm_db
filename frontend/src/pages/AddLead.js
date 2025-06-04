@@ -126,13 +126,13 @@ const AddLead = () => {
 
   return (
     <div className="flex min-h-screen overflow-hidden">
-      <Sidebar />
-      <div className="flex-grow bg-gray-100 ml-64 mt-16 p-6">
-       <div className="mt-6 md:mt-0 flex flex-col items-end gap-4">
+      <Sidebar />      <div className="flex-grow bg-gray-100 ml-64 mt-16 p-6">
+        <div className="flex justify-between items-start mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Add New Lead</h1>
           <BackButton />
         </div>
 
-        <p className="text-gray-800 text-sm font-semibold truncate">
+        <p className="text-gray-800 text-sm font-semibold truncate mb-4">
           Hey, {userName || "User"}!
         </p>
 

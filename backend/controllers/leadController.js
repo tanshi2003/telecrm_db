@@ -753,3 +753,39 @@ exports.getLeadsByUserId = (req, res) => {
         });
     });
 };
+
+// Get leads for a specific campaign
+exports.getCampaignLeads = async (req, res) => {
+    const { campaignId } = req.params;
+    
+    try {
+        const query = `
+            SELECT 
+                l.*,
+                u.name as assigned_to_name,
+                m.name as manager_name,
+                COUNT(DISTINCT c.id) as call_count
+            FROM leads l
+            LEFT JOIN users u ON l.assigned_to = u.id
+            LEFT JOIN users m ON l.manager_id = m.id
+            LEFT JOIN calls c ON l.id = c.lead_id
+            WHERE l.campaign_id = ?
+            GROUP BY l.id, l.name, l.phone_no, l.status, l.assigned_to, l.manager_id, u.name, m.name
+            ORDER BY l.updated_at DESC
+        `;
+        
+        const [results] = await db.promise().query(query, [campaignId]);
+        
+        res.json({
+            success: true,
+            data: results
+        });
+    } catch (error) {
+        console.error('Error fetching campaign leads:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch campaign leads',
+            error: error.message
+        });
+    }
+};
