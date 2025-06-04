@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import BackButton from "../components/BackButton";
@@ -101,14 +102,20 @@ const Activities = () => {
             setFilters(prev => ({...prev, role: "field_employee"}));
         }
         // Admin and manager can see all activities by default
-    }, [navigate, fetchActivities]); // Fix dependency array    useEffect(() => {
-        if (!activities.length) return; // Avoid unnecessary filtering on empty activities
-        
+    }, [navigate, fetchActivities]);
+
+    // Updated filtering useEffect: runs when activities, filters, or searchTerm change
+    useEffect(() => {
+        if (!activities.length) {
+            setFilteredActivities([]);
+            return;
+        }
+
         let result = [...activities];
 
         // Apply search
         if (searchTerm) {
-            result = result.filter(activity => 
+            result = result.filter(activity =>
                 activity.activity_description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 activity.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 activity.user_role?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -122,27 +129,24 @@ const Activities = () => {
                     // Admin sees everything
                     break;
                 case 'manager':
-                    // Show all campaign activities plus manager's own activities
-                    result = result.filter(activity => 
-                        activity.activity_type.includes('campaign_') || 
-                        (activity.user_role === 'manager' &&
-                        ['lead_assign', 'user_create', 'settings_update'].includes(activity.activity_type))
+                    result = result.filter(activity =>
+                        activity.user_role === 'manager' ||
+                        activity.user_role === 'caller' ||
+                        activity.user_role === 'field_employee'
                     );
                     break;
                 case 'caller':
-                    result = result.filter(activity => 
-                        activity.user_role === 'caller' && 
-                        ['lead_create', 'lead_update', 'call_made'].includes(activity.activity_type)
+                    result = result.filter(activity =>
+                        activity.user_role === 'caller'
                     );
                     break;
                 case 'field_employee':
-                    result = result.filter(activity => 
-                        activity.user_role === 'field_employee' && 
-                        ['lead_create', 'lead_update', 'location_update', 'client_visit'].includes(activity.activity_type)
+                    result = result.filter(activity =>
+                        activity.user_role === 'field_employee'
                     );
                     break;
                 case 'system':
-                    result = result.filter(activity => 
+                    result = result.filter(activity =>
                         !activity.user_role || activity.user_role === 'system'
                     );
                     break;
@@ -150,27 +154,29 @@ const Activities = () => {
                     result = result.filter(activity => activity.user_role === filters.role);
                     break;
             }
-        }        // Apply activity type filter
+        }
+
+        // Apply activity type filter
         if (filters.type !== "all") {
             if (filters.type === 'campaign_all') {
-                // Show all campaign-related activities
-                result = result.filter(activity => 
+                result = result.filter(activity =>
                     activity.activity_type.includes('campaign_') ||
                     activity.reference_type === 'campaign'
                 );
             } else if (filters.type.startsWith('campaign_')) {
-                // Show specific campaign activity type
-                result = result.filter(activity => 
+                result = result.filter(activity =>
                     activity.activity_type === filters.type ||
                     (activity.reference_type === 'campaign' && activity.activity_type.includes(filters.type))
                 );
             } else {
-                // For all other activity types
                 result = result.filter(activity => activity.activity_type === filters.type);
             }
-        }        if (filters.date !== "all") {
+        }
+
+        // Apply date filter
+        if (filters.date !== "all") {
             const now = new Date();
-            now.setHours(0, 0, 0, 0); // Set to start of day for consistent comparison
+            now.setHours(0, 0, 0, 0);
             const dayInMs = 24 * 60 * 60 * 1000;
             switch (filters.date) {
                 case "today":
@@ -195,6 +201,9 @@ const Activities = () => {
                     break;
             }
         }
+
+        setFilteredActivities(result);
+    }, [activities, filters, searchTerm]);
 
     const getActivityIcon = (type, role) => {
         const icons = {
@@ -279,20 +288,24 @@ const Activities = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
             <Navbar />
-            <Sidebar user={user} />            <div className="lg:ml-64 pt-16">
+            <Sidebar user={user} />
+            <div className="lg:ml-64 pt-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     {/* Header Section */}
                     <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border border-gray-100">
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                             <div className="flex-1">
                                 <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Activities</h1>
-                                <div className="mt-3 flex items-center">                                    <div className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                <div className="mt-3 flex items-center">
+                                    <div className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 border border-blue-100">
                                         <FaUser className="mr-2" />
                                         {user?.name || localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user"))?.name : "User"} • {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)} View
-                                    </div>                                    <span className="ml-4 text-gray-500">
+                                    </div>
+                                    <span className="ml-4 text-gray-500">
                                         {filteredActivities.length} Activities
                                     </span>
-                                </div>                            </div>
+                                </div>
+                            </div>
                             <div className="mt-6 md:mt-0 flex flex-col items-end gap-4">
                                 <BackButton />
                                 <div className="inline-flex shadow-sm rounded-lg">
@@ -401,7 +414,8 @@ const Activities = () => {
                                                         ].join(" ")}>
                                                             {activity.user_role || 'System'}
                                                         </span>
-                                                    </div>                                                    <div className="flex items-center mt-2 sm:mt-0 text-sm text-gray-500">
+                                                    </div>
+                                                    <div className="flex items-center mt-2 sm:mt-0 text-sm text-gray-500">
                                                         <FaCalendarAlt className="mr-2 h-4 w-4 text-gray-400" />
                                                         {activity.created_at ? format(parseISO(activity.created_at), "d MMM yyyy 'at' h:mm a") : 'No date'}
                                                     </div>
@@ -442,4 +456,3 @@ const Activities = () => {
 };
 
 export default Activities;
-
