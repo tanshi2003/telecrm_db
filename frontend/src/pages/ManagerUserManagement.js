@@ -5,6 +5,7 @@ import BackButton from "../components/BackButton";
 import { Users, FileText, BarChart2, UserCheck } from "lucide-react";
 import { getUsers, updateUserStatus } from "../services/managerService";
 import toast from "react-hot-toast";
+import axios from "axios";
 
 const ManagerUserManagement = () => {
   const [teamMembers, setTeamMembers] = useState([]);
@@ -50,9 +51,29 @@ const ManagerUserManagement = () => {
     }
   };
 
-  const handleUserClick = (user) => {
-    setSelectedUser(user);
-    setShowUserModal(true);
+  const handleUserClick = async (user) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`http://localhost:5000/api/leads/user/${user.id}/lead-counts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        setSelectedUser({
+          ...user,
+          ...response.data.data
+        });
+        setShowUserModal(true);
+      } else {
+        toast.error("Failed to fetch user details");
+      }
+    } catch (error) {
+      console.error('Error fetching user details:', error);
+      toast.error("Failed to fetch user details");
+      // Still show the modal with basic user info
+      setSelectedUser(user);
+      setShowUserModal(true);
+    }
   };
 
   return (
@@ -147,12 +168,6 @@ const ManagerUserManagement = () => {
                           >
                             View Details
                           </button>
-                          <button
-                            onClick={() => handleLeadAssignment(member.id)}
-                            className="text-green-600 hover:text-green-900"
-                          >
-                            Assign Leads
-                          </button>
                         </td>
                       </tr>
                     ))}
@@ -167,38 +182,67 @@ const ManagerUserManagement = () => {
       {/* User Details Modal */}
       {showUserModal && selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-            <h2 className="text-2xl font-bold mb-4">{selectedUser.name}</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-gray-600">Email</p>
-                <p className="font-medium">{selectedUser.email}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Role</p>
-                <p className="font-medium capitalize">{selectedUser.role}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Status</p>
-                <p className="font-medium capitalize">{selectedUser.status}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Location</p>
-                <p className="font-medium">{selectedUser.location || 'Not specified'}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Assigned Leads</p>
-                <p className="font-medium">{selectedUser.assigned_leads?.length || 0}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Performance</p>
-                <p className="font-medium">{selectedUser.completed_calls}/{selectedUser.total_calls} calls completed</p>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end">
+          <div className="bg-white rounded-lg p-4 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800">{selectedUser.name}</h2>
               <button
                 onClick={() => setShowUserModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Basic Information */}
+              <div className="mb-4">
+                <h3 className="font-semibold text-gray-800 text-sm mb-2">Basic Information</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-gray-500">Email:</p>
+                    <p className="font-medium">{selectedUser.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Role:</p>
+                    <p className="font-medium capitalize">{selectedUser.role}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Status:</p>
+                    <p className="font-medium capitalize">{selectedUser.status}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Location:</p>
+                    <p className="font-medium">{selectedUser.location || 'Not specified'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lead Statistics */}
+              <div>
+                <h3 className="font-semibold text-gray-800 text-sm mb-2">Lead Statistics</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-blue-50 p-2 rounded">
+                    <p className="text-xs font-medium text-blue-600">Total Leads</p>
+                    <p className="text-lg font-bold text-blue-700">{selectedUser.total_leads || 0}</p>
+                  </div>
+                  <div className="bg-green-50 p-2 rounded">
+                    <p className="text-xs font-medium text-green-600">Active</p>
+                    <p className="text-lg font-bold text-green-700">{selectedUser.active_leads || 0}</p>
+                  </div>
+                  <div className="bg-purple-50 p-2 rounded">
+                    <p className="text-xs font-medium text-purple-600">Converted</p>
+                    <p className="text-lg font-bold text-purple-700">{selectedUser.converted_leads || 0}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setShowUserModal(false)}
+                className="px-3 py-1.5 text-sm bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
               >
                 Close
               </button>

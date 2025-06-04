@@ -29,56 +29,67 @@ const Activities = () => {
         role: "all",
         type: "all",
         date: "all"
-    });
-    const navigate = useNavigate();
-
+    });    const navigate = useNavigate();
+    
     const fetchActivities = React.useCallback(async () => {
         try {
             setLoading(true);
             const userRole = localStorage.getItem('role');
-            const userId = JSON.parse(localStorage.getItem('user'))?.id;
+            const user = JSON.parse(localStorage.getItem('user'));
+            const userId = user?.id;
             
-            let endpoint = 'all';
-            if (userRole === 'manager') {
-                endpoint = `team/${userId}`;
-            } else if (userRole === 'caller' || userRole === 'field_employee') {
-                endpoint = `user/${userId}`;
+            if (!userId || !userRole) {
+                throw new Error('User information not found in local storage');
             }
 
+            // Use 'all' endpoint for managers and admins, 'user/:id' for others
+            const endpoint = (userRole === 'manager' || userRole === 'admin') ? 'all' : `user/${userId}`;
+            console.log('Fetching activities from endpoint:', endpoint);
+            
             const response = await fetch(`http://localhost:5000/api/activities/${endpoint}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
-            
-            if (!response.ok) throw new Error('Failed to fetch activities');
-            
-            const data = await response.json();
-            if (data.success) {
-                const sortedActivities = data.data.sort(
-                    (a, b) => new Date(b.created_at) - new Date(a.created_at)
-                );
 
-                // Filter activities based on role
-                let filteredData = sortedActivities;
-                if (userRole === 'manager') {
-                    // Managers see their team's activities
-                    filteredData = sortedActivities.filter(activity => 
-                        activity.user_id === userId || // Their own activities
-                        activity.manager_id === userId // Their team members' activities
-                    );
-                } else if (userRole === 'caller' || userRole === 'field_employee') {
-                    // Callers and field employees only see their own activities
-                    filteredData = sortedActivities.filter(activity => 
-                        activity.user_id === userId
-                    );
-                }
-                
-                setActivities(filteredData);
-                setFilteredActivities(filteredData);
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Failed to fetch activities:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    endpoint,
+                    userRole,
+                    userId,
+                    errorText
+                });
+                throw new Error(`Failed to fetch activities: ${response.status} ${response.statusText}\n${errorText}`);
             }
+
+            const data = await response.json();
+            console.log('Received activities data:', data);
+
+            if (!data.success) {
+                throw new Error(`API returned error: ${data.message}`);
+            }
+
+            const sortedActivities = data.data.sort(
+                (a, b) => new Date(b.created_at) - new Date(a.created_at)
+            );            // Filter activities based on role
+            let filteredData = sortedActivities;
+            if (userRole === 'manager') {
+                // Managers only see their own activities
+                filteredData = sortedActivities.filter(activity => activity.user_id === userId);
+                console.log('Filtered activities for manager:', filteredData.length);
+            } else if (userRole === 'caller' || userRole === 'field_employee') {
+                // Callers and field employees only see their own activities
+                filteredData = sortedActivities.filter(activity => activity.user_id === userId);
+                console.log('Filtered activities for user:', filteredData.length);
+            }
+
+            setActivities(filteredData);
+            setFilteredActivities(filteredData);
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error in fetchActivities:', error);
         } finally {
             setLoading(false);
         }
@@ -120,41 +131,7 @@ const Activities = () => {
                 activity.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 activity.user_role?.toLowerCase().includes(searchTerm.toLowerCase())
             );
-        }
-
-        // Apply role filter
-        if (filters.role !== "all") {
-            switch (filters.role) {
-                case 'admin':
-                    // Admin sees everything
-                    break;
-                case 'manager':
-                    result = result.filter(activity =>
-                        activity.user_role === 'manager' ||
-                        activity.user_role === 'caller' ||
-                        activity.user_role === 'field_employee'
-                    );
-                    break;
-                case 'caller':
-                    result = result.filter(activity =>
-                        activity.user_role === 'caller'
-                    );
-                    break;
-                case 'field_employee':
-                    result = result.filter(activity =>
-                        activity.user_role === 'field_employee'
-                    );
-                    break;
-                case 'system':
-                    result = result.filter(activity =>
-                        !activity.user_role || activity.user_role === 'system'
-                    );
-                    break;
-                default:
-                    result = result.filter(activity => activity.user_role === filters.role);
-                    break;
-            }
-        }
+        }        // Role filtering removed - managers only see their own activities
 
         // Apply activity type filter
         if (filters.type !== "all") {
@@ -327,11 +304,9 @@ const Activities = () => {
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    {/* Filters Section */}
+                    </div>                    {/* Filters Section */}
                     <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <FaSearch className="text-gray-400 h-4 w-4" />
@@ -344,15 +319,6 @@ const Activities = () => {
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
-                            <select
-                                className="block w-full px-4 py-3 border border-gray-200 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150 ease-in-out sm:text-sm"
-                                value={filters.role}
-                                onChange={(e) => setFilters({...filters, role: e.target.value})}
-                            >
-                                {getRoleFilterOptions().map(role => (
-                                    <option key={role.value} value={role.value}>{role.label}</option>
-                                ))}
-                            </select>
                             <select
                                 className="block w-full px-4 py-3 border border-gray-200 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150 ease-in-out sm:text-sm"
                                 value={filters.type}

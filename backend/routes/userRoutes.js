@@ -64,8 +64,8 @@ router.put("/:id/assign-manager", roleMiddleware(['admin']), userController.assi
 router.put("/:id/remove-manager", roleMiddleware(['admin']), userController.removeManager);
 
 // User statistics
-router.get("/:id/stats", roleMiddleware(['admin', 'caller', 'field_employee']), userController.getUserStats);
-router.get("/:id/leads", roleMiddleware(['admin', 'caller', 'field_employee']), userController.getLeadsByUserId);
-router.get("/:id/campaigns", roleMiddleware(['admin', 'caller', 'field_employee']), userController.getCampaignsByUserId);
+router.get("/:id/stats", roleMiddleware(['admin', 'manager', 'caller', 'field_employee']), userController.getUserStats);
+router.get("/:id/leads", roleMiddleware(['admin', 'manager', 'caller', 'field_employee']), userController.getLeadsByUserId);
+router.get("/:id/campaigns", roleMiddleware(['admin', 'manager', 'caller', 'field_employee']), userController.getCampaignsByUserId);
 
 module.exports = router;
