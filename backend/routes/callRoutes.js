@@ -57,6 +57,55 @@ router.get('/stats/:timeRange', checkRole(['admin']), async (req, res) => {
     }
 });
 
+// Get call statistics for a specific user
+router.get('/stats/:timeRange/:userId', checkRole(['admin', 'manager', 'caller', 'field_employee']), async (req, res) => {
+    try {
+        const { timeRange, userId } = req.params;
+        let startDate = new Date();
+
+        // Set the start date based on timeRange
+        switch (timeRange) {
+            case 'today':
+                startDate.setHours(0,0,0,0);
+                break;
+            case 'week':
+                startDate.setDate(startDate.getDate() - 7);
+                break;
+            case 'month':
+                startDate.setMonth(startDate.getMonth() - 1);
+                break;
+            case 'year':
+                startDate.setFullYear(startDate.getFullYear() - 1);
+                break;
+            default:
+                startDate.setDate(startDate.getDate() - 7);
+        }
+
+        const [results] = await db.promise().query(
+            `SELECT 
+                status,
+                disposition,
+                COUNT(*) as count
+            FROM calls 
+            WHERE created_at >= ? AND caller_id = ?
+            GROUP BY status, disposition`,
+            [startDate, userId]
+        );
+
+        res.json({
+            success: true,
+            data: results || []
+        });
+    } catch (error) {
+        console.error('Error fetching call statistics:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch call statistics',
+            error: error.message
+        });
+    }
+});
+
 // Create a new call
 router.post("/", callController.createCall);
 

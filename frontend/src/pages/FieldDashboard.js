@@ -1,6 +1,8 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUser, FaBullhorn, FaChartLine, FaPencilAlt, FaPhone } from "react-icons/fa";
+import { toast } from 'react-toastify';
+import { AuthContext } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
 import io from 'socket.io-client';  
 
@@ -31,6 +33,11 @@ const FieldDashboard = () => {
   const [leadNotes, setLeadNotes] = useState("");
   const [updateMessage, setUpdateMessage] = useState(""); // new state for success message
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [error, setError] = useState(""); // Add error state
+
+  // Call related states
+  const [callStatus, setCallStatus] = useState('idle');
+  const [callDuration, setCallDuration] = useState(0);
 
   // Add performance metrics state
   const [performanceData, setPerformanceData] = useState({
@@ -50,13 +57,13 @@ const FieldDashboard = () => {
   const [dialedNumber, setDialedNumber] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredLeads, setFilteredLeads] = useState([]);
-  const [showCallbook, setShowCallbook] = useState(false);
-  const [callStatus, setCallStatus] = useState('idle');
-  const [callDuration, setCallDuration] = useState(0);
-
-  // Add pagination state
+  const [showCallbook, setShowCallbook] = useState(false);  // Add pagination state
   const [displayCount, setDisplayCount] = useState(5);  // Show 5 leads initially
   const [showingAll, setShowingAll] = useState(false);
+
+  // Campaign leads states
+  const [campaignLeads, setCampaignLeads] = useState([]);
+  const [isLoadingLeads, setIsLoadingLeads] = useState(false);
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
@@ -234,99 +241,264 @@ const FieldDashboard = () => {
     if (!user) return;
     refreshLeads();
   }, [user, refreshLeads]); // Added refreshLeads to dependencies
-
-  // Add this component before the return statement
+  // Campaign Modal Component
   const CampaignModal = ({ campaign, onClose }) => {
+    const { user: authUser } = useContext(AuthContext);
+    const [showLeads, setShowLeads] = useState(false);
+    const [campaignLeads, setCampaignLeads] = useState([]);
+    const [isLoadingLeads, setIsLoadingLeads] = useState(false);
+    const [displayCount, setDisplayCount] = useState(5);
+    const [showingAll, setShowingAll] = useState(false);
+
+    const fetchCampaignLeads = async (campaignId) => {
+      if (!campaignId) {
+        toast.error("Campaign ID is missing");
+        return;
+      }
+      
+      setIsLoadingLeads(true);
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.error("Authentication token is missing");
+          return;
+        }
+
+        const response = await fetch(`${BASE_URL}/api/campaigns/${campaignId}/leads/assigned`, {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch campaign leads');
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+          const leadsWithDetails = data.data.map(lead => ({
+            ...lead,
+            name: lead.name || 'Unknown',
+            phone_no: lead.phone_no || 'N/A',
+            status: lead.status || 'New',
+            assigned_name: lead.assigned_to_name || 'Unassigned',
+            manager_name: lead.manager_name || campaign.manager_name || 'Not assigned',
+            call_count: lead.call_count || 0,
+            notes: lead.notes || '',
+            updated_at: lead.updated_at || new Date().toISOString()
+          }));
+          setCampaignLeads(leadsWithDetails);
+          setShowLeads(true);
+        } else {
+          throw new Error(data.message || 'Failed to fetch campaign leads');
+        }
+      } catch (error) {
+        console.error('Error fetching campaign leads:', error);
+        toast.error(error.message || "Failed to fetch campaign leads");
+      } finally {
+        setIsLoadingLeads(false);
+      }
+    };
+
+    useEffect(() => {
+      if (campaign?._id) {
+        fetchCampaignLeads(campaign._id);
+      }
+    }, [campaign]);
+
+    const handleShowMore = () => {
+      if (showingAll) {
+        setDisplayCount(5);
+      } else {
+        setDisplayCount(campaignLeads.length);
+      }
+      setShowingAll(!showingAll);
+    };
+
     return (
       <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div className="relative top-20 mx-auto p-6 border w-[480px] shadow-xl rounded-lg bg-white">
-          <div className="absolute top-4 right-4">
-            <button 
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-500 transition-colors"
-            >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="mt-2">
-            {/* Header */}
-            <div className="border-b pb-4 mb-4">
-              <h3 className="text-2xl font-semibold text-gray-800">
-                {campaign.name}
-              </h3>
-              <p className="text-sm text-gray-500 mt-1">
-                {campaign.description || 'No description available'}
-              </p>
-            </div>
-
-            {/* Campaign Details Grid */}
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-gray-500">Manager</p>
-                <div className="flex items-center mt-1">
-                  <div className="bg-blue-100 rounded-full p-2 mr-2">
-                    <FaUser className="text-blue-600 text-sm" />
+              <div className="relative top-10 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+                {/* Header with close button */}
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">{campaign.name}</h2>
+                    <p className="text-sm text-gray-600 mt-1">{campaign.description}</p>
                   </div>
-                  <p className="text-base text-gray-900">{campaign.manager_name || 'Not assigned'}</p>
+                  <button 
+                    onClick={onClose}
+                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                  >
+                    &times;
+                  </button>
                 </div>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-gray-500">Status</p>
-                <div className="mt-1">
-                  <span className={`inline-block px-3 py-1 text-sm rounded-full font-medium ${
-                    campaign.status === 'active' ? 'bg-green-100 text-green-800' :
-                    campaign.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {campaign.status?.charAt(0).toUpperCase() + campaign.status?.slice(1)}
-                  </span>
+      
+                {/* Campaign Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  {/* Manager Info */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm font-medium text-gray-500 mb-2">Manager</p>
+                    <div className="flex items-center">
+                      <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <FaUser className="text-blue-600" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-900">
+                          {campaign.manager_name || "Not assigned"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+      
+                  {/* Status */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm font-medium text-gray-500 mb-2">Status</p>
+                    <div className="mt-1">
+                      <span className={`inline-block px-3 py-1 text-sm rounded-full font-medium ${
+                        campaign.status === 'active' ? 'bg-green-100 text-green-800' :
+                        campaign.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {campaign.status === 'active' ? 'Active' : campaign.status}
+                      </span>
+                    </div>
+                  </div>
+      
+                  {/* Duration */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm font-medium text-gray-500 mb-2">Duration</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>                  
+                        <p className="text-xs text-gray-500">Start Date</p>                  <p className="font-medium">
+                          {campaign.start_date && !isNaN(new Date(campaign.start_date).getTime()) 
+                            ? new Date(campaign.start_date).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              }) 
+                            : 'Not Set'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">End Date</p>
+                        <p className="font-medium">
+                          {campaign.end_date && !isNaN(new Date(campaign.end_date).getTime())
+                            ? new Date(campaign.end_date).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })
+                            : 'Ongoing'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>                  {/* Lead Statistics */}
+                  <div 
+                    className="bg-blue-50 p-4 rounded-lg cursor-pointer hover:bg-blue-100 transition"
+                    onClick={() => fetchCampaignLeads(campaign._id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-blue-600">Total Leads</p>
+                        <p className="text-2xl font-bold text-blue-700 mt-1">
+                          {campaign.lead_count || 0}
+                        </p>
+                      </div>
+                      <div className="bg-blue-100 rounded-full p-3">
+                        <FaBullhorn className="text-blue-600 text-xl" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-gray-500">Start Date</p>
-                <p className="text-base text-gray-900 mt-1">
-                  {new Date(campaign.start_date).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
-                </p>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-gray-500">End Date</p>
-                <p className="text-base text-gray-900 mt-1">
-                  {campaign.end_date 
-                    ? new Date(campaign.end_date).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })
-                    : 'Ongoing'}
-                </p>
+      
+                {/* Campaign Leads Table */}
+                {showLeads && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold mb-3">Campaign Leads</h3>
+                    {isLoadingLeads ? (
+                      <div className="text-center py-4">
+                        <p>Loading leads...</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">                  <table className="min-w-full divide-y divide-gray-200">                    <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manager</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Call Count</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {campaignLeads.map(lead => (
+                              <tr key={lead.id} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="font-medium text-gray-900">{lead.name}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                                  {lead.phone_no}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    lead.status === 'Contacted' ? 'bg-green-100 text-green-800' :
+                                    lead.status === 'New' ? 'bg-blue-100 text-blue-800' :
+                                    lead.status === 'Follow-Up Scheduled' ? 'bg-yellow-100 text-yellow-800' :
+                                    lead.status === 'Converted' ? 'bg-indigo-100 text-indigo-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {lead.status}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {new Date(lead.updated_at).toLocaleDateString()}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center">
+                                    <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                      <FaUser className="text-blue-600 text-xs" />
+                                    </div>
+                                    <div className="ml-3">
+                                      <p className="text-sm font-medium text-gray-900">
+                                        {lead.assigned_name || 'Unassigned'}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {lead.assigned_to === user?.id ? '(You)' : ''}
+                                      </p>                              </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center">
+                                    <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                                      <FaUser className="text-green-600 text-xs" />
+                                    </div>
+                                    <div className="ml-3">
+                                      <p className="text-sm font-medium text-gray-900">
+                                        {lead.manager_name}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                                  {lead.notes || 'No notes'}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                    {lead.call_count || 0} calls
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>          )}
               </div>
             </div>
-
-            {/* Lead Statistics */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-600">Total Leads</p>
-                  <p className="text-2xl font-bold text-blue-700 mt-1">{campaign.lead_count || 0}</p>
-                </div>
-                <div className="bg-blue-100 rounded-full p-3">
-                  <FaBullhorn className="text-blue-600 text-xl" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     );
   };
 
@@ -509,6 +681,33 @@ const FieldDashboard = () => {
     return () => socket.disconnect();
   }, []);  // No need to add startTimer/stopTimer as deps since they're stable
 
+  // New function to fetch campaign leads
+  const getCampaignLeads = async (campaignId) => {
+    setIsLoadingLeads(true);
+    try {
+      const response = await fetch(`${BASE_URL}/api/campaigns/${campaignId}/leads`, {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setCampaignLeads(data);
+      } else {
+        setError(data.error);
+      }
+    } catch (err) {
+      setError('Failed to fetch campaign leads');
+    }
+    setIsLoadingLeads(false);
+  };
+  // Handle clicking on campaign card
+  const handleCampaignClick = async (campaign) => {
+    setSelectedCampaign(campaign);
+    setIsCampaignModalOpen(true);
+    await getCampaignLeads(campaign._id);
+  };
+
   return (
     <div className="relative flex min-h-screen">
       <Sidebar user={user} />
@@ -583,14 +782,10 @@ const FieldDashboard = () => {
             </div>
             {campaigns && campaigns.length > 0 ? (
               <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                {campaigns.map(campaign => (
-                  <div 
+                {campaigns.map(campaign => (                  <div 
                     key={campaign.id} 
                     className="border-b last:border-0 pb-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
-                    onClick={() => {
-                      setSelectedCampaign(campaign);
-                      setIsCampaignModalOpen(true);
-                    }}
+                    onClick={() => handleCampaignClick(campaign)}
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -788,14 +983,14 @@ const FieldDashboard = () => {
               </div>
             </div>
           </div>
-        )}
-        {isCampaignModalOpen && selectedCampaign && (
+        )}        {isCampaignModalOpen && selectedCampaign && (
           <CampaignModal 
-            campaign={selectedCampaign} 
+            campaign={selectedCampaign}
             onClose={() => {
               setIsCampaignModalOpen(false);
               setSelectedCampaign(null);
             }}
+            isOpen={isCampaignModalOpen}
           />
         )}
         {showDialer && <DialerModal />}

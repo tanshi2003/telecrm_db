@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FaUser, FaBullhorn, FaChartLine, FaPencilAlt, FaPhone } from "react-icons/fa";
 import Sidebar from "../components/Sidebar";
 import io from 'socket.io-client';  
-import axios from 'axios';
+// import axios from 'axios';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../context/AuthContext';
 import 'react-toastify/dist/ReactToastify.css';
@@ -62,10 +62,10 @@ const CallerDashboard = () => {
   const [displayCount, setDisplayCount] = useState(5);  // Show 5 leads initially
   const [showingAll, setShowingAll] = useState(false);
 
-  // New states for campaign leads
-  const [campaignLeads, setCampaignLeads] = useState([]);
-  const [isLoadingLeads, setIsLoadingLeads] = useState(false);
-  const [showLeads, setShowLeads] = useState(false);
+  // // New states for campaign leads
+  // const [campaignLeads, setCampaignLeads] = useState([]);
+  // const [isLoadingLeads, setIsLoadingLeads] = useState(false);
+  // const [showLeads, setShowLeads] = useState(false);
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
