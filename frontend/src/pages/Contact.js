@@ -23,12 +23,11 @@ const Contact = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-r from-white via-blue-100 to-white text-black">
-      {/* Main Content */}
-      <div className="flex-grow flex flex-col items-center py-10">
+      {/* Main Content */}      <div className="flex-grow flex flex-col items-center py-20">
         {/* Hero Section */}
-        <section className="text-center px-4 py-6">
+        <section className="text-center px-4 py-12">
           <motion.h1
-            className="text-4xl font-bold mb-4 text-darkblue"
+            className="text-4xl font-bold mb-4 text-[#1e3a8a]"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1 }}

@@ -1,0 +1,118 @@
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate3d(0, 1, 0.2, 0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate3d(0, 1, 0.2, 10deg);
+  }
+}
+
+.logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.logo-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transform-style: preserve-3d;
+  animation: float 6s ease-in-out infinite;
+  padding-top: 2rem;
+}
+
+.logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform-style: preserve-3d;
+  margin-top: -6rem;
+}
+
+.logo-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transform-style: preserve-3d;
+  animation: float 6s ease-in-out infinite;
+}
+
+.headset-icon {
+  transform-style: preserve-3d;
+  position: relative;
+  filter: drop-shadow(0 4px 12px rgba(30, 58, 138, 0.3));
+}
+
+.headset-3d {
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }}
+
+
+.head-circle {
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.logo-text {
+  font-size: 5rem;
+  font-weight: bold;
+  color: white;
+  text-shadow: 
+    2px 2px 0 rgba(255, 255, 255, 0.3),
+    4px 4px 0 rgba(30, 58, 138, 0.3);
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  letter-spacing: -0.02em;
+  display: inline-flex;
+  align-items: center;
+  margin-left: -0.5rem;
+  transform: translateZ(0);
+}
+
+@keyframes float-icon {
+  0%, 100% {
+    transform: translateY(0) rotateY(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotateY(10deg);
+  }
+}
+
+.logo-shadow {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 20px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+  border-radius: 50%;
+  animation: shadow 6s ease-in-out infinite;
+}
+
+@keyframes shadow {
+  0% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateX(-50%) scale(0.8);
+    opacity: 0.2;
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.4;
+  }
+}
