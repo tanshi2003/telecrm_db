@@ -15,12 +15,17 @@ const CampaignManagement = () => {
   const [allCampaigns, setAllCampaigns] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [viewCampaign, setViewCampaign] = useState(null);
+  const [assignLeadCampaign, setAssignLeadCampaign] = useState(null);
   const [user, setUser] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
   const [showColorInfo, setShowColorInfo] = useState(null); // Store campaign ID for showing color info // 'all', 'active', 'leads'
   const [showAllCampaignsModal, setShowAllCampaignsModal] = useState(false);
   const [showActiveCampaignsModal, setShowActiveCampaignsModal] = useState(false);
   const [showLeadsModal, setShowLeadsModal] = useState(false);
+  const [availableLeads, setAvailableLeads] = useState([]);
+  const [selectedLeads, setSelectedLeads] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -132,11 +137,12 @@ const CampaignManagement = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      console.log('Assigning users:', { campaignId, userIds }); // Debug log
+      // Ensure userIds is an array
+      const userIdsArray = Array.isArray(userIds) ? userIds : [userIds];
 
       const response = await axios.post(
         `http://localhost:5000/api/campaigns/${campaignId}/assign-users`,
-        { user_ids: userIds },
+        { user_ids: userIdsArray },
         { 
           headers: { 
             'Authorization': `Bearer ${token}`,
@@ -145,26 +151,21 @@ const CampaignManagement = () => {
         }
       );
 
-      console.log('Assignment response:', response.data); // Debug log
-
       if (response.data.success) {
         // Refresh both campaign lists to update the UI
         await Promise.all([
           fetchCampaigns(),
           fetchAllCampaigns()
         ]);
-        // Show success message
-        setError({ type: 'success', message: 'Successfully assigned user to campaign' });
+        toast.success(response.data.message || 'Successfully added team members to campaign');
       } else {
         throw new Error(response.data.message || 'Failed to assign users');
       }
     } catch (error) {
       console.error('Error assigning users:', error);
-      setError({ type: 'error', message: 'Failed to assign users to campaign' });
+      toast.error(error.response?.data?.message || 'Failed to assign users to campaign');
     } finally {
       setLoading(false);
-      // Clear any error/success message after 3 seconds
-      setTimeout(() => setError(null), 3000);
     }
   };
 
@@ -250,6 +251,105 @@ const CampaignManagement = () => {
   );
 
   const filteredCampaigns = getFilteredCampaigns();
+
+  // Add this function to fetch leads
+  const fetchAvailableLeads = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      const response = await axios.get(
+        `http://localhost:5000/api/leads?role=manager`,
+        { 
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
+      );
+      if (response.data.success) {
+        // Filter out leads that are already assigned to campaigns and belong to this manager
+        const unassignedLeads = response.data.data.filter(lead => 
+          !lead.campaign_id && 
+          lead.manager_id === storedUser.id
+        );
+        console.log('Available leads for assignment:', unassignedLeads);
+        setAvailableLeads(unassignedLeads);
+      }
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+      toast.error('Failed to fetch leads');
+    }
+  };
+
+  // Add this function to handle lead assignment
+  const handleAssignLeads = async () => {
+    if (selectedLeads.length === 0) {
+      toast.warning('Please select leads to assign');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `http://localhost:5000/api/leads/assign-campaign`,
+        { 
+          campaignId: assignLeadCampaign,
+          leadId: selectedLeads[0] // If multiple leads, we'll need to make multiple requests
+        },
+        { 
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
+      );
+
+      if (response.data.success) {
+        // If there are multiple leads, handle them sequentially
+        if (selectedLeads.length > 1) {
+          for (let i = 1; i < selectedLeads.length; i++) {
+            await axios.post(
+              `http://localhost:5000/api/leads/assign-campaign`,
+              { 
+                campaignId: assignLeadCampaign,
+                leadId: selectedLeads[i]
+              },
+              { 
+                headers: { 
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                } 
+              }
+            );
+          }
+        }
+
+        toast.success('Leads assigned successfully');
+        setAssignLeadCampaign(null);
+        setSelectedLeads([]);
+        // Refresh both campaign lists to update the UI
+        await Promise.all([
+          fetchCampaigns(),
+          fetchAllCampaigns()
+        ]);
+      }
+    } catch (error) {
+      console.error('Error assigning leads:', error);
+      toast.error(error.response?.data?.message || 'Failed to assign leads');
+    }
+  };
+
+  // Add this computed value for filtered leads
+  const filteredLeads = availableLeads.filter(lead => {
+    const matchesSearch = 
+      lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.phone_no?.includes(searchTerm) ||
+      lead.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = filterStatus === 'all' || lead.status?.toLowerCase() === filterStatus.toLowerCase();
+    
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="flex min-h-screen bg-gray-100">
@@ -489,6 +589,17 @@ const CampaignManagement = () => {
                     >
                       <Users size={14} />
                       Assign Team
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAssignLeadCampaign(campaign.id);
+                        fetchAvailableLeads();
+                        setSelectedLeads([]);
+                      }}
+                      className="flex-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors flex items-center justify-center gap-1"
+                    >
+                      <Target size={14} />
+                      Assign Lead
                     </button>
                     <button
                       onClick={() => setViewCampaign(campaign)}
@@ -904,6 +1015,134 @@ const CampaignManagement = () => {
                       </div>
                     </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Assign Leads Modal */}
+        {assignLeadCampaign && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-[800px] max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Assign Leads to Campaign</h2>
+                <button
+                  onClick={() => {
+                    setAssignLeadCampaign(null);
+                    setSelectedLeads([]);
+                  }}
+                  className="text-gray-500 hover:text-gray-800 text-2xl"
+                >
+                  &times;
+                </button>
+              </div>
+
+              {/* Search and Filter */}
+              <div className="mb-4 flex gap-4">
+                <input
+                  type="text"
+                  placeholder="Search leads by name, phone, or email..."
+                  className="flex-1 px-4 py-2 border rounded-lg"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <select
+                  className="px-4 py-2 border rounded-lg"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                >
+                  <option value="all">All Status</option>
+                  <option value="cold">Cold</option>
+                  <option value="warm">Warm</option>
+                  <option value="hot">Hot</option>
+                </select>
+              </div>
+
+              {/* Leads List */}
+              <div className="space-y-2 mb-4">
+                {filteredLeads.map((lead) => (
+                  <div
+                    key={lead.id}
+                    className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg ${
+                      selectedLeads.includes(lead.id) ? 'border-2 border-blue-500' : ''
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeads.includes(lead.id)}
+                          onChange={() => {
+                            setSelectedLeads(prev =>
+                              prev.includes(lead.id)
+                                ? prev.filter(id => id !== lead.id)
+                                : [...prev, lead.id]
+                            );
+                          }}
+                          className="w-4 h-4 text-blue-600"
+                        />
+                        <div>
+                          <p className="font-medium">{lead.name}</p>
+                          <div className="flex items-center gap-4 text-sm text-gray-600">
+                            <span className="flex items-center gap-1">
+                              <Phone size={14} />
+                              {lead.phone_no}
+                            </span>
+                            {lead.email && (
+                              <span className="flex items-center gap-1">
+                                <Mail size={14} />
+                                {lead.email}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full ${
+                          lead.status?.toLowerCase() === 'hot'
+                            ? 'bg-red-100 text-red-800'
+                            : lead.status?.toLowerCase() === 'warm'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}
+                      >
+                        {lead.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+
+                {filteredLeads.length === 0 && (
+                  <div className="text-center py-4 text-gray-500">
+                    No leads available
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setAssignLeadCampaign(null);
+                    setSelectedLeads([]);
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAssignLeads}
+                  disabled={selectedLeads.length === 0}
+                  className={`px-4 py-2 rounded text-white ${
+                    selectedLeads.length === 0
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  Assign Selected ({selectedLeads.length})
+                </button>
               </div>
             </div>
           </div>

@@ -358,11 +358,12 @@ const CallerDashboard = () => {
               <p className="text-sm font-medium text-gray-500 mb-2">Duration</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>                  
-                  <p className="text-xs text-gray-500">Start Date</p>                  <p className="font-medium">
+                  <p className="text-xs text-gray-500">Start Date</p>
+                  <p className="font-medium">
                     {campaign.start_date && !isNaN(new Date(campaign.start_date).getTime()) 
                       ? new Date(campaign.start_date).toLocaleDateString('en-US', {
                           year: 'numeric',
-                          month: 'short',
+                          month: 'long',
                           day: 'numeric'
                         }) 
                       : 'Not Set'}
@@ -374,10 +375,10 @@ const CallerDashboard = () => {
                     {campaign.end_date && !isNaN(new Date(campaign.end_date).getTime())
                       ? new Date(campaign.end_date).toLocaleDateString('en-US', {
                           year: 'numeric',
-                          month: 'short',
+                          month: 'long',
                           day: 'numeric'
                         })
-                      : 'Ongoing'}
+                      : 'Not Set'}
                   </p>
                 </div>
               </div>
@@ -776,7 +777,7 @@ const CallerDashboard = () => {
                       </span>
                     </div>
                     <div className="mt-1 text-xs text-gray-400">
-                      {new Date(campaign.created_at).toLocaleDateString()}
+                      Created: {new Date(campaign.created_at).toLocaleDateString()}
                     </div>
                   </div>
                 ))}

@@ -303,8 +303,8 @@ const FieldDashboard = () => {
     };
 
     useEffect(() => {
-      if (campaign?._id) {
-        fetchCampaignLeads(campaign._id);
+      if (campaign?.id) {
+        fetchCampaignLeads(campaign.id);
       }
     }, [campaign]);
 
@@ -396,7 +396,7 @@ const FieldDashboard = () => {
                   </div>                  {/* Lead Statistics */}
                   <div 
                     className="bg-blue-50 p-4 rounded-lg cursor-pointer hover:bg-blue-100 transition"
-                    onClick={() => fetchCampaignLeads(campaign._id)}
+                    onClick={() => fetchCampaignLeads(campaign.id)}
                   >
                     <div className="flex items-center justify-between">
                       <div>
@@ -705,7 +705,35 @@ const FieldDashboard = () => {
   const handleCampaignClick = async (campaign) => {
     setSelectedCampaign(campaign);
     setIsCampaignModalOpen(true);
-    await getCampaignLeads(campaign._id);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${BASE_URL}/api/campaigns/${campaign.id}/leads/assigned`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        const leadsWithDetails = data.data.map(lead => ({
+          ...lead,
+          name: lead.name || 'Unknown',
+          phone_no: lead.phone_no || 'N/A',
+          status: lead.status || 'New',
+          assigned_name: lead.assigned_to_name || 'Unassigned',
+          manager_name: lead.manager_name || campaign.manager_name || 'Not assigned',
+          call_count: lead.call_count || 0,
+          notes: lead.notes || '',
+          updated_at: lead.updated_at || new Date().toISOString()
+        }));
+        setCampaignLeads(leadsWithDetails);
+      } else {
+        setError(data.message || 'Failed to fetch campaign leads');
+      }
+    } catch (err) {
+      setError('Failed to fetch campaign leads');
+      console.error('Error fetching campaign leads:', err);
+    }
   };
 
   return (

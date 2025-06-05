@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import { useNavigate } from 'react-router-dom';
 
+
 const priorities = ['Low', 'Medium', 'High'];
 const statuses = ['active', 'pending', 'inactive'];
 
@@ -20,14 +21,57 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [user, setUser] = useState(null);
+  const [availableLeads, setAvailableLeads] = useState([]);
+  const [selectedLeads, setSelectedLeads] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
+
+  // Add effect to refresh leads periodically
+  useEffect(() => {
+    const refreshLeads = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const storedUser = JSON.parse(localStorage.getItem('user'));
+        
+        if (!storedUser?.id) {
+          console.error('No user found in localStorage');
+          return;
+        }
+
+        const leadsRes = await axios.get(
+          `http://localhost:5000/api/leads?role=manager`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (leadsRes.data.success) {
+          const unassignedLeads = leadsRes.data.data.filter(lead => 
+            lead.campaign_id === null && 
+            lead.manager_id === storedUser.id
+          );
+          console.log('Refreshed available leads:', unassignedLeads);
+          setAvailableLeads(unassignedLeads);
+        }
+      } catch (err) {
+        console.error('Error refreshing leads:', err);
+      }
+    };
+
+    // Refresh leads every 5 seconds
+    const intervalId = setInterval(refreshLeads, 5000);
+
+    // Initial refresh
+    refreshLeads();
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user'));
     setUser(storedUser);
 
-    // Fetch manager's team members
-    const fetchTeamMembers = async () => {
+    // Fetch manager's team members and leads
+    const fetchData = async () => {
       try {
         const token = localStorage.getItem('token');
         const managerId = storedUser?.id;
@@ -60,16 +104,16 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
             return;
           }
 
-          // If user is manager, proceed with fetching team members
-          const res = await axios.get(
+          // If user is manager, proceed with fetching team members and leads
+          const teamRes = await axios.get(
             `http://localhost:5000/api/managers/teams/${managerId}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           
-          console.log('Team members API response:', res.data);
+          console.log('Team members API response:', teamRes.data);
           
-          if (res.data.success && Array.isArray(res.data.data?.team_members)) {
-            const teamMembers = res.data.data.team_members.filter(member => member.id !== managerId);
+          if (teamRes.data.success && Array.isArray(teamRes.data.data?.team_members)) {
+            const teamMembers = teamRes.data.data.team_members.filter(member => member.id !== managerId);
             console.log('Filtered team members:', teamMembers);
             
             if (teamMembers.length === 0) {
@@ -91,22 +135,39 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
               setError(''); // Clear any previous error
             }
           } else {
-            console.error('Invalid response format:', res.data);
+            console.error('Invalid response format:', teamRes.data);
             setEmployees([]);
             setError('Error fetching team members. Please try again.');
           }
+
+          // Fetch available leads
+          const leadsRes = await axios.get(
+            `http://localhost:5000/api/leads?role=manager`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+
+          if (leadsRes.data.success) {
+            // Filter out leads that are already assigned to campaigns and belong to this manager
+            const unassignedLeads = leadsRes.data.data.filter(lead => 
+              lead.campaign_id === null && 
+              lead.manager_id === managerId
+            );
+            console.log('Available leads for campaign creation:', unassignedLeads);
+            setAvailableLeads(unassignedLeads);
+          }
+
         } catch (err) {
-          console.error('Error fetching user details:', err);
-          setError('Failed to verify user role. Please try again.');
+          console.error('Error fetching data:', err);
+          setError('Failed to fetch data. Please try again.');
         }
       } catch (err) {
-        console.error('Error in fetchTeamMembers:', err);
-        setError('Failed to fetch team members. Please try again.');
+        console.error('Error in fetchData:', err);
+        setError('Failed to fetch data. Please try again.');
       }
     };
 
     if (storedUser?.id) {
-      fetchTeamMembers();
+      fetchData();
     } else {
       setError('User information not found. Please log in again.');
     }
@@ -121,7 +182,10 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
       const token = localStorage.getItem('token');
       const storedUser = JSON.parse(localStorage.getItem('user'));
       
-      // 1. Create campaign
+      // Get the full lead objects for selected leads
+      const selectedLeadObjects = availableLeads.filter(lead => selectedLeads.includes(lead.id));
+      
+      // Create campaign with leads
       const campaignRes = await axios.post(
         'http://localhost:5000/api/campaigns',
         { 
@@ -131,8 +195,9 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
           priority, 
           start_date: startDate ? new Date(startDate).toISOString().split('T')[0] : null,
           end_date: endDate ? new Date(endDate).toISOString().split('T')[0] : null,
-          assigned_users: selectedUsers || [],  // Ensure it's always an array
-          admin_id: storedUser.role === 'admin' ? storedUser.id : null  // Only set admin_id if user is admin
+          assigned_users: selectedUsers || [],
+          leads: selectedLeadObjects,
+          admin_id: storedUser.role === 'admin' ? storedUser.id : null
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -140,6 +205,31 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
       console.log('Campaign creation response:', campaignRes.data);
 
       if (campaignRes.data.success) {
+        // Clear selected leads immediately
+        setSelectedLeads([]);
+        
+        // Remove the assigned leads from availableLeads immediately
+        const assignedLeadIds = selectedLeadObjects.map(lead => lead.id);
+        setAvailableLeads(prevLeads => 
+          prevLeads.filter(lead => !assignedLeadIds.includes(lead.id))
+        );
+
+        // Then refresh from server to ensure sync
+        const leadsRes = await axios.get(
+          `http://localhost:5000/api/leads?role=manager`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (leadsRes.data.success) {
+          // Filter out leads that are already assigned to campaigns and belong to this manager
+          const unassignedLeads = leadsRes.data.data.filter(lead => 
+            lead.campaign_id === null && 
+            lead.manager_id === storedUser.id
+          );
+          console.log('Updated available leads after campaign creation:', unassignedLeads);
+          setAvailableLeads(unassignedLeads);
+        }
+
         setSuccess('Campaign created successfully!');
         setName('');
         setDescription('');
@@ -148,6 +238,7 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
         setStartDate('');
         setEndDate('');
         setSelectedUsers([]);
+        
         if (onSuccess) onSuccess();
       } else {
         throw new Error(campaignRes.data.message || 'Failed to create campaign');
@@ -168,38 +259,20 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
     );
   };
 
-  const handleAssignUsers = async (userIds) => {
-    try {
-      const token = localStorage.getItem('token');
-      const managerId = user?.id;
-
-      const res = await axios.post(
-        'http://localhost:5000/api/managers/assign-users',
-        {
-          manager_id: managerId,
-          user_ids: userIds
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (res.data.success) {
-        // Refresh team members
-        const teamRes = await axios.get(
-          `http://localhost:5000/api/managers/${managerId}/team`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        if (teamRes.data.success && Array.isArray(teamRes.data.data)) {
-          const teamMembers = teamRes.data.data.filter(member => member.id !== managerId);
-          setEmployees(teamMembers);
-          setError('');
-        }
-      }
-    } catch (err) {
-      console.error('Error assigning users:', err.response?.data || err);
-      setError('Failed to assign users to team');
-    }
+  const handleLeadSelect = (leadId) => {
+    setSelectedLeads((prev) =>
+      prev.includes(leadId)
+        ? prev.filter((id) => id !== leadId)
+        : [...prev, leadId]
+    );
   };
+
+  // Filter leads based on search term
+  const filteredLeads = availableLeads.filter(lead => 
+    lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    lead.phone_no?.includes(searchTerm) ||
+    lead.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="flex min-h-screen bg-gray-100">
@@ -301,19 +374,32 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
                           <span>{emp.name} ({emp.role})</span>
                         </label>
                       ))}
-                      {error && error.includes('No team members found') && (
-                        <div className="mt-2">
-                          <button
-                            type="button"
-                            onClick={() => handleAssignUsers(employees.map(emp => emp.id))}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            Assign these users to your team
-                          </button>
-                        </div>
-                      )}
                     </>
                   )}
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block font-medium mb-1">Assign Leads</label>
+                <div className="max-h-40 overflow-y-auto border rounded p-2">
+                  {availableLeads.length === 0 ? (
+                    <div className="text-gray-500">No leads available.</div>
+                  ) : (
+                    <>
+                      {availableLeads.map(lead => (
+                        <label key={lead.id} className="flex items-center space-x-2 mb-1">
+                          <input
+                            type="checkbox"
+                            checked={selectedLeads.includes(lead.id)}
+                            onChange={() => handleLeadSelect(lead.id)}
+                          />
+                          <span>{lead.name} ({lead.phone_no})</span>
+                        </label>
+                      ))}
+                    </>
+                  )}
+                </div>
+                <div className="mt-1 text-sm text-gray-500">
+                  Selected: {selectedLeads.length} leads
                 </div>
               </div>
               {error && <div className="text-red-500 mb-2">{error}</div>}

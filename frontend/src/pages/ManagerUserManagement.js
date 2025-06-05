@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from 'react-router-dom';
 import BackButton from "../components/BackButton";
-import { Users, FileText, BarChart2, UserCheck } from "lucide-react";
+import { Users, UserCheck } from "lucide-react";
 import { getUsers, updateUserStatus } from "../services/managerService";
 import toast from "react-hot-toast";
 import axios from "axios";
