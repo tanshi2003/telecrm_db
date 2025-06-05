@@ -112,8 +112,7 @@ const Sidebar = ({ user }) => {
     {
       icon: FileText,
       label: "Campaigns",
-      // Add a path for hover highlighting
-      path: "/campaigns", // <-- Add a dummy path for hover/active
+      path: "/campaigns",
       onClick: handleCampaignsClick,
       allowedRoles: ["admin", "manager"]
     },
@@ -122,12 +121,6 @@ const Sidebar = ({ user }) => {
       label: "Activities",
       path: "/activities",
       allowedRoles: ["admin", "manager", "caller", "field_employee"]
-    },
-    {
-      icon: Filter,
-      label: "Filters",
-      path: "/filters",
-      allowedRoles: ["admin", "manager"]
     },
     {
       icon: BarChart2,

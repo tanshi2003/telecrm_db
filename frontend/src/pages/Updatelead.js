@@ -206,10 +206,12 @@ const Updatelead = () => {
 
           {/* Lead Detail Panel */}
           <div className="w-2/3 p-6 bg-white overflow-y-auto relative">
-            {/* Single BackButton at top right */}
-            <div className="absolute top-4 right-6 z-10">
-              <BackButton />
-            </div>
+            {/* Move BackButton inside the detail panel, above the form/details */}
+            {selectedLead && (
+              <div className="mb-4 flex justify-end">
+                <BackButton />
+              </div>
+            )}
             {selectedLead ? (
               isEditing ? (
                 // --- EDIT FORM ---
