@@ -196,7 +196,7 @@ export default function CallReport() {
                   onChange={value => setSelectedUser(value)}
                   options={userOptions}
                   isClearable={user?.role === 'admin' || user?.role === 'manager'}
-                  placeholder="Filter by user..."
+                  placeholder="All Users"
                   className="text-sm"
                 />
               </div>

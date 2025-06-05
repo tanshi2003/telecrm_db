@@ -118,12 +118,11 @@ router.post('/initiate', async (req, res) => {
     const { to, from, leadId } = req.body;
     const callerId = req.user.id;
     
-    try {
-        // Insert initial call record
+    try {        // Insert initial call record
         const [result] = await db.promise().query(
-            `INSERT INTO calls (caller_id, lead_id, phone_number, status, created_at)
-             VALUES (?, ?, ?, 'initiated', NOW())`,
-            [callerId, leadId, to]
+            `INSERT INTO calls (caller_id, lead_id, start_time, status, call_type, disposition)
+             VALUES (?, ?, NOW(), 'initiated', 'outbound', 'pending')`,
+            [callerId, leadId]
         );
         
         // Log the call activity
