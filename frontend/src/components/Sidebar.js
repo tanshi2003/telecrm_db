@@ -17,6 +17,7 @@ const Sidebar = ({ user }) => {
   // State management
   const [isExpanded, setIsExpanded] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [hoveredLabel, setHoveredLabel] = useState(null);
 
   // Refs
   const reportBtnRef = useRef(null);
@@ -101,7 +102,8 @@ const Sidebar = ({ user }) => {
       label: "Search", 
       path: "/search",
       allowedRoles: ["admin", "manager", "caller", "field_employee"]
-    },    {
+    },
+    {
       icon: PlusCircle,
       label: "Add Leads",
       path: role === "caller" || role === "field_employee" ? "/addlead" : "/Lead1",
@@ -110,9 +112,12 @@ const Sidebar = ({ user }) => {
     {
       icon: FileText,
       label: "Campaigns",
+      // Add a path for hover highlighting
+      path: "/campaigns", // <-- Add a dummy path for hover/active
       onClick: handleCampaignsClick,
       allowedRoles: ["admin", "manager"]
-    },    {
+    },
+    {
       icon: Activity,
       label: "Activities",
       path: "/activities",
@@ -132,10 +137,14 @@ const Sidebar = ({ user }) => {
     },
   ];
 
-  // Function to check if menu item is active
-  const isMenuItemActive = (itemPath) => {
-    if (!itemPath) return false;
-    return location.pathname === itemPath || location.pathname.startsWith(itemPath + '/');
+  // Function to check if menu item is active or hovered
+  const isMenuItemActiveOrHovered = (itemPath, label) => {
+    if (!itemPath) return hoveredLabel === label;
+    return (
+      location.pathname === itemPath ||
+      location.pathname.startsWith(itemPath + "/") ||
+      hoveredLabel === label
+    );
   };
 
   return (
@@ -170,16 +179,18 @@ const Sidebar = ({ user }) => {
               className={`group relative flex items-center ${
                 isExpanded ? "gap-4 px-4 py-3" : "justify-center p-3"
               } cursor-pointer transition-all rounded-md ${
-                isMenuItemActive(path)
+                isMenuItemActiveOrHovered(path, label)
                   ? "bg-blue-50 text-blue-600"
                   : "text-gray-700 hover:bg-gray-100"
               }`}
               onClick={onClick || (path ? () => navigate(path) : undefined)}
+              onMouseEnter={() => setHoveredLabel(label)}
+              onMouseLeave={() => setHoveredLabel(null)}
             >
-              <Icon size={20} className={isMenuItemActive(path) ? "text-blue-600" : ""} />
+              <Icon size={20} className={isMenuItemActiveOrHovered(path, label) ? "text-blue-600" : ""} />
               {isExpanded && (
                 <span className={`text-sm font-medium ${
-                  isMenuItemActive(path) ? "text-blue-600" : ""
+                  isMenuItemActiveOrHovered(path, label) ? "text-blue-600" : ""
                 }`}>
                   {label}
                 </span>

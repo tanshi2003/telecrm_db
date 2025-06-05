@@ -22,7 +22,7 @@ function Footer() {
             <li><Link to="/home">Home</Link></li>
             <li><Link to="/LandingPage">About Us</Link></li>
             <li><Link to="/contact">Contact Us</Link></li>
-            <li><Link to="/terms">Terms of Use</Link></li>
+            {/* <li><Link to="/terms">Terms of Use</Link></li> */}
           </ul>
         </div>
 

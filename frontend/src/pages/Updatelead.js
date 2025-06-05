@@ -363,7 +363,7 @@ const Updatelead = () => {
                         {selectedLead.status || "Fresh"}
                       </span>
                     </p>
-                    <div className="flex items-center mt-1 space-x-1 text-yellow-500">
+                    {/* <div className="flex items-center mt-1 space-x-1 text-yellow-500">
                       {[...Array(5)].map((_, i) =>
                         i < (selectedLead.rating || 0) ? (
                           <FaStar key={i} />
@@ -371,7 +371,7 @@ const Updatelead = () => {
                           <FaRegStar key={i} />
                         )
                       )}
-                    </div>
+                    </div> */}
                     <p className="text-sm mt-2">
                       <strong>Phone:</strong> {selectedLead.phone_no}
                     </p>
