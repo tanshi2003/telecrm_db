@@ -19,7 +19,7 @@ router.get("/manager/:id", roleMiddleware(["manager"]), campaignController.getCa
 
 // Get campaigns for a caller (specific route)
 router.get("/user/:id/campaigns", roleMiddleware(["admin", "manager", "caller"]), campaignController.getCampaignsByUserId);
-
+router.get('/assigned-leads', campaignController.getAssignedLeadIds);
 // Create a new campaign (Admin and Manager only)
 router.post("/", roleMiddleware(["admin", "manager"]), campaignController.createCampaign);
 
@@ -46,26 +46,40 @@ router.get("/:userId/campaigns/with-leads", authenticateToken, async (req, res) 
     try {
         const userId = req.params.userId;
         const userRole = req.user.role;        // Different query based on role
-        const query = `
+        const query = userRole === 'caller' ? `
             SELECT 
                 c.id, 
                 c.name, 
                 c.description, 
                 c.created_at,
-                c.start_date,
-                c.end_date,
                 c.status,
                 u.name AS manager_name,
                 COUNT(DISTINCT l.id) AS lead_count
             FROM campaigns c
             INNER JOIN campaign_users cu ON c.id = cu.campaign_id
             LEFT JOIN users u ON c.manager_id = u.id
-            LEFT JOIN leads l ON c.id = l.campaign_id${userRole === 'caller' ? ' AND l.assigned_to = ?' : ''}
+            LEFT JOIN leads l ON c.id = l.campaign_id AND l.assigned_to = ?
+            WHERE cu.user_id = ?
+            GROUP BY c.id, c.name, c.description, c.created_at, c.status, u.name
+        ` : `
+            SELECT 
+                c.id, 
+                c.name, 
+                c.description, 
+                c.created_at,
+                c.start_date,
+                c.end_date,                c.status,
+                u.name AS manager_name,
+                COUNT(DISTINCT l.id) AS lead_count
+            FROM campaigns c
+            INNER JOIN campaign_users cu ON c.id = cu.campaign_id
+            LEFT JOIN users u ON c.manager_id = u.id
+            LEFT JOIN leads l ON c.id = l.campaign_id
             WHERE cu.user_id = ?
             GROUP BY c.id, c.name, c.description, c.created_at, c.start_date, c.end_date, c.status, u.name
         `;
-        const params = userRole === 'caller' ? [userId, userId] : [userId];
-        const [campaigns] = await db.query(query, params);
+
+        const [campaigns] = await db.query(query, [userId, userId]);
 
         res.json({
             success: true,

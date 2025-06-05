@@ -21,6 +21,7 @@ const ManageCampaigns = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [leads, setLeads] = useState([]); // <-- all leads from DB
+  const [assignedLeadIds, setAssignedLeadIds] = useState([]);
 
   const navigate = useNavigate();
 
@@ -37,7 +38,22 @@ const ManageCampaigns = () => {
         console.error("Error fetching leads:", error);
       }
     };
+
+    const fetchAssignedLeads = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get("http://localhost:5000/api/campaigns/assigned-leads", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setAssignedLeadIds(response.data.assignedLeadIds || []);
+        console.log("Assigned Lead IDs:", response.data.assignedLeadIds); // <-- Add this
+      } catch (error) {
+        console.error("Error fetching assigned leads:", error);
+      }
+    };
+
     fetchLeads();
+    fetchAssignedLeads();
   }, []);
 
   // Utility: Reset form
@@ -205,19 +221,54 @@ const ManageCampaigns = () => {
             <label className="block text-sm font-medium mb-1">
               Select Leads<span className="text-red-500">*</span>
             </label>
+            <div className="mb-2">
+              <label className="flex items-center space-x-2 cursor-pointer font-semibold">
+                <input
+                  type="checkbox"
+                  checked={
+                    leads.length > 0 &&
+                    leads.filter(l => !assignedLeadIds.includes(l.id)).every(l => formData.leads.includes(l.id))
+                  }
+                  onChange={e => {
+                    if (e.target.checked) {
+                      setFormData(prev => ({
+                        ...prev,
+                        leads: leads
+                          .filter(l => !assignedLeadIds.includes(l.id))
+                          .map(l => l.id)
+                      }));
+                    } else {
+                      setFormData(prev => ({ ...prev, leads: [] }));
+                    }
+                  }}
+                  className="accent-blue-600"
+                  disabled={leads.filter(l => !assignedLeadIds.includes(l.id)).length === 0}
+                />
+                <span>Select All</span>
+              </label>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded p-2 bg-gray-50">
-              {leads.map(lead => (
-                <label key={lead.id} className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    value={lead.id}
-                    checked={formData.leads.includes(lead.id)}
-                    onChange={() => handleLeadCheckbox(lead.id)}
-                    className="accent-blue-600"
-                  />
-                  <span>{lead.name} ({lead.phone_no})</span>
-                </label>
-              ))}
+              {leads.map(lead => {
+                const isAssigned = assignedLeadIds.map(String).includes(String(lead.id));
+                return (
+                  <label key={lead.id} className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      value={lead.id}
+                      checked={formData.leads.includes(lead.id)}
+                      onChange={() => handleLeadCheckbox(lead.id)}
+                      className="accent-blue-600"
+                      disabled={isAssigned}
+                    />
+                    <span>
+                      {lead.name} ({lead.phone_no})
+                      {isAssigned && (
+                        <span className="ml-2 text-xs text-red-500">(Already assigned)</span>
+                      )}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
             <small className="text-gray-500">Select one or more leads for this campaign.</small>
           </div>

@@ -795,7 +795,21 @@ const campaignController = {
                 error: error.message
             });
         }
-    }
+    },
+
+    // Get assigned lead IDs
+    getAssignedLeadIds: (req, res) => {
+        db.query(
+            "SELECT id FROM leads WHERE campaign_id IS NOT NULL",
+            (err, rows) => {
+                if (err) {
+                    return res.status(500).json({ success: false, message: "Database error", error: err.message });
+                }
+                const assignedLeadIds = rows.map(row => row.id);
+                res.json({ assignedLeadIds });
+            }
+        );
+    },
 };
 
 module.exports = campaignController;
