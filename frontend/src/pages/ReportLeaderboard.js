@@ -37,13 +37,18 @@ export default function CallerReport() {
     }
 
     setUser(storedUser);
-    
+
     // Fetch users based on role
     const fetchUsers = async () => {
       try {
-        const endpoint = role === "admin"
-          ? "http://localhost:5000/api/users"
-          : `http://localhost:5000/api/users/team/${storedUser.id}`;
+        let endpoint;
+        if (role === "admin") {
+          endpoint = "http://localhost:5000/api/users";
+        } else if (role === "manager") {
+          endpoint = `http://localhost:5000/api/managers/teams/${storedUser.id}`;
+        } else {
+          endpoint = `http://localhost:5000/api/users/team/${storedUser.id}`;
+        }
 
         const response = await fetch(endpoint, {
           headers: {
@@ -56,19 +61,30 @@ export default function CallerReport() {
 
         const data = await response.json();
         if (data.success) {
-          setUsers(data.data.map(user => ({
-            value: user.id,
-            label: user.name,
-            email: user.email
-          })));
+          // For manager, API might return { team_members: [...] }
+          const usersArray = data.data?.team_members || data.data;
+          setUsers(
+            usersArray.map(user => ({
+              value: user.id,
+              label: user.name,
+              email: user.email
+            }))
+          );
         }
       } catch (error) {
         console.error('Error fetching users:', error);
       }
     };
-
     fetchUsers();
   }, [navigate]);
+
+  // Sync selectedUser with URL param and users list
+  useEffect(() => {
+    if (users.length && caller_id) {
+      const found = users.find(u => u.value.toString() === caller_id.toString());
+      setSelectedUser(found || null);
+    }
+  }, [users, caller_id]);
 
   useEffect(() => {
     if (!caller_id) return;
@@ -78,16 +94,18 @@ export default function CallerReport() {
       .then((res) => res.json())
       .then((data) => {
         const c = data.data || data || {};
-        
+
         // Find the matching user from users array to get correct email
         const selectedUserData = users.find(u => u.value.toString() === caller_id.toString());
-        
+        const storedUser = JSON.parse(localStorage.getItem("user"));
+
         setCaller({
           name: c.caller_name || selectedUserData?.label || "Caller Name",
-          email: selectedUserData?.email || c.caller_email || "example@email.com",
+          email: selectedUserData?.email || c.email || storedUser?.email || "example@email.com",
         });
 
-        setCallStats([          {
+        setCallStats([
+          {
             icon: <IoCallOutline className="text-blue-700 w-5 h-5" />,
             label: "All Calls",
             value: c.total_calls || 0,
@@ -119,8 +137,8 @@ export default function CallerReport() {
           },
           {
             icon: <FaHourglassHalf className="text-blue-700 w-5 h-5" />,
-            label: "Total Hours",
-            value: c.total_hours || "3.5h",
+            label: "Total Duration",
+            value: c.total_hours || "0h",
             bgColor: "bg-blue-50"
           },
           {
@@ -138,7 +156,7 @@ export default function CallerReport() {
       .then((data) => {
         setLeads(data.data || []);
       });
-  }, [caller_id, navigate, users]); // Added users to dependency array
+  }, [caller_id, navigate, users]);
 
   // Calculate lead stage counts based on current leads state
   const leadStageCounts = {
@@ -156,11 +174,11 @@ export default function CallerReport() {
   return (
     <div className="flex min-h-screen overflow-hidden bg-gradient-to-br from-blue-900 to-blue-300">
       <Sidebar user={user} />
-      <div className="flex-grow ml-64 mt-16 p-2 bg-gray-100"> {/* Increased top margin to 16 */}
-        <div className="flex justify-between items-center px-4 py-2 mt-4"> {/* Added top margin */}
-          <h1 className="text-xl font-bold text-gray-800">Leaderboard</h1> {/* Smaller text */}
-          <div className="flex items-center gap-2"> {/* Reduced gap */}
-            <div className="w-48"> {/* Made dropdown narrower */}
+      <div className="flex-grow ml-64 mt-16 p-2 bg-gray-100">
+        <div className="flex justify-between items-center px-4 py-2 mt-4">
+          <h1 className="text-xl font-bold text-gray-800">Leaderboard</h1>
+          <div className="flex items-center gap-2">
+            <div className="w-48">
               <Select
                 options={users}
                 value={selectedUser}
@@ -189,7 +207,8 @@ export default function CallerReport() {
           {/* Left: Leaderboard Card */}
           <div className="flex-1 max-w-2xl">
             <div className="bg-white rounded-xl shadow border border-gray-200 p-6 mb-4">
-              <div className="flex items-center justify-between mb-2">                <div className="font-semibold text-lg text-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold text-lg text-gray-700">
                   Leaderboard
                 </div>
                 <FaTrophy className="text-yellow-500" size={24} />
@@ -226,7 +245,7 @@ export default function CallerReport() {
                 </div>
               </div>
               {/* Stats */}
-                <div className="flex gap-8 items-center">
+              <div className="flex gap-8 items-center">
                 <div className="text-2xl font-semibold text-gray-700">
                   {callStats.find((s) => s.label === "All Calls")?.value ?? 0}
                   <div className="text-xs font-normal text-gray-500">
@@ -244,7 +263,7 @@ export default function CallerReport() {
           </div>
 
           {/* Right: Profile & Stats */}
-          <div className="flex-1 flex flex-col gap-2"> {/* Reduced gap */}
+          <div className="flex-1 flex flex-col gap-2">
             {/* Profile Card - More compact */}
             <div className="bg-white rounded-lg shadow border border-gray-200 p-3 flex items-center gap-3">
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-purple-200 flex items-center justify-center text-lg font-bold text-purple-700 uppercase">

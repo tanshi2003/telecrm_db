@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +24,7 @@ export default function CallReport() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [userOptions, setUserOptions] = useState([]);
   const navigate = useNavigate();
+
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (!storedUser) {
@@ -34,20 +35,23 @@ export default function CallReport() {
     setUser(storedUser);
   }, [navigate]);
 
+  // Fetch users for admin/manager
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
       const userRole = localStorage.getItem("role");
       const userId = JSON.parse(localStorage.getItem("user"))?.id;
 
-      // Only admin and managers can select users
       if (userRole !== 'admin' && userRole !== 'manager') {
         return;
       }
 
-      const endpoint = userRole === 'admin'
-        ? "http://localhost:5000/api/users"
-        : `http://localhost:5000/api/users/team/${userId}`;
+      let endpoint;
+      if (userRole === 'admin') {
+        endpoint = "http://localhost:5000/api/users";
+      } else if (userRole === 'manager') {
+        endpoint = `http://localhost:5000/api/managers/teams/${userId}`;
+      }
 
       const response = await fetch(endpoint, {
         headers: {
@@ -61,15 +65,22 @@ export default function CallReport() {
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
-        const options = data.data
+        // For manager, API might return { team_members: [...] }
+        const usersArray = data.data?.team_members || data.data;
+        const options = usersArray
           .filter(user => user.role?.toLowerCase() === 'caller')
           .map(user => ({
             value: { id: user.id, name: user.name },
             label: user.name
           }));
         setUserOptions(options);
+
+        // Show combined data for all callers under manager by default
+        if (userRole === "manager") {
+          setSelectedUser(null);
+        }
       }
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -80,9 +91,11 @@ export default function CallReport() {
     if (user) {
       fetchUsers();
     }
+    // eslint-disable-next-line
   }, [user]);
 
-  const fetchChartData = async () => {
+  // Fetch chart data
+  const fetchChartData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -90,33 +103,37 @@ export default function CallReport() {
       const userRole = localStorage.getItem("role");
       const userId = JSON.parse(localStorage.getItem("user"))?.id;
 
-      // For non-admin/manager roles, always use their own ID
-      const effectiveUserId = (userRole === 'caller' || userRole === 'field_employee')
-        ? userId
-        : selectedUser?.value;
+      let effectiveUserId = null;
+      if (userRole === 'caller' || userRole === 'field_employee') {
+        effectiveUserId = userId;
+      } else if (selectedUser) {
+        effectiveUserId = selectedUser.value.id;
+      }
+      // For managers: if no user selected, show team stats (omit userId in URL)
+      let url = `http://localhost:5000/api/calls/stats/${timeRange.value}`;
+      if (effectiveUserId) {
+        url += `/${effectiveUserId}`;
+      }
 
-      const response = await fetch(
-        `http://localhost:5000/api/calls/stats/${timeRange.value}${effectiveUserId ? `/${effectiveUserId}` : ''}`,
-        {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
+      const response = await fetch(url, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
         }
-      );
+      });
 
       if (!response.ok) {
         throw new Error('Failed to fetch call statistics');
       }
 
       const data = await response.json();
-      
+
       if (!data.success) {
         throw new Error(data.message || 'Failed to fetch data');
       }
 
       const responseData = Array.isArray(data.data) ? data.data : [];
-      
+
       const combinedData = responseData.map(item => ({
         label: `${item.status}/${item.disposition}`,
         count: item.count,
@@ -133,23 +150,23 @@ export default function CallReport() {
 
       setBarData(sortedData);
       setPieData(sortedData);
-      
+
     } catch (error) {
       console.error("Error fetching chart data:", error);
       setError(error.message);
     } finally {
       setIsLoading(false);
     }
-  };  // Memoize fetchChartData to prevent infinite loops
-  const memoizedFetchChartData = React.useCallback(fetchChartData, [timeRange, selectedUser]);
+  }, [timeRange, selectedUser]);
 
   useEffect(() => {
     if (user) {
-      memoizedFetchChartData();
+      fetchChartData();
     }
-  }, [user, memoizedFetchChartData]);
+  }, [user, fetchChartData]);
 
   if (!user) return null;
+
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -164,26 +181,6 @@ export default function CallReport() {
     return null;
   };
 
-  const renderUserFilter = () => {
-    if (user?.role === 'caller') return null;
-    
-    return (
-      <div className="mb-4">
-        <Select
-          value={selectedUser}
-          onChange={value => {
-            setSelectedUser(value);
-            fetchChartData();
-          }}
-          options={userOptions}
-          isClearable={user?.role === 'admin' || user?.role === 'manager'}
-          placeholder="Filter by user..."
-          className="w-64"
-        />
-      </div>
-    );
-  };
-
   return (
     <div className="flex min-h-screen overflow-hidden bg-gradient-to-br from-blue-900 to-blue-300">
       <Sidebar user={user} />
@@ -191,11 +188,25 @@ export default function CallReport() {
         <div className="flex justify-between items-center px-8 py-4">
           <h1 className="text-2xl font-bold text-gray-800">Calls Report</h1>
           <div className="flex items-center gap-4">
+            {/* User Filter Dropdown */}
+            {(user?.role !== 'caller' && user?.role !== 'field_employee') && (
+              <div className="w-64">
+                <Select
+                  value={selectedUser}
+                  onChange={value => setSelectedUser(value)}
+                  options={userOptions}
+                  isClearable={user?.role === 'admin' || user?.role === 'manager'}
+                  placeholder="Filter by user..."
+                  className="text-sm"
+                />
+              </div>
+            )}
+            {/* Time Range Dropdown */}
             <div className="w-48">
               <Select
                 options={timeRangeOptions}
                 value={timeRange}
-                onChange={setTimeRange}
+                onChange={option => setTimeRange(option)}
                 className="text-sm"
                 isSearchable={false}
                 theme={(theme) => ({
@@ -219,7 +230,7 @@ export default function CallReport() {
         ) : error ? (
           <div className="text-center p-4 text-red-600">
             <p>{error}</p>
-            <button 
+            <button
               onClick={fetchChartData}
               className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
@@ -238,9 +249,9 @@ export default function CallReport() {
                     margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                     barSize={30}
                   >
-                    <XAxis 
-                      dataKey="label" 
-                      angle={-45} 
+                    <XAxis
+                      dataKey="label"
+                      angle={-45}
                       textAnchor="end"
                       height={80}
                       stroke="#4B5563"
@@ -305,12 +316,12 @@ export default function CallReport() {
               <div className="bg-white rounded-xl shadow-md p-4">
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {pieData.map((entry, index) => (
-                    <div 
+                    <div
                       key={`${entry.status}-${entry.disposition}`}
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50"
                     >
-                      <div 
-                        className="w-3 h-3 rounded-full" 
+                      <div
+                        className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: COLORS[index % COLORS.length] }}
                       />
                       <div>
