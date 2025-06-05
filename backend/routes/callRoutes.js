@@ -13,7 +13,7 @@ const Activity = require('../models/Activity');
 router.use(authenticateToken);
 
 // Get call statistics
-router.get('/stats/:timeRange', checkRole(['admin']), async (req, res) => {
+router.get('/stats/:timeRange', checkRole(['admin', 'manager']), async (req, res) => {
     try {
         const { timeRange } = req.params;
         let startDate = new Date();
