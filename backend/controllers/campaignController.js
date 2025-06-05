@@ -474,12 +474,19 @@ const campaignController = {
                 return res.status(404).json(responseFormatter(false, "Campaign not found"));
             }
 
-            // Remove all current assignments for this campaign
-            await db.promise().query("DELETE FROM campaign_users WHERE campaign_id = ?", [id]);
+            // Get existing assignments
+            const [existingAssignments] = await db.promise().query(
+                "SELECT user_id FROM campaign_users WHERE campaign_id = ?",
+                [id]
+            );
+            const existingUserIds = existingAssignments.map(assignment => assignment.user_id);
 
-            // Insert new user assignments
-            const values = user_ids.map(userId => [id, userId]);
-            if (values.length > 0) {
+            // Filter out users that are already assigned
+            const newUserIds = user_ids.filter(userId => !existingUserIds.includes(userId));
+
+            // Insert only new user assignments
+            if (newUserIds.length > 0) {
+                const values = newUserIds.map(userId => [id, userId]);
                 await db.promise().query(
                     "INSERT INTO campaign_users (campaign_id, user_id) VALUES ?",
                     [values]
@@ -491,7 +498,7 @@ const campaignController = {
                 req.user.id,
                 req.user.role,
                 'campaign_user',
-                `Assigned ${user_ids.length} users to campaign #${id}`,
+                `Assigned ${newUserIds.length} new users to campaign #${id}`,
                 'campaign',
                 id,
                 null

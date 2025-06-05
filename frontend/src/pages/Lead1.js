@@ -63,21 +63,44 @@ const Lead1 = () => {
       if (!token || !storedUser) return;
       try {
         if (role === "admin") {
-          // Admin: fetch all callers for assignment
+          // Admin: fetch all callers and field employees for assignment
           const usersRes = await axios.get("http://localhost:5000/api/users", {
             headers: { Authorization: `Bearer ${token}` },
           });
-          setUsers(usersRes.data?.data?.filter(u => u.role === "caller") || []);
+          const eligibleUsers = usersRes.data?.data?.filter(
+            u => u.role === "caller" || u.role === "field_employee"
+          ) || [];
+          
+          // Sort users: callers first, then field employees
+          const sortedUsers = [
+            ...eligibleUsers.filter(user => user.role === 'caller'),
+            ...eligibleUsers.filter(user => user.role === 'field_employee')
+          ];
+          
+          setUsers(sortedUsers);
+          
           // Admin: fetch all campaigns
           const campRes = await axios.get("http://localhost:5000/api/campaigns", {
             headers: { Authorization: `Bearer ${token}` },
           });
           setCampaigns(campRes.data?.data || []);
-        } else if (role === "manager") {          // Manager: fetch only users assigned to this manager
+        } else if (role === "manager") {
+          // Manager: fetch only users assigned to this manager
           const usersRes = await axios.get(`http://localhost:5000/api/managers/${storedUser.id}/users`, {
             headers: { Authorization: `Bearer ${token}` },
           });
-          setUsers(usersRes.data?.data || []);
+          
+          // Filter and sort users: callers first, then field employees
+          const eligibleUsers = usersRes.data?.data?.filter(
+            u => u.role === "caller" || u.role === "field_employee"
+          ) || [];
+          
+          const sortedUsers = [
+            ...eligibleUsers.filter(user => user.role === 'caller'),
+            ...eligibleUsers.filter(user => user.role === 'field_employee')
+          ];
+          
+          setUsers(sortedUsers);
           
           // Manager: fetch only campaigns where they are the manager
           const campRes = await axios.get(`http://localhost:5000/api/campaigns/manager/${storedUser.id}`, {
@@ -107,9 +130,18 @@ const Lead1 = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if(response.data?.data){
-        // Filter only callers from the users list
-        const callers = response.data.data.filter(user => user.role === 'caller');
-        setUsers(callers);
+        // Filter callers and field employees, then sort them
+        const eligibleUsers = response.data.data.filter(
+          user => user.role === 'caller' || user.role === 'field_employee'
+        );
+        
+        // Sort users: callers first, then field employees
+        const sortedUsers = [
+          ...eligibleUsers.filter(user => user.role === 'caller'),
+          ...eligibleUsers.filter(user => user.role === 'field_employee')
+        ];
+        
+        setUsers(sortedUsers);
       }
     } catch (error) {
       console.error("Error fetching users:", error.response?.data || error.message);
@@ -336,11 +368,26 @@ const Lead1 = () => {
                 className="w-full p-2 rounded border shadow bg-white"
               >
                 <option value="">Select User</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name}
-                  </option>
-                ))}
+                {/* Callers Section */}
+                <optgroup label="Callers">
+                  {users
+                    .filter(user => user.role === 'caller')
+                    .map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                </optgroup>
+                {/* Field Employees Section */}
+                <optgroup label="Field Employees">
+                  {users
+                    .filter(user => user.role === 'field_employee')
+                    .map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                </optgroup>
               </select>
             ) : (
               <p className="p-2 border rounded bg-gray-100">N/A</p>

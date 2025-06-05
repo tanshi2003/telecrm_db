@@ -585,7 +585,7 @@ const CampaignManagement = () => {
                   <div className="flex gap-2 mt-auto pt-2 border-t">
                     <button
                       onClick={() => setSelectedCampaign(campaign.id)}
-                      className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                      className="flex-1 px-3 py-1.5 bg-blue-400 text-white text-sm rounded hover:bg-blue-500 transition-colors flex items-center justify-center gap-1"
                     >
                       <Users size={14} />
                       Assign Team
@@ -596,14 +596,14 @@ const CampaignManagement = () => {
                         fetchAvailableLeads();
                         setSelectedLeads([]);
                       }}
-                      className="flex-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors flex items-center justify-center gap-1"
+                      className="flex-1 px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors flex items-center justify-center gap-1"
                     >
                       <Target size={14} />
                       Assign Lead
                     </button>
                     <button
                       onClick={() => setViewCampaign(campaign)}
-                      className="flex-1 px-3 py-1.5 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors flex items-center justify-center gap-1"
+                      className="flex-1 px-3 py-1.5 bg-blue-700 text-white text-sm rounded hover:bg-blue-800 transition-colors flex items-center justify-center gap-1"
                     >
                       <BarChart2 size={14} />
                       View Details

@@ -399,33 +399,6 @@ const Updatelead = () => {
                   </div>
                   {/* ...rest of your actions/history... */}
                   <div className="grid grid-cols-5 gap-4 text-center text-sm text-gray-600 mb-4">
-                    <div className="flex flex-col items-center">
-                      <FaPhone className="text-xl mb-1" />
-                      Call
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <FaPhone className="text-xl mb-1" />
-                      Call Later
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <FaEnvelope className="text-xl mb-1" />
-                      Email
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <FaSms className="text-xl mb-1" />
-                      SMS
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <FaStickyNote className="text-xl mb-1" />
-                      Add Note
-                    </div>
-                  </div>
-                  <div className="mt-6 border-t pt-4">
-                    <h3 className="font-semibold text-gray-700 mb-2">History</h3>
-                    <div className="text-sm text-gray-500 space-y-1">
-                      <p>📄 Lead source: - Excel vivek anad-global-tech...</p>
-                      <p>📄 Lead source: - Excel bv-students (23-02-2025)</p>
-                    </div>
                   </div>
                 </div>
               )
