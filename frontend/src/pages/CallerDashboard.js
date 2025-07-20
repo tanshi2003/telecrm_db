@@ -55,8 +55,12 @@ const CallerDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredLeads, setFilteredLeads] = useState([]);
   const [showCallbook, setShowCallbook] = useState(false);
+  // Add missing states for callStatus and callDuration
+  // eslint-disable-next-line
   const [callStatus, setCallStatus] = useState('idle');
+  // eslint-disable-next-line
   const [callDuration, setCallDuration] = useState(0);
+  // ...existing code...
 
   // Add pagination state
   const [displayCount, setDisplayCount] = useState(5);  // Show 5 leads initially
@@ -124,7 +128,7 @@ const CallerDashboard = () => {
       console.error("Error fetching leads:", err);
       setUpdateMessage("Error loading leads");
     }
-  }, [user]); // Add user as dependency
+  }, [user, navigate]); // Add user and navigate as dependencies
 
   // Update useEffect to use fetchData
   useEffect(() => {
@@ -646,11 +650,7 @@ const CallerDashboard = () => {
     setCallDuration(0);
   };
 
-  const formatDuration = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  // ...existing code...
   // Update socket connection useEffect
   useEffect(() => {
     const token = localStorage.getItem("token");

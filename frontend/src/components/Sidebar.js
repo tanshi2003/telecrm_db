@@ -5,7 +5,6 @@ import {
   PlusCircle,
   FileText,
   Activity,
-  Filter,
   BarChart2,
   Menu,
   ChevronLeft,

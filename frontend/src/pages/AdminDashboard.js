@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
-import { FaUsers, FaBullhorn, FaClipboardList, FaChartLine } from "react-icons/fa"; // added icons
+import { FaUsers, FaBullhorn, FaClipboardList } from "react-icons/fa"; // added icons
 
 const AdminDashboard = () => {
   const [user, setUser] = useState(null);

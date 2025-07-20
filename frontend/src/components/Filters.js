@@ -32,7 +32,6 @@ const Filters = ({ type = "users", onApply, onReset, removeWorkingHours }) => {
   const [manager, setManager] = useState("");
   const [performance, setPerformance] = useState("");
   const [workingHours, setWorkingHours] = useState({ min: "", max: "" });
-
   // Campaigns
   const [campStatus, setCampStatus] = useState("");
   const [priority, setPriority] = useState("");
@@ -40,7 +39,6 @@ const Filters = ({ type = "users", onApply, onReset, removeWorkingHours }) => {
   const [usersAssigned, setUsersAssigned] = useState("");
   const [leadCount, setLeadCount] = useState({ min: "", max: "" });
   const [admins, setAdmins] = useState([]);
-  const [managers, setManagers] = useState([]);
 
   // Fetch users/campaigns/admins as needed
   useEffect(() => {
@@ -55,12 +53,6 @@ const Filters = ({ type = "users", onApply, onReset, removeWorkingHours }) => {
         .then(res => setCampaigns(res.data?.data || []))
         .catch(() => {});
     }
-    if (type === "users") {
-      // Managers for manager dropdown
-      axios.get("http://localhost:5000/api/users?role=Manager", { headers: { Authorization: `Bearer ${token}` } })
-        .then(res => setManagers(res.data?.data || []))
-        .catch(() => {});
-    }
     if (type === "campaigns") {
       // Admins for createdBy dropdown
       axios.get("http://localhost:5000/api/users?role=Admin", { headers: { Authorization: `Bearer ${token}` } })
@@ -68,23 +60,6 @@ const Filters = ({ type = "users", onApply, onReset, removeWorkingHours }) => {
         .catch(() => {});
     }
   }, [type]);
-
-  // Fetch managers data
-  useEffect(() => {
-    const fetchManagers = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/managers');
-        const data = await response.json();
-        if (data.success) {
-          setManagers(data.data);
-        }
-      } catch (error) {
-        console.error('Error fetching managers:', error);
-      }
-    };
-
-    fetchManagers();
-  }, []);
 
   // Reset all fields
   const handleReset = () => {
