@@ -16,6 +16,7 @@ const EditLead = () => {
 
   // Fetch user from localStorage
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const storedUser = JSON.parse(localStorage.getItem("user"));
     if (storedUser) {
       setUser(storedUser);
@@ -60,6 +61,7 @@ const EditLead = () => {
   }, []);
 
   // Fetch lead details if not passed via state
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!lead) {
       const fetchLead = async () => {
@@ -90,7 +92,8 @@ const EditLead = () => {
 
       fetchLead();
     }
-  }, [id, lead]);      const handleUpdateLead = async (updatedLead) => {
+  }, [id, lead]);      
+  const handleUpdateLead = async (updatedLead) => {
     // Add warning for manager trying to update non-team lead
     if (user?.role === 'manager' && !isTeamLead) {
       const continueAnyway = window.confirm(

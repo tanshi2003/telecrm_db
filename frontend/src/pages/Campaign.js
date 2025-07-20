@@ -5,7 +5,7 @@ import axios from "axios";
 
 const Campaign = () => {
   const [user, setUser] = useState(null);
-  const [filters, setFilters] = useState({
+  const [filters] = useState({
     status: "",
     priority: "",
     dateRange: { start: "", end: "" },
@@ -65,20 +65,7 @@ const Campaign = () => {
     }
   };
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    if (name === "dateRange.start" || name === "dateRange.end") {
-      setFilters((prev) => ({
-        ...prev,
-        dateRange: {
-          ...prev.dateRange,
-          [name.split(".")[1]]: value,
-        },
-      }));
-    } else {
-      setFilters((prev) => ({ ...prev, [name]: value }));
-    }
-  };
+  // ...existing code...
 
   const filteredCampaigns = campaigns.filter((campaign) => {
     const matchesStatus = filters.status ? campaign.status === filters.status : true;

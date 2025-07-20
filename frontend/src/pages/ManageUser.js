@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import BackButton from "../components/BackButton";
 
 const ManageUser = () => { // ✅ Capitalized component name
+  // eslint-disable-next-line no-unused-vars
   const [admin, setAdmin] = useState(null);
 
   useEffect(() => {

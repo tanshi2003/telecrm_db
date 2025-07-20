@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api',
+    baseURL: `${process.env.REACT_APP_API_BASE_URL}/api`,
     headers: {
         'Content-Type': 'application/json'
     }
@@ -26,7 +26,6 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // Handle unauthorized access
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = '/login';
@@ -35,4 +34,4 @@ api.interceptors.response.use(
     }
 );
 
-export default api; 
+export default api;

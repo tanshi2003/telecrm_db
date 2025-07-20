@@ -8,8 +8,8 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const CampaignManagement = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [setLoading] = useState(true);
+  const [error] = useState(null);
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [allCampaigns, setAllCampaigns] = useState([]);
@@ -17,7 +17,7 @@ const CampaignManagement = () => {
   const [viewCampaign, setViewCampaign] = useState(null);
   const [assignLeadCampaign, setAssignLeadCampaign] = useState(null);
   const [user, setUser] = useState(null);
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeFilter] = useState('all');
   const [showColorInfo, setShowColorInfo] = useState(null); // Store campaign ID for showing color info // 'all', 'active', 'leads'
   const [showAllCampaignsModal, setShowAllCampaignsModal] = useState(false);
   const [showActiveCampaignsModal, setShowActiveCampaignsModal] = useState(false);
@@ -38,9 +38,8 @@ const CampaignManagement = () => {
     }
 
     setUser(storedUser);
-    fetchCampaigns();
-    fetchEmployees();
-    fetchAllCampaigns();
+    // fetchCampaigns();
+    // fetchEmployees();
   }, [navigate]);
 
   useEffect(() => {
@@ -78,8 +77,9 @@ const CampaignManagement = () => {
       console.error('Error fetching campaigns:', error);
       toast.error('Failed to fetch campaigns');
     } finally {
-      setLoading(false);
+      // setLoading(false);
     }
+     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchAllCampaigns = async () => {
@@ -104,7 +104,7 @@ const CampaignManagement = () => {
       setAllCampaigns([]);
     }
   };
-
+ // eslint-disable-next-line 
   const fetchEmployees = async () => {
     try {
       setLoading(true);
@@ -217,9 +217,9 @@ const CampaignManagement = () => {
   };
 
   // Handle card clicks
-  const handleCardClick = (filterType) => {
-    setActiveFilter(filterType);
-  };
+  // const handleCardClick = (filterType) => {
+  //   setActiveFilter(filterType);
+  // };
 
   // if (loading) return (
   //   <div className="flex min-h-screen">

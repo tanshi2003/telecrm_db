@@ -43,13 +43,13 @@ const ManagerUserManagement = () => {
     }
   };
 
-  const handleLeadAssignment = async (userId) => {
-    try {
-      navigate("/lead-assignment", { state: { selectedUserId: userId } });
-    } catch (err) {
-      toast.error("Failed to navigate to lead assignment");
-    }
-  };
+  // const handleLeadAssignment = async (userId) => {
+  //   try {
+  //     navigate("/lead-assignment", { state: { selectedUserId: userId } });
+  //   } catch (err) {
+  //     toast.error("Failed to navigate to lead assignment");
+  //   }
+  // };
 
   const handleUserClick = async (user) => {
     try {
