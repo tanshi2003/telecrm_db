@@ -5,6 +5,7 @@ dotenv.config();
 
 const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306, 
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'telecrm_db',
@@ -12,7 +13,7 @@ const db = mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0,
     enableKeepAlive: true,
-    keepAliveInitialDelay: 0,
+    keepAliveInitialDelay: 10000,
     connectTimeout: 60000
 });
 
@@ -40,4 +41,3 @@ db.on('error', (err) => {
 });
 
 module.exports = db;
-
