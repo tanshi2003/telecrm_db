@@ -1,10 +1,10 @@
+import api from '../config/api';
 import React, { useEffect, useState, useCallback } from "react";
 import Sidebar from "../components/Sidebar";
 import BackButton from "../components/BackButton";
 import { Users, Phone, Mail, MapPin, Calendar, Activity, Briefcase, Clock } from "lucide-react";
 import { getTeams } from "../services/managerService";
 import toast from "react-hot-toast";
-import axios from "axios";
 
 const TeamView = () => {
   const [loading, setLoading] = useState(true);
@@ -57,7 +57,7 @@ const TeamView = () => {
   const handleUserClick = async (member) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/leads/user/${member.id}/lead-counts`, {
+      const response = await api.get(`/api/leads/user/${member.id}/lead-counts`, {
         headers: {
           Authorization: `Bearer ${token}`
         }

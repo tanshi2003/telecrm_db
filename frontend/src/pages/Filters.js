@@ -17,9 +17,9 @@ const AdminFiltersPage = () => {
     setResults([]);
     const token = localStorage.getItem("token");
     let url = "";
-    if (type === "leads") url = "http://localhost:5000/api/leads/filter";
-    else if (type === "users") url = "http://localhost:5000/api/users/filter";
-    else if (type === "campaigns") url = "http://localhost:5000/api/campaigns/filter";
+    if (type === "leads") url = `${process.env.REACT_APP_API_BASE_URL}/api/leads/filter`;
+    else if (type === "users") url = `${process.env.REACT_APP_API_BASE_URL}/api/users/filter`;
+    else if (type === "campaigns") url = `${process.env.REACT_APP_API_BASE_URL}/api/campaigns/filter`;
     try {
       const res = await axios.post(url, filters, {
         headers: { Authorization: `Bearer ${token}` },

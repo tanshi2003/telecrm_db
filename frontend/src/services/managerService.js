@@ -47,7 +47,7 @@ export const getCampaignPerformance = async (managerId) => {
     try {
         const token = localStorage.getItem('token');
         const response = await fetch(
-            `http://localhost:5000/api/campaigns`,
+            `${process.env.REACT_APP_API_BASE_URL}/api/campaigns`,
             {
                 headers: { 
                     Authorization: `Bearer ${token}`,

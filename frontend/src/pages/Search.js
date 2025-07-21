@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import api from '../config/api';
 import axios from "axios";
 import Sidebar from "../components/Sidebar"; // Import Sidebar
 import { FaUser } from "react-icons/fa"; // Import icons
@@ -18,7 +19,7 @@ const SearchPage = () => {
   const fetchLeadsForUser = async (userId) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(`http://localhost:5000/api/users/${userId}/leads`, {
+      const response = await api.get(`/api/users/${userId}/leads`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setFilteredLeads(response.data.data); // Set the leads data
@@ -32,7 +33,7 @@ const SearchPage = () => {
   const fetchCampaignsForUser = async (userId) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(`http://localhost:5000/api/users/${userId}/campaigns`, {
+      const response = await api.get(`/api/users/${userId}/campaigns`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setFilteredCampaigns(response.data.data); // Set the campaigns data
@@ -48,13 +49,13 @@ const SearchPage = () => {
       const token = localStorage.getItem("token");
 
       // Fetch total leads count
-      const leadsResponse = await axios.get(`http://localhost:5000/api/users/${userId}/leads`, {
+      const leadsResponse = await api.get(`/api/users/${userId}/leads`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const totalLeads = leadsResponse.data.data.length;
 
       // Fetch total campaigns count
-      const campaignsResponse = await axios.get(`http://localhost:5000/api/users/${userId}/campaigns`, {
+      const campaignsResponse = await api.get(`/api/users/${userId}/campaigns`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const totalCampaigns = campaignsResponse.data.data.length;
@@ -82,7 +83,7 @@ const SearchPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        `http://localhost:5000/api/search?query=${searchQuery}&category=${searchCategory}`,
+         `${process.env.REACT_APP_API_BASE_URL}/api/search?query=${searchQuery}&category=${searchCategory}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

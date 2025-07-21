@@ -32,7 +32,7 @@ const Campaign = () => {
   const fetchCampaigns = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/campaigns", {
+      const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/campaigns`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -55,7 +55,7 @@ const Campaign = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/api/campaigns/${id}`, {
+      await axios.delete(`${process.env.REACT_APP_API_BASE_URL}/api/campaigns/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCampaigns((prev) => prev.filter((c) => c.id !== id));

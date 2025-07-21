@@ -21,23 +21,23 @@ const EditUser = () => {
         const headers = { Authorization: `Bearer ${token}` };
 
         // Fetch user details
-        const userResponse = await axios.get(`http://localhost:5000/api/users/${id}`, { headers });
+        const userResponse = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/users/${id}`, { headers });
         setUser(userResponse.data.data);
 
         // Fetch all leads
-        const leadsResponse = await axios.get('http://localhost:5000/api/leads', { headers });
+        const leadsResponse = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/leads`, { headers });
         setLeads(leadsResponse.data.data || []);
 
         // Fetch all campaigns
-        const campaignsResponse = await axios.get('http://localhost:5000/api/campaigns', { headers });
+        const campaignsResponse = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/campaigns`, { headers });
         setCampaigns(campaignsResponse.data.data || []);
 
         // Fetch user's assigned leads
-        const userLeadsResponse = await axios.get(`http://localhost:5000/api/users/${id}/leads`, { headers });
+        const userLeadsResponse = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/users/${id}/leads`, { headers });
         setSelectedLeads(userLeadsResponse.data.data || []);
 
         // Fetch user's assigned campaigns
-        const userCampaignsResponse = await axios.get(`http://localhost:5000/api/users/${id}/campaigns`, { headers });
+        const userCampaignsResponse = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/users/${id}/campaigns`, { headers });
         setSelectedCampaigns(userCampaignsResponse.data.data || []);
 
         setLoading(false);
@@ -75,7 +75,7 @@ const EditUser = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `http://localhost:5000/api/users/${id}`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/users/${id}`,
         {
           ...user,
           assigned_leads: selectedLeads,

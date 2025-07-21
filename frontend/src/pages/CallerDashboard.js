@@ -9,7 +9,7 @@ import { AuthContext } from '../context/AuthContext';
 import 'react-toastify/dist/ReactToastify.css';
 
 // Add base URL constant
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 // Update LEAD_STATUSES to match exactly with backend VALID_STATUSES
 const LEAD_STATUSES = [

@@ -1,26 +1,20 @@
+import api from '../config/api';
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 
 const Leads = () => {
   const [user, setUser] = useState(null);
   const [leads, setLeads] = useState([]);
   const [users, setUsers] = useState([]); 
-  const [filters, setFilters] = useState({
-    status: "",
-    category: "",
-    assignedTo: "",
-    campaign: "",
-    dateRange: { start: "", end: "" },
-  });
+  // Removed unused filters and setFilters state
   const navigate = useNavigate();
   
   // Define fetchLeadsAndUsers before using it
-  const fetchLeadsAndUsers = async () => {
+  const fetchLeadsAndUsers = React.useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/leads", {
+      const response = await api.get("/api/leads", {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -34,7 +28,7 @@ const Leads = () => {
       }
 
       // Fetch users
-      const usersResponse = await axios.get("http://localhost:5000/api/users", {
+      const usersResponse = await api.get("/api/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(usersResponse.data.data || []);
@@ -44,7 +38,7 @@ const Leads = () => {
         navigate("/login");
       }
     }
-  };
+  }, [navigate]);
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
@@ -58,7 +52,7 @@ const Leads = () => {
 
     setUser(storedUser);
     fetchLeadsAndUsers();
-  }, [navigate]);
+  }, [navigate, fetchLeadsAndUsers]);
 
   // Map assigned_to ID to user name using the fetched users
   const getAssignedUserName = (userId) => {
@@ -66,21 +60,7 @@ const Leads = () => {
     return foundUser ? foundUser.name : "N/A";
   };
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    if (name.includes("dateRange")) {
-      const [key] = name.split(".");
-      setFilters((prev) => ({
-        ...prev,
-        dateRange: {
-          ...prev.dateRange,
-          [key]: value,
-        },
-      }));
-    } else {
-      setFilters((prev) => ({ ...prev, [name]: value }));
-    }
-  };
+  // Removed unused handleFilterChange
 
   // Delete lead from frontend and database
   const handleDeleteLead = async (id) => {
@@ -88,7 +68,7 @@ const Leads = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/api/leads/${id}`, {
+      await api.delete(`/api/leads/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -100,16 +80,8 @@ const Leads = () => {
     }
   };
 
-  const filteredLeads = leads.filter((lead) => {
-    return (
-      (!filters.status || lead.status === filters.status) &&
-      (!filters.category || lead.lead_category === filters.category) &&
-      (!filters.assignedTo || lead.assigned_to === filters.assignedTo) &&
-      (!filters.campaign || lead.campaign_id === filters.campaign) &&
-      (!filters.dateRange.start || new Date(lead.created_at) >= new Date(filters.dateRange.start)) &&
-      (!filters.dateRange.end || new Date(lead.created_at) <= new Date(filters.dateRange.end))
-    );
-  });
+  // No filters, so show all leads
+  const filteredLeads = leads;
 
   return (
     <div className="flex min-h-screen overflow-hidden">

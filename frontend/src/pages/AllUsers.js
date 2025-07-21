@@ -57,7 +57,7 @@ const AllUsers = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/users", {
+      const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/users`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -81,11 +81,11 @@ const AllUsers = () => {
       const headers = { Authorization: `Bearer ${token}` };
 
       // Fetch all leads
-      const leadsResponse = await axios.get('http://localhost:5000/api/leads', { headers });
+      const leadsResponse = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/leads`, { headers });
       setLeads(leadsResponse.data.data || []);
 
       // Fetch all campaigns
-      const campaignsResponse = await axios.get('http://localhost:5000/api/campaigns', { headers });
+      const campaignsResponse = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/campaigns`, { headers });
       setCampaigns(campaignsResponse.data.data || []);
     } catch (error) {
       console.error("Error fetching leads and campaigns:", error);
@@ -102,11 +102,11 @@ const AllUsers = () => {
       if (!user) return;
 
       // Fetch user's assigned leads
-      const userLeadsResponse = await axios.get(`http://localhost:5000/api/users/${id}/leads`, { headers });
+      const userLeadsResponse = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/users/${id}/leads`, { headers });
       const assignedLeads = userLeadsResponse.data.data || [];
 
       // Fetch user's assigned campaigns
-      const userCampaignsResponse = await axios.get(`http://localhost:5000/api/users/${id}/campaigns`, { headers });
+      const userCampaignsResponse = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/users/${id}/campaigns`, { headers });
       const assignedCampaigns = userCampaignsResponse.data.data || [];
 
       setFormData({
@@ -141,7 +141,7 @@ const AllUsers = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `http://localhost:5000/api/users/${editId}`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/users/${editId}`,
         {
           ...formData,
           assigned_leads: formData.assigned_leads,
@@ -166,7 +166,7 @@ const AllUsers = () => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/api/users/${id}`, {
+      await axios.delete(`${process.env.REACT_APP_API_BASE_URL}/api/users/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

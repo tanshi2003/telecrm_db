@@ -1,3 +1,4 @@
+import api from '../config/api';
 import React, { useEffect, useState } from "react";
 import Select from "react-select";
 import { toast } from "react-hot-toast";
@@ -28,7 +29,7 @@ const ManageStatus = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/users", {
+      const response = await api.get("/api/users", {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -59,7 +60,7 @@ const ManageStatus = () => {
       const token = localStorage.getItem("token");
       const userId = selectedUser;
       const response = await axios.put(
-        `http://localhost:5000/api/users/${userId}/status`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/users/${userId}/status`,
         {
           status: bulkStatus.value
         },

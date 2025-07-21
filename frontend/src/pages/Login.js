@@ -27,8 +27,8 @@ function Login() {
       // Determine API endpoint based on role
       const apiEndpoint =
         role === "admin"
-          ? "http://localhost:5000/api/admins/login"
-          : "http://localhost:5000/api/users/login";
+           ? `${process.env.REACT_APP_API_BASE_URL}/api/admins/login`
+           : `${process.env.REACT_APP_API_BASE_URL}/api/users/login`;
 
       // Make API request
       const res = await axios.post(apiEndpoint, { email, password });

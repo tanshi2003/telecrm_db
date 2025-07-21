@@ -1,3 +1,4 @@
+import api from '../config/api';
 import React, { useEffect, useState, useContext, useRef } from "react";
 import axios from "axios";
 import Navbar from "../components/Navbar";
@@ -19,7 +20,7 @@ const UpdateCampaign = () => {
     const fetchCampaigns = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:5000/api/campaigns", {
+        const response = await api.get("/api/campaigns", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data) {
@@ -45,7 +46,7 @@ const UpdateCampaign = () => {
     if (!window.confirm("Are you sure you want to delete this campaign?")) return;
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/api/campaigns/${campaignId}`, {
+      await api.delete(`/api/campaigns/${campaignId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const updatedCampaigns = campaigns.filter((campaign) => campaign.id !== campaignId);
@@ -80,7 +81,7 @@ const UpdateCampaign = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `http://localhost:5000/api/campaigns/${editForm.id}`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/campaigns/${editForm.id}`,
         editForm,
         { headers: { Authorization: `Bearer ${token}` } }
       );

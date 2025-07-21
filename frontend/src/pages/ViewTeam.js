@@ -12,11 +12,7 @@ const ViewTeam = () => {
   const [error, setError] = useState(null);
   const [team, setTeam] = useState(null);
 
-  useEffect(() => {
-    fetchTeamData();
-  }, [fetchTeamData, id]);
-
-  const fetchTeamData = async () => {
+  const fetchTeamData = React.useCallback(async () => {
     try {
       setLoading(true);
       const response = await getTeamById(id);
@@ -27,7 +23,11 @@ const ViewTeam = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchTeamData();
+  }, [fetchTeamData]);
 
   if (loading) {
     return (

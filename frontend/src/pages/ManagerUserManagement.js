@@ -1,3 +1,4 @@
+import api from '../config/api';
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from 'react-router-dom';
@@ -5,7 +6,6 @@ import BackButton from "../components/BackButton";
 import { Users, UserCheck } from "lucide-react";
 import { getUsers, updateUserStatus } from "../services/managerService";
 import toast from "react-hot-toast";
-import axios from "axios";
 
 const ManagerUserManagement = () => {
   const [teamMembers, setTeamMembers] = useState([]);
@@ -54,7 +54,7 @@ const ManagerUserManagement = () => {
   const handleUserClick = async (user) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/leads/user/${user.id}/lead-counts`, {
+      const response = await api.get(`/api/leads/user/${user.id}/lead-counts`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

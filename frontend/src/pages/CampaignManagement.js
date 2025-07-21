@@ -58,7 +58,7 @@ const CampaignManagement = () => {
       }
 
       const response = await axios.get(
-        `http://localhost:5000/api/campaigns/manager/${user.id}`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/campaigns/manager/${user.id}`,
         { 
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -87,7 +87,7 @@ const CampaignManagement = () => {
       const token = localStorage.getItem('token');
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const response = await axios.get(
-        `http://localhost:5000/api/campaigns/manager/${storedUser.id}`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/campaigns/manager/${storedUser.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (response.data.success && Array.isArray(response.data.data)) {
@@ -119,7 +119,7 @@ const CampaignManagement = () => {
       const managerId = storedUser.id.toString().trim();
 
       const response = await axios.get(
-        `http://localhost:5000/api/managers/teams/${managerId}`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/managers/teams/${managerId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -141,7 +141,7 @@ const CampaignManagement = () => {
       const userIdsArray = Array.isArray(userIds) ? userIds : [userIds];
 
       const response = await axios.post(
-        `http://localhost:5000/api/campaigns/${campaignId}/assign-users`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/campaigns/${campaignId}/assign-users`,
         { user_ids: userIdsArray },
         { 
           headers: { 
@@ -175,7 +175,7 @@ const CampaignManagement = () => {
       const token = localStorage.getItem('token');
       
       const response = await axios.post(
-        'http://localhost:5000/api/campaigns/unassign',
+        `${process.env.REACT_APP_API_BASE_URL}/api/campaigns/unassign`,
         {
           campaign_id: campaignId,
           user_id: userId
@@ -258,7 +258,7 @@ const CampaignManagement = () => {
       const token = localStorage.getItem('token');
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const response = await axios.get(
-        `http://localhost:5000/api/leads?role=manager`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/leads?role=manager`,
         { 
           headers: { 
             'Authorization': `Bearer ${token}`,
@@ -291,7 +291,7 @@ const CampaignManagement = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        `http://localhost:5000/api/leads/assign-campaign`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/leads/assign-campaign`,
         { 
           campaignId: assignLeadCampaign,
           leadId: selectedLeads[0] // If multiple leads, we'll need to make multiple requests
@@ -309,7 +309,7 @@ const CampaignManagement = () => {
         if (selectedLeads.length > 1) {
           for (let i = 1; i < selectedLeads.length; i++) {
             await axios.post(
-              `http://localhost:5000/api/leads/assign-campaign`,
+              `${process.env.REACT_APP_API_BASE_URL}/api/leads/assign-campaign`,
               { 
                 campaignId: assignLeadCampaign,
                 leadId: selectedLeads[i]

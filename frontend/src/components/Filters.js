@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from '../config/api';
 
 const defaultLeadStatuses = [
   "New", "Contacted", "Follow-Up Scheduled", "Interested", "Not Interested", "Call Back Later", "Under Review", "Converted", "Lost", "Not Reachable", "On Hold"
@@ -44,18 +44,18 @@ const Filters = ({ type = "users", onApply, onReset, removeWorkingHours }) => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (type === "leads" || type === "users" || type === "campaigns") {
-      axios.get("http://localhost:5000/api/users", { headers: { Authorization: `Bearer ${token}` } })
+      api.get("/api/users", { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setUsers(res.data?.data || []))
         .catch(() => {});
     }
     if (type === "leads" || type === "campaigns") {
-      axios.get("http://localhost:5000/api/campaigns", { headers: { Authorization: `Bearer ${token}` } })
+      api.get("/api/campaigns", { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setCampaigns(res.data?.data || []))
         .catch(() => {});
     }
     if (type === "campaigns") {
       // Admins for createdBy dropdown
-      axios.get("http://localhost:5000/api/users?role=Admin", { headers: { Authorization: `Bearer ${token}` } })
+      api.get("/api/users?role=Admin", { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setAdmins(res.data?.data || []))
         .catch(() => {});
     }

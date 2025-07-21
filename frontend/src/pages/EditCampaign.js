@@ -23,7 +23,7 @@ const EditCampaign = () => {
     const fetchCampaigns = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:5000/api/campaigns", {
+        const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/campaigns`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data) {
@@ -79,7 +79,7 @@ const EditCampaign = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.put(
-        `http://localhost:5000/api/campaigns/${editForm.id}`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/campaigns/${editForm.id}`,
         editForm,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -113,7 +113,7 @@ const EditCampaign = () => {
     if (!window.confirm("Are you sure you want to delete this campaign?")) return;
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/api/campaigns/${campaignId}`, {
+      await axios.delete(`${process.env.REACT_APP_API_BASE_URL}/api/campaigns/${campaignId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const updatedCampaigns = campaigns.filter((campaign) => campaign.id !== campaignId);

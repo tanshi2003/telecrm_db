@@ -7,7 +7,7 @@ import Sidebar from "../components/Sidebar";
 import io from 'socket.io-client';  
 
 // Add base URL constant
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 // Update LEAD_STATUSES to match exactly with backend VALID_STATUSES
 const LEAD_STATUSES = [
@@ -258,12 +258,11 @@ const FieldDashboard = () => {
     const [displayCount, setDisplayCount] = useState(5);
     const [showingAll, setShowingAll] = useState(false);
 
-    const fetchCampaignLeads = async (campaignId) => {
+    const fetchCampaignLeads = React.useCallback(async (campaignId) => {
       if (!campaignId) {
         toast.error("Campaign ID is missing");
         return;
       }
-      
       setIsLoadingLeads(true);
       try {
         const token = localStorage.getItem("token");
@@ -271,20 +270,16 @@ const FieldDashboard = () => {
           toast.error("Authentication token is missing");
           return;
         }
-
         const response = await fetch(`${BASE_URL}/api/campaigns/${campaignId}/leads/assigned`, {
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
-
         if (!response.ok) {
           throw new Error('Failed to fetch campaign leads');
         }
-
         const data = await response.json();
-        
         if (data.success) {
           const leadsWithDetails = data.data.map(lead => ({
             ...lead,
@@ -308,14 +303,14 @@ const FieldDashboard = () => {
       } finally {
         setIsLoadingLeads(false);
       }
-    };
+    }, [campaign]);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
       if (campaign?.id) {
         fetchCampaignLeads(campaign.id);
       }
-    }, [campaign]);
+    }, [campaign, fetchCampaignLeads]);
 
     // eslint-disable-next-line no-unused-vars
     const handleShowMore = () => {

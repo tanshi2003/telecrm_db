@@ -1,3 +1,4 @@
+import api from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
@@ -27,7 +28,7 @@ function AddUser() {
   const fetchManagers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/users", {
+      const response = await api.get("/api/users", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -105,7 +106,7 @@ function AddUser() {
       console.log("Sending data to server:", dataToSend);
 
       const response = await axios.post(
-        "http://localhost:5000/api/users/register", 
+         `${process.env.REACT_APP_API_BASE_URL}/api/users/register`, 
         dataToSend,
         {
           headers: {

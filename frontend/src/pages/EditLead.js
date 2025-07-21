@@ -13,6 +13,15 @@ const EditLead = () => {
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState([]); 
   const [isTeamLead, setIsTeamLead] = useState(false); // Add this state
+  // Helper function to check if lead belongs to manager's team
+  const checkIfTeamLead = React.useCallback((leadData, currentUser) => {
+    if (!leadData || !currentUser) return false;
+    if (currentUser.role !== 'manager') return true;
+    // Check if lead is unassigned (can be claimed by manager)
+    if (!leadData.assigned_to) return true;
+    // Check if lead is assigned to one of manager's team members
+    return users.some(user => user.id === leadData.assigned_to);
+  }, [users]);
 
   // Fetch user from localStorage
   useEffect(() => {
@@ -30,11 +39,11 @@ const EditLead = () => {
       try {
         const token = localStorage.getItem("token");
         const storedUser = JSON.parse(localStorage.getItem("user"));
-        let endpoint = "http://localhost:5000/api/users";
+        let endpoint = `${process.env.REACT_APP_API_BASE_URL}/api/users`;
         
         // If user is a manager, only fetch their team members
         if (storedUser?.role === "manager") {
-          endpoint = `http://localhost:5000/api/managers/${storedUser.id}/team-members`;
+          endpoint = `${process.env.REACT_APP_API_BASE_URL}/api/managers/${storedUser.id}/team-members`;
         }
         
         const response = await axios.get(endpoint, {
@@ -72,7 +81,7 @@ const EditLead = () => {
             return;
           }
 
-          const response = await axios.get(`http://localhost:5000/api/leads/${id}`, {
+          const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/leads/${id}`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -92,7 +101,7 @@ const EditLead = () => {
 
       fetchLead();
     }
-  }, [id, lead]);      
+  }, [id, lead, checkIfTeamLead, user]);      
   const handleUpdateLead = async (updatedLead) => {
     // Add warning for manager trying to update non-team lead
     if (user?.role === 'manager' && !isTeamLead) {
@@ -107,7 +116,7 @@ const EditLead = () => {
       const storedUser = JSON.parse(localStorage.getItem("user"));
       console.log("Sending update with data:", updatedLead);
       
-      const response = await axios.put(`http://localhost:5000/api/leads/${id}`, updatedLead, {
+      const response = await axios.put(`${process.env.REACT_APP_API_BASE_URL}/api/leads/${id}`, updatedLead, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -129,17 +138,7 @@ const EditLead = () => {
     }
   };
 
-  // Helper function to check if lead belongs to manager's team
-  const checkIfTeamLead = (leadData, currentUser) => {
-    if (!leadData || !currentUser) return false;
-    if (currentUser.role !== 'manager') return true;
-    
-    // Check if lead is unassigned (can be claimed by manager)
-    if (!leadData.assigned_to) return true;
-    
-    // Check if lead is assigned to one of manager's team members
-    return users.some(user => user.id === leadData.assigned_to);
-  };
+  // Helper function to check lead belongs to manager's team
 
   return (
     <div className="flex min-h-screen overflow-hidden">

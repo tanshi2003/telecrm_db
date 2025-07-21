@@ -64,7 +64,7 @@ const Lead1 = () => {
       try {
         if (role === "admin") {
           // Admin: fetch all callers and field employees for assignment
-          const usersRes = await axios.get("http://localhost:5000/api/users", {
+          const usersRes = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/users`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           const eligibleUsers = usersRes.data?.data?.filter(
@@ -80,13 +80,13 @@ const Lead1 = () => {
           setUsers(sortedUsers);
           
           // Admin: fetch all campaigns
-          const campRes = await axios.get("http://localhost:5000/api/campaigns", {
+          const campRes = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/campaigns`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           setCampaigns(campRes.data?.data || []);
         } else if (role === "manager") {
           // Manager: fetch only users assigned to this manager
-          const usersRes = await axios.get(`http://localhost:5000/api/managers/${storedUser.id}/users`, {
+          const usersRes = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/managers/${storedUser.id}/users`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           
@@ -103,7 +103,7 @@ const Lead1 = () => {
           setUsers(sortedUsers);
           
           // Manager: fetch only campaigns where they are the manager
-          const campRes = await axios.get(`http://localhost:5000/api/campaigns/manager/${storedUser.id}`, {
+          const campRes = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/campaigns/manager/${storedUser.id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           // Only set campaigns if we got a successful response with an array
@@ -126,7 +126,7 @@ const Lead1 = () => {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/users", {
+      const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if(response.data?.data){
@@ -151,7 +151,7 @@ const Lead1 = () => {
   const fetchCampaigns = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/campaigns", {
+      const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/campaigns`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       // Only set campaigns if we got a successful response with an array
@@ -202,7 +202,7 @@ const Lead1 = () => {
       console.log('Sending lead data:', leadPayload);
 
       const response = await axios.post(
-        "http://localhost:5000/api/leads",
+        `${process.env.REACT_APP_API_BASE_URL}/api/leads`,
         leadPayload,
         {
           headers: {

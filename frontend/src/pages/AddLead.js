@@ -5,7 +5,7 @@ import Sidebar from "../components/Sidebar";
 import BackButton from "../components/BackButton";
 import { FaPhone } from "react-icons/fa";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const AddLead = () => {
   const [leadData, setLeadData] = useState({

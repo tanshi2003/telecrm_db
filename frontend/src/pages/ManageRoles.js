@@ -27,7 +27,7 @@ const ManageRoles = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/users", {
+      const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/users`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -58,7 +58,7 @@ const ManageRoles = () => {
       }
 
       const response = await axios.put(
-        `http://localhost:5000/api/users/${userId}/role`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/users/${userId}/role`,
         { role: newRole },
         {
           headers: {
