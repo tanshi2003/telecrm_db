@@ -134,9 +134,9 @@ exports.getUsers = async (req, res) => {
                 u.created_at,
                 u.updated_at,
                 COALESCE(m.name, '') as manager_name,
-                -- Total leads assigned to user
+                -- Total leads assigned to User
                 (SELECT COUNT(*) FROM Leads l WHERE l.assigned_to = u.id) as total_leads,
-                -- Campaigns handled by user
+                -- Campaigns handled by User
                 (SELECT COUNT(DISTINCT cu.campaign_id) FROM campaign_users cu WHERE cu.user_id = u.id) as campaigns_handled,
                 -- Total working hours (sum of call logs in hours)
                 COALESCE((
