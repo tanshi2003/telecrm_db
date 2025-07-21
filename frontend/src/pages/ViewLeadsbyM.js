@@ -4,6 +4,7 @@ import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Plus } from "lucide-react";
+import { BASE_URL } from '../config/api'
 
 const ViewLeads = () => {
   const [user, setUser] = useState(null);
@@ -23,7 +24,7 @@ const ViewLeads = () => {
       }
 
       // Get leads for manager
-      const response = await api.get(`/api/leads`, {
+      const response = await api.get(`${BASE_URL}/api/leads`, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -97,7 +98,7 @@ const ViewLeads = () => {
         return;
       }
 
-      const response = await api.delete(`/api/leads/${id}`, {
+      const response = await api.delete(`${BASE_URL}/api/leads/${id}`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

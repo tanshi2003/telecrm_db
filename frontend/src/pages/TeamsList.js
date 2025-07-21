@@ -1,4 +1,5 @@
 import api from '../config/api';
+import { BASE_URL } from '../config/api'
 import React, { useEffect, useState, useCallback } from "react";
 import Sidebar from "../components/Sidebar";
 import BackButton from "../components/BackButton";
@@ -60,7 +61,7 @@ const TeamsList = () => {
   const handleUserClick = async (member) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await api.get(`/api/leads/user/${member.id}/lead-counts`, {
+      const response = await api.get(`${BASE_URL}/api/leads/user/${member.id}/lead-counts`, {
         headers: {
           Authorization: `Bearer ${token}`
         }

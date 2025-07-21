@@ -6,6 +6,7 @@ import BackButton from "../components/BackButton";
 import { Users, UserCheck } from "lucide-react";
 import { getUsers, updateUserStatus } from "../services/managerService";
 import toast from "react-hot-toast";
+import { BASE_URL } from '../config/api'
 
 const ManagerUserManagement = () => {
   const [teamMembers, setTeamMembers] = useState([]);
@@ -54,7 +55,7 @@ const ManagerUserManagement = () => {
   const handleUserClick = async (user) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await api.get(`/api/leads/user/${user.id}/lead-counts`, {
+      const response = await api.get(`${BASE_URL}/api/leads/user/${user.id}/lead-counts`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

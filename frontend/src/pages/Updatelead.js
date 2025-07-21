@@ -1,4 +1,5 @@
 import api from '../config/api';
+import { BASE_URL } from '../config/api'
 import axios from "axios";
 import React, { useEffect, useState, useContext } from "react";
 import Navbar from "../components/Navbar";
@@ -48,7 +49,7 @@ const Updatelead = () => {
     const fetchLeads = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await api.get("/api/leads", {
+        const response = await api.get(`${BASE_URL}/api/leads`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data) {
@@ -96,7 +97,7 @@ const Updatelead = () => {
     if (!window.confirm("Are you sure you want to delete this lead?")) return;
     try {
       const token = localStorage.getItem("token");
-      await api.delete(`/api/leads/${leadId}`, {
+      await api.delete(`${BASE_URL}/api/leads/${leadId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const updatedLeads = leads.filter((lead) => lead.id !== leadId);

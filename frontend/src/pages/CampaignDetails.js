@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import { useNavigate } from 'react-router-dom';
 import { FaBullhorn } from "react-icons/fa"; // added icon
+import { BASE_URL } from '../config/api'
 
 const CampaignDetails = () => {
   const [user, setUser] = useState(null);
@@ -17,7 +18,7 @@ const CampaignDetails = () => {
     if(!user) return;
     const token = user.token || localStorage.getItem("token");
     if(!token) return;
-    fetch(`/api/users/${user.id}/campaigns`, {
+    fetch(`${BASE_URL}/api/users/${user.id}/campaigns`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => {

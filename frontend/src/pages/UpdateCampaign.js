@@ -1,4 +1,5 @@
 import api from '../config/api';
+import { BASE_URL } from '../config/api'
 import React, { useEffect, useState, useContext, useRef } from "react";
 import axios from "axios";
 import Navbar from "../components/Navbar";
@@ -20,7 +21,7 @@ const UpdateCampaign = () => {
     const fetchCampaigns = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await api.get("/api/campaigns", {
+        const response = await api.get(`${BASE_URL}/api/campaigns`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data) {
@@ -46,7 +47,7 @@ const UpdateCampaign = () => {
     if (!window.confirm("Are you sure you want to delete this campaign?")) return;
     try {
       const token = localStorage.getItem("token");
-      await api.delete(`/api/campaigns/${campaignId}`, {
+      await api.delete(`${BASE_URL}/api/campaigns/${campaignId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const updatedCampaigns = campaigns.filter((campaign) => campaign.id !== campaignId);
