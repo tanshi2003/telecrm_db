@@ -3,7 +3,7 @@ import api from './api';
 // Get all campaigns
 export const getAllCampaigns = async () => {
     try {
-        const response = await api.get('/api/campaigns');
+        const response = await api.get('/campaigns');
         console.log('All Campaigns Response:', response);
         return response.data;
     } catch (error) {

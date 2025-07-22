@@ -13,7 +13,7 @@ export const initiateCall = async (phoneNumber, userId, leadId) => {
     if (!cleanNumber.startsWith('91')) {
       cleanNumber = '91' + cleanNumber;
     }
-      const response = await api.post('/api/calls/initiate',
+      const response = await api.post('/calls/initiate',
       {
         to: cleanNumber,
         from: userId,
@@ -41,7 +41,7 @@ export const endCall = async (callId, callSid) => {
       throw new Error('No authentication token found');
     }
 
-      const response = await api.post('/api/calls/end',
+      const response = await api.post('/calls/end',
       {
         callId,
         callSid
