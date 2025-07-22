@@ -28,7 +28,7 @@ function AddUser() {
   const fetchManagers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await api.get("/api/users", {
+      const response = await api.get("/users", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -106,7 +106,7 @@ function AddUser() {
       console.log("Sending data to server:", dataToSend);
 
       const response = await axios.post(
-         `${process.env.REACT_APP_API_BASE_URL}/api/users/register`, 
+          `${process.env.REACT_APP_API_BASE_URL}/users/register`, 
         dataToSend,
         {
           headers: {

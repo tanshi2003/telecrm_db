@@ -42,11 +42,11 @@ export default function CallerReport() {
       try {
         let endpoint;
         if (role === "admin") {
-           endpoint = `${process.env.REACT_APP_API_BASE_URL}/api/users`;
+            endpoint = `${process.env.REACT_APP_API_BASE_URL}/users`;
         } else if (role === "manager") {
-           endpoint = `${process.env.REACT_APP_API_BASE_URL}/api/managers/teams/${storedUser.id}`;
+            endpoint = `${process.env.REACT_APP_API_BASE_URL}/managers/teams/${storedUser.id}`;
         } else {
-           endpoint = `${process.env.REACT_APP_API_BASE_URL}/api/users/team/${storedUser.id}`;
+            endpoint = `${process.env.REACT_APP_API_BASE_URL}/users/team/${storedUser.id}`;
         }
 
         const response = await fetch(endpoint, {
@@ -89,7 +89,7 @@ export default function CallerReport() {
     if (!caller_id) return;
 
     // Fetch caller stats
-     fetch(`${process.env.REACT_APP_API_BASE_URL}/api/monthly_caller_stats/${caller_id}`)
+      fetch(`${process.env.REACT_APP_API_BASE_URL}/monthly_caller_stats/${caller_id}`)
       .then((res) => res.json())
       .then((data) => {
         const c = data.data || data || {};
@@ -150,7 +150,7 @@ export default function CallerReport() {
       });
 
     // Fetch and group lead stages (optional; update endpoint as needed)
-     fetch(`${process.env.REACT_APP_API_BASE_URL}/api/monthly_caller_stats/${caller_id}/leads`)
+      fetch(`${process.env.REACT_APP_API_BASE_URL}/monthly_caller_stats/${caller_id}/leads`)
       .then((res) => res.json())
       .then((data) => {
         setLeads(data.data || []);

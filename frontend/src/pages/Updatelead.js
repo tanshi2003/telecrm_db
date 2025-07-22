@@ -49,7 +49,7 @@ const Updatelead = () => {
     const fetchLeads = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await api.get(`${BASE_URL}/api/leads`, {
+        const response = await api.get(`${BASE_URL}/leads`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data) {
@@ -72,11 +72,11 @@ const Updatelead = () => {
       try {
         const token = localStorage.getItem("token");
         const storedUser = JSON.parse(localStorage.getItem("user"));
-        let endpoint = `${process.env.REACT_APP_API_BASE_URL}/api/users`;
+        let endpoint = `${process.env.REACT_APP_API_BASE_URL}/users`;
         
         // If user is a manager, only fetch their team members
         if (storedUser?.role === "manager") {
-           endpoint = `${process.env.REACT_APP_API_BASE_URL}/api/users?managerId=${storedUser.id}`;
+           endpoint = `${process.env.REACT_APP_API_BASE_URL}/users?managerId=${storedUser.id}`;
         }
 
         const response = await axios.get(endpoint, {
@@ -97,7 +97,7 @@ const Updatelead = () => {
     if (!window.confirm("Are you sure you want to delete this lead?")) return;
     try {
       const token = localStorage.getItem("token");
-      await api.delete(`${BASE_URL}/api/leads/${leadId}`, {
+      await api.delete(`${BASE_URL}/leads/${leadId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const updatedLeads = leads.filter((lead) => lead.id !== leadId);
@@ -132,12 +132,12 @@ const Updatelead = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `${process.env.REACT_APP_API_BASE_URL}/api/leads/${editForm.id}`,
+        `${process.env.REACT_APP_API_BASE_URL}/leads/${editForm.id}`,
         editForm,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       // Fetch the updated lead details
-      const updatedLeadRes = await api.get(`/api/leads/${editForm.id}`, {
+      const updatedLeadRes = await api.get(`/leads/${editForm.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const updatedLead = updatedLeadRes.data.data;

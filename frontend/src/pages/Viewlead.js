@@ -29,7 +29,7 @@ const Viewlead = () => {
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await api.get(`${BASE_URL}/api/users`, {
+        const response = await api.get(`${BASE_URL}/users`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data) {
@@ -48,7 +48,7 @@ const Viewlead = () => {
       const fetchLead = async () => {
         try {
           const token = localStorage.getItem("token");
-           const response = await api.get(`${BASE_URL}/api/leads/${id}`, {
+           const response = await api.get(`${BASE_URL}/leads/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (response.data) {

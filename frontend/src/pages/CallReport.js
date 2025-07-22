@@ -48,9 +48,9 @@ export default function CallReport() {
 
       let endpoint;
       if (userRole === 'admin') {
-        endpoint = `${process.env.REACT_APP_API_BASE_URL}/api/users`;
+        endpoint = `${process.env.REACT_APP_API_BASE_URL}/users`;
       } else if (userRole === 'manager') {
-        endpoint = `${process.env.REACT_APP_API_BASE_URL}/api/managers/teams/${userId}`;
+        endpoint = `${process.env.REACT_APP_API_BASE_URL}/managers/teams/${userId}`;
       }
 
       const response = await fetch(endpoint, {
@@ -110,7 +110,7 @@ export default function CallReport() {
         effectiveUserId = selectedUser.value.id;
       }
       // For managers: if no user selected, show team stats (omit userId in URL)
-      let url = `${process.env.REACT_APP_API_BASE_URL}/api/calls/stats/${timeRange.value}`;
+      let url = `${process.env.REACT_APP_API_BASE_URL}/calls/stats/${timeRange.value}`;
       if (effectiveUserId) {
         url += `/${effectiveUserId}`;
       }

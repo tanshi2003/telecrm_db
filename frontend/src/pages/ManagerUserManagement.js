@@ -55,7 +55,7 @@ const ManagerUserManagement = () => {
   const handleUserClick = async (user) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await api.get(`${BASE_URL}/api/leads/user/${user.id}/lead-counts`, {
+      const response = await api.get(`${BASE_URL}/leads/user/${user.id}/lead-counts`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

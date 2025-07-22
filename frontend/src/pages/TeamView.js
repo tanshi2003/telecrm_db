@@ -58,7 +58,7 @@ const TeamView = () => {
   const handleUserClick = async (member) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await api.get(`${BASE_URL}/api/leads/user/${member.id}/lead-counts`, {
+      const response = await api.get(`${BASE_URL}/leads/user/${member.id}/lead-counts`, {
         headers: {
           Authorization: `Bearer ${token}`
         }

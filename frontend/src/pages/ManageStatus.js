@@ -29,7 +29,7 @@ const ManageStatus = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await api.get("/api/users", {
+      const response = await api.get("/users", {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -59,8 +59,8 @@ const ManageStatus = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
       const userId = selectedUser;
-      const response = await axios.put(
-        `${process.env.REACT_APP_API_BASE_URL}/api/users/${userId}/status`,
+       const response = await axios.put(
+         `${process.env.REACT_APP_API_BASE_URL}/users/${userId}/status`,
         {
           status: bulkStatus.value
         },

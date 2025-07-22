@@ -39,11 +39,11 @@ const EditLead = () => {
       try {
         const token = localStorage.getItem("token");
         const storedUser = JSON.parse(localStorage.getItem("user"));
-        let endpoint = `${process.env.REACT_APP_API_BASE_URL}/api/users`;
+         let endpoint = `${process.env.REACT_APP_API_BASE_URL}/users`;
         
         // If user is a manager, only fetch their team members
         if (storedUser?.role === "manager") {
-          endpoint = `${process.env.REACT_APP_API_BASE_URL}/api/managers/${storedUser.id}/team-members`;
+           endpoint = `${process.env.REACT_APP_API_BASE_URL}/managers/${storedUser.id}/team-members`;
         }
         
         const response = await axios.get(endpoint, {
@@ -81,7 +81,7 @@ const EditLead = () => {
             return;
           }
 
-          const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/leads/${id}`, {
+           const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/leads/${id}`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -116,7 +116,7 @@ const EditLead = () => {
       const storedUser = JSON.parse(localStorage.getItem("user"));
       console.log("Sending update with data:", updatedLead);
       
-      const response = await axios.put(`${process.env.REACT_APP_API_BASE_URL}/api/leads/${id}`, updatedLead, {
+       const response = await axios.put(`${process.env.REACT_APP_API_BASE_URL}/leads/${id}`, updatedLead, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

@@ -47,7 +47,7 @@ export const getCampaignPerformance = async (managerId) => {
     try {
         const token = localStorage.getItem('token');
         const response = await fetch(
-            `${process.env.REACT_APP_API_BASE_URL}/api/campaigns`,
+            `${process.env.REACT_APP_API_BASE_URL}/campaigns`,
             {
                 headers: { 
                     Authorization: `Bearer ${token}`,
@@ -123,7 +123,7 @@ export const getUsers = async () => {
     const user = JSON.parse(localStorage.getItem('user'));
     const managerId = user.id;
     // Use the dedicated team-members endpoint
-    const response = await api.get(`/api/managers/${managerId}/team-members`, getAuthHeader());
+    const response = await api.get(`/managers/${managerId}/team-members`, getAuthHeader());
     return {
       success: true,
       data: response.data.data || []
@@ -136,7 +136,7 @@ export const getUsers = async () => {
 // Update user status
 export const updateUserStatus = async (userId, status) => {
   try {
-    const response = await api.put(`/api/users/${userId}/status`, { status }, getAuthHeader());
+    const response = await api.put(`/users/${userId}/status`, { status }, getAuthHeader());
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -155,7 +155,7 @@ export const assignLead = async (leadId, userId) => {
 
 // Get specific team by ID
 export const getTeamById = async (teamId) => {
-    const response = await api.get(`/api/managers/teams/${teamId}`);
+    const response = await api.get(`/managers/teams/${teamId}`);
     return response.data;
 };
 

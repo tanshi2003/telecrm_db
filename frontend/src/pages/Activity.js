@@ -46,7 +46,7 @@ const Activities = () => {
             const endpoint = (userRole === 'manager' || userRole === 'admin') ? 'all' : `user/${userId}`;
             console.log('Fetching activities from endpoint:', endpoint);
             
-            const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/activities/${endpoint}`, {
+            const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/activities/${endpoint}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }

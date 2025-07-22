@@ -18,7 +18,7 @@ const CampaignDetails = () => {
     if(!user) return;
     const token = user.token || localStorage.getItem("token");
     if(!token) return;
-    fetch(`${BASE_URL}/api/users/${user.id}/campaigns`, {
+    fetch(`${BASE_URL}/users/${user.id}/campaigns`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => {

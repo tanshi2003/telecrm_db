@@ -36,7 +36,7 @@ const LeadManagement = () => {
       }).toString();
 
       const response = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/api/managers/${managerId}/leads?${queryParams}`,
+         `${process.env.REACT_APP_API_BASE_URL}/managers/${managerId}/leads?${queryParams}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -54,7 +54,7 @@ const LeadManagement = () => {
       const managerId = JSON.parse(localStorage.getItem('user')).id;
 
       const response = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/api/managers/${managerId}/team`,
+         `${process.env.REACT_APP_API_BASE_URL}/managers/${managerId}/team`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -68,7 +68,7 @@ const LeadManagement = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/api/campaigns`,
+         `${process.env.REACT_APP_API_BASE_URL}/campaigns`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -82,7 +82,7 @@ const LeadManagement = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `${process.env.REACT_APP_API_BASE_URL}/api/leads/assign`,
+         `${process.env.REACT_APP_API_BASE_URL}/leads/assign`,
         {
           leadIds: selectedLeads,
           employeeId
@@ -102,7 +102,7 @@ const LeadManagement = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `${process.env.REACT_APP_API_BASE_URL}/api/leads/${leadId}/notes`,
+         `${process.env.REACT_APP_API_BASE_URL}/leads/${leadId}/notes`,
         { note },
         { headers: { Authorization: `Bearer ${token}` } }
       );

@@ -92,7 +92,7 @@ const AddLead = () => {
 
       const response = await axios({
         method: 'post',
-        url: `${BASE_URL}/api/leads/add-lead`,
+        url: `${BASE_URL}/leads/add-lead`,
         data: leadPayload,
         headers: {
           'Authorization': `Bearer ${token}`

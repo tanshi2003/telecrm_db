@@ -44,18 +44,18 @@ const Filters = ({ type = "users", onApply, onReset, removeWorkingHours }) => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (type === "leads" || type === "users" || type === "campaigns") {
-      api.get("/api/users", { headers: { Authorization: `Bearer ${token}` } })
+      api.get("/users", { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setUsers(res.data?.data || []))
         .catch(() => {});
     }
     if (type === "leads" || type === "campaigns") {
-      api.get("/api/campaigns", { headers: { Authorization: `Bearer ${token}` } })
+      api.get("/campaigns", { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setCampaigns(res.data?.data || []))
         .catch(() => {});
     }
     if (type === "campaigns") {
       // Admins for createdBy dropdown
-      api.get("/api/users?role=Admin", { headers: { Authorization: `Bearer ${token}` } })
+      api.get("/users?role=Admin", { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setAdmins(res.data?.data || []))
         .catch(() => {});
     }

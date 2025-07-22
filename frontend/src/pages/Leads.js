@@ -14,7 +14,7 @@ const Leads = () => {
   const fetchLeadsAndUsers = React.useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await api.get(`${process.env.REACT_APP_API_BASE_URL}/api/leads`, {
+      const response = await api.get(`/leads`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -28,7 +28,7 @@ const Leads = () => {
       }
 
       // Fetch users
-      const usersResponse = await api.get(`${process.env.REACT_APP_API_BASE_URL}/api/users`, {
+      const usersResponse = await api.get(`/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(usersResponse.data.data || []);
@@ -68,7 +68,7 @@ const Leads = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await api.delete(`${process.env.REACT_APP_API_BASE_URL}/api/leads/${id}`, {
+      await api.delete(`/leads/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

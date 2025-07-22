@@ -15,7 +15,7 @@ export const getAllCampaigns = async () => {
 // Get campaign details by ID
 export const getCampaignById = async (campaignId) => {
     try {
-        const response = await api.get(`/api/campaigns/${campaignId}`);
+         const response = await api.get(`/campaigns/${campaignId}`);
         console.log('Campaign Details Response:', response);
         return response.data;
     } catch (error) {
@@ -27,7 +27,7 @@ export const getCampaignById = async (campaignId) => {
 // Update campaign
 export const updateCampaign = async (campaignId, campaignData) => {
     try {
-        const response = await api.put(`/api/campaigns/${campaignId}`, campaignData);
+         const response = await api.put(`/campaigns/${campaignId}`, campaignData);
         console.log('Update Campaign Response:', response);
         return response.data;
     } catch (error) {

@@ -24,7 +24,7 @@ const ViewLeads = () => {
       }
 
       // Get leads for manager
-      const response = await api.get(`${BASE_URL}/api/leads`, {
+      const response = await api.get(`${BASE_URL}/leads`, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -47,7 +47,7 @@ const ViewLeads = () => {
 
       // Fetch team members
       const usersResponse = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/api/managers/${storedUser.id}/team-members`, 
+         `${process.env.REACT_APP_API_BASE_URL}/managers/${storedUser.id}/team-members`, 
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -98,7 +98,7 @@ const ViewLeads = () => {
         return;
       }
 
-      const response = await api.delete(`${BASE_URL}/api/leads/${id}`, {
+      const response = await api.delete(`${BASE_URL}/leads/${id}`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

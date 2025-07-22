@@ -22,7 +22,7 @@ const AssignUser = () => {
     const fetchCampaigns = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/campaigns`, {
+        const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/campaigns`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data && response.data.data.length > 0) {
@@ -30,7 +30,7 @@ const AssignUser = () => {
           // Fetch first campaign's details
           const firstCampaign = response.data.data[0];
           const res = await axios.get(
-            `${process.env.REACT_APP_API_BASE_URL}/api/campaigns/${firstCampaign.id}`,
+             `${process.env.REACT_APP_API_BASE_URL}/campaigns/${firstCampaign.id}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
            const campaignData = res.data.data
@@ -56,7 +56,7 @@ const AssignUser = () => {
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/users`, {
+        const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/users`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUsers(response.data.data || []);
@@ -101,7 +101,7 @@ const AssignUser = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.post(
-        `${process.env.REACT_APP_API_BASE_URL}/api/campaigns/${selectedCampaign.id}/assign-users`,
+         `${process.env.REACT_APP_API_BASE_URL}/campaigns/${selectedCampaign.id}/assign-users`,
         { user_ids: assignForm.userIds },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -110,7 +110,7 @@ const AssignUser = () => {
 
       // Fetch updated campaign details from backend
       const updatedCampaignRes = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/api/campaigns/${selectedCampaign.id}`,
+         `${process.env.REACT_APP_API_BASE_URL}/campaigns/${selectedCampaign.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setSelectedCampaign(updatedCampaignRes.data.data);
@@ -128,7 +128,7 @@ const AssignUser = () => {
     try {
       const token = localStorage.getItem("token");
       const res = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/api/campaigns/${campaign.id}`,
+         `${process.env.REACT_APP_API_BASE_URL}/campaigns/${campaign.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

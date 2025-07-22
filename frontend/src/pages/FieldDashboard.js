@@ -82,7 +82,7 @@ const FieldDashboard = () => {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${BASE_URL}/api/users/${user.id}/leads`, {
+      const response = await fetch(`${BASE_URL}/users/${user.id}/leads`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -147,7 +147,7 @@ const FieldDashboard = () => {
 
         console.log('Updating lead:', selectedLead.id, updateData); // Debug log
 
-        const response = await fetch(`${BASE_URL}/api/leads/${selectedLead.id}`, {
+        const response = await fetch(`${BASE_URL}/leads/${selectedLead.id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -201,7 +201,7 @@ const FieldDashboard = () => {
         const token = localStorage.getItem("token");
         
         // First fetch leads
-        const leadsResponse = await fetch(`${BASE_URL}/api/users/${user.id}/leads`, {
+        const leadsResponse = await fetch(`${BASE_URL}/users/${user.id}/leads`, {
             headers: { 
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -211,7 +211,7 @@ const FieldDashboard = () => {
         const leadsData = await leadsResponse.json();
         
         // Then fetch campaigns
-        const campaignsResponse = await fetch(`${BASE_URL}/api/campaigns/${user.id}/campaigns/with-leads`, {
+        const campaignsResponse = await fetch(`${BASE_URL}/campaigns/${user.id}/campaigns/with-leads`, {
             headers: { 
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -270,7 +270,7 @@ const FieldDashboard = () => {
           toast.error("Authentication token is missing");
           return;
         }
-        const response = await fetch(`${BASE_URL}/api/campaigns/${campaignId}/leads/assigned`, {
+        const response = await fetch(`${BASE_URL}/campaigns/${campaignId}/leads/assigned`, {
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -692,7 +692,7 @@ const FieldDashboard = () => {
   const getCampaignLeads = async (campaignId) => {
     setIsLoadingLeads(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/campaigns/${campaignId}/leads`, {
+      const response = await fetch(`${BASE_URL}/campaigns/${campaignId}/leads`, {
         headers: {
           'Authorization': `Bearer ${user.token}`
         }
@@ -714,7 +714,7 @@ const FieldDashboard = () => {
     setIsCampaignModalOpen(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${BASE_URL}/api/campaigns/${campaign.id}/leads/assigned`, {
+      const response = await fetch(`${BASE_URL}/campaigns/${campaign.id}/leads/assigned`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

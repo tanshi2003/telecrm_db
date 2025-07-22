@@ -34,7 +34,7 @@ export default function LeadsChartReport() {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/users`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/users`, {
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
@@ -56,10 +56,10 @@ export default function LeadsChartReport() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-        // Use the /api/leads/stats/distribution endpoint for all users view
+        // Use the /leads/stats/distribution endpoint for all users view
       const url = selectedUser === "all" 
-        ? `${process.env.REACT_APP_API_BASE_URL}/api/leads/stats/distribution` 
-        : `${process.env.REACT_APP_API_BASE_URL}/api/users/${selectedUser}/leads`;
+        ? `${process.env.REACT_APP_API_BASE_URL}/leads/stats/distribution` 
+        : `${process.env.REACT_APP_API_BASE_URL}/users/${selectedUser}/leads`;
       
       const response = await fetch(url, {
         headers: {

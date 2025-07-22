@@ -87,7 +87,7 @@ const CallerDashboard = () => {
         navigate("/login");
         throw new Error('No authentication token found');
       }      
-      const response = await fetch(`${BASE_URL}/api/leads/assigned/${user.id}`, {
+      const response = await fetch(`${BASE_URL}/leads/assigned/${user.id}`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -160,7 +160,7 @@ const CallerDashboard = () => {
  
          console.log('Updating lead:', selectedLead.id, updateData); // Debug log
  
-         const response = await fetch(`${BASE_URL}/api/leads/${selectedLead.id}`, {
+         const response = await fetch(`${BASE_URL}/leads/${selectedLead.id}`, {
              method: "PUT",
              headers: {
                  "Content-Type": "application/json",
@@ -214,7 +214,7 @@ const CallerDashboard = () => {
          const token = localStorage.getItem("token");
          
          // First fetch leads
-         const leadsResponse = await fetch(`${BASE_URL}/api/users/${user.id}/leads`, {
+         const leadsResponse = await fetch(`${BASE_URL}/users/${user.id}/leads`, {
              headers: { 
                  'Authorization': `Bearer ${token}`,
                  'Content-Type': 'application/json'
@@ -224,7 +224,7 @@ const CallerDashboard = () => {
          const leadsData = await leadsResponse.json();
          
          // Then fetch campaigns
-         const campaignsResponse = await fetch(`${BASE_URL}/api/campaigns/${user.id}/campaigns/with-leads`, {
+         const campaignsResponse = await fetch(`${BASE_URL}/campaigns/${user.id}/campaigns/with-leads`, {
              headers: { 
                  'Authorization': `Bearer ${token}`,
                  'Content-Type': 'application/json'
@@ -271,7 +271,7 @@ const CallerDashboard = () => {
         setIsLoadingLeads(true);
         const token = localStorage.getItem('token');
           // Get leads for this campaign with user and manager details
-        const response = await fetch(`${BASE_URL}/api/campaigns/${campaignId}/leads/assigned`, {
+         const response = await fetch(`${BASE_URL}/campaigns/${campaignId}/leads/assigned`, {
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

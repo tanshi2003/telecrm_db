@@ -18,7 +18,7 @@ const AssignManager = () => {
       const token = localStorage.getItem("token");
       
       // Fetch all users first
-      const usersRes = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/api/users`, {
+      const usersRes = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -129,7 +129,7 @@ const AssignManager = () => {
       const oldManager = managers.find(m => m.id === user.manager_id);
 
       const response = await axios.put(
-        `${process.env.REACT_APP_API_BASE_URL}/api/users/${userId}/assign-manager`,
+         `${process.env.REACT_APP_API_BASE_URL}/users/${userId}/assign-manager`,
         { manager_id: parseInt(managerId) },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -227,7 +227,7 @@ const AssignManager = () => {
 
       // Perform the reassignment
       const response = await axios.put(
-        `${process.env.REACT_APP_API_BASE_URL}/api/users/${userId}/assign-manager`,
+         `${process.env.REACT_APP_API_BASE_URL}/users/${userId}/assign-manager`,
         { manager_id: parseInt(newManagerId) },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -270,7 +270,7 @@ const AssignManager = () => {
         // Using the dedicated remove endpoint
         const response = await axios({
             method: 'put',
-            url: `${process.env.REACT_APP_API_BASE_URL}/api/users/${userId}/remove-manager`,
+            url: `${process.env.REACT_APP_API_BASE_URL}/users/${userId}/remove-manager`,
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
