@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
-import {
-  FaPhone,
-  FaEnvelope,
-  FaSms,
-  FaStickyNote,
-  FaStar,
-  FaRegStar,
-} from "react-icons/fa";
+// import {
+//   FaPhone,
+//   FaEnvelope,
+//   FaSms,
+//   FaStickyNote,
+//   FaStar,
+//   FaRegStar,
+// } from "react-icons/fa";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { AuthContext } from "../context/AuthContext";

@@ -13,6 +13,8 @@ const campaignStatuses = ["Ongoing", "Completed", "Paused"];
 const campaignPriorities = ["High", "Medium", "Low"];
 
 const Filters = ({ type = "users", onApply, onReset, removeWorkingHours }) => {
+  // Add missing managers state for manager dropdowns
+  const [managers, setManagers] = useState([]);
   // Common states
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
@@ -40,7 +42,6 @@ const Filters = ({ type = "users", onApply, onReset, removeWorkingHours }) => {
   const [usersAssigned, setUsersAssigned] = useState("");
   const [leadCount, setLeadCount] = useState({ min: "", max: "" });
   const [admins, setAdmins] = useState([]);
-  const [managers, setManagers] = useState([]);
 
   // Fetch users/campaigns/admins as needed
   useEffect(() => {

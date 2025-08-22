@@ -230,24 +230,6 @@ const Activities = () => {
     };
 
     // Update the role filter options based on user role
-    const getRoleFilterOptions = () => {
-        const userRole = localStorage.getItem('role');
-        if (userRole === 'admin') {
-            return [
-                { value: 'all', label: 'All Roles' },
-                { value: 'manager', label: 'Manager' },
-                { value: 'caller', label: 'Caller' },
-                { value: 'field_employee', label: 'Field Employee' }
-            ];
-        } else if (userRole === 'manager') {
-            return [
-                { value: 'all', label: 'All Team Members' },
-                { value: 'caller', label: 'Caller' },
-                { value: 'field_employee', label: 'Field Employee' }
-            ];
-        }
-        return []; // Callers and field employees don't need role filters
-    };
 
     if (loading) {
         return (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getUnassignedLeads, getUsers, assignLeads } from '../services/managerService';
-import { Search, X, UserPlus, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Search, X, UserPlus, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 

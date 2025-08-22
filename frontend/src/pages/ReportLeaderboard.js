@@ -4,7 +4,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   FaPhoneVolume,
   FaPhoneSlash,
-  FaMapMarkerAlt,
   FaChartLine,
   FaCheck,
   FaHourglassHalf,

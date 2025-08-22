@@ -11,7 +11,7 @@ const CampaignManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [campaigns, setCampaigns] = useState([]);
-  const [selectedCampaign, setSelectedCampaign] = useState(null);
+    const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [allCampaigns, setAllCampaigns] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [viewCampaign, setViewCampaign] = useState(null);
@@ -50,7 +50,6 @@ const CampaignManagement = () => {
 
   const fetchCampaigns = useCallback(async () => {
     try {
-      setLoading(true);
       const token = localStorage.getItem('token');
       const user = JSON.parse(localStorage.getItem('user'));
       
@@ -78,7 +77,6 @@ const CampaignManagement = () => {
       console.error('Error fetching campaigns:', error);
       toast.error('Failed to fetch campaigns');
     } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -218,7 +216,7 @@ const CampaignManagement = () => {
 
   // Handle card clicks
   const handleCardClick = (filterType) => {
-    setActiveFilter(filterType);
+  setActiveFilter(filterType);
   };
 
   // if (loading) return (
