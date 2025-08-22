@@ -7,7 +7,7 @@ import Sidebar from "../components/Sidebar";
 import io from 'socket.io-client';  
 
 // Add base URL constant
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 // Update LEAD_STATUSES to match exactly with backend VALID_STATUSES
 const LEAD_STATUSES = [
@@ -33,10 +33,14 @@ const FieldDashboard = () => {
   const [leadNotes, setLeadNotes] = useState("");
   const [updateMessage, setUpdateMessage] = useState(""); // new state for success message
   const [isModalOpen, setIsModalOpen] = useState(false);
+   // eslint-disable-next-line 
+  // eslint-disable-next-line no-unused-vars
   const [error, setError] = useState(""); // Add error state
 
   // Call related states
+  // eslint-disable-next-line no-unused-vars
   const [callStatus, setCallStatus] = useState('idle');
+  // eslint-disable-next-line no-unused-vars
   const [callDuration, setCallDuration] = useState(0);
 
   // Add performance metrics state
@@ -62,7 +66,9 @@ const FieldDashboard = () => {
   const [showingAll, setShowingAll] = useState(false);
 
   // Campaign leads states
+  // eslint-disable-next-line no-unused-vars
   const [campaignLeads, setCampaignLeads] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [isLoadingLeads, setIsLoadingLeads] = useState(false);
 
   useEffect(() => {
@@ -76,7 +82,7 @@ const FieldDashboard = () => {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${BASE_URL}/api/users/${user.id}/leads`, {
+      const response = await fetch(`${BASE_URL}/users/${user.id}/leads`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -141,7 +147,7 @@ const FieldDashboard = () => {
 
         console.log('Updating lead:', selectedLead.id, updateData); // Debug log
 
-        const response = await fetch(`${BASE_URL}/api/leads/${selectedLead.id}`, {
+        const response = await fetch(`${BASE_URL}/leads/${selectedLead.id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -195,7 +201,7 @@ const FieldDashboard = () => {
         const token = localStorage.getItem("token");
         
         // First fetch leads
-        const leadsResponse = await fetch(`${BASE_URL}/api/users/${user.id}/leads`, {
+        const leadsResponse = await fetch(`${BASE_URL}/users/${user.id}/leads`, {
             headers: { 
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -205,7 +211,7 @@ const FieldDashboard = () => {
         const leadsData = await leadsResponse.json();
         
         // Then fetch campaigns
-        const campaignsResponse = await fetch(`${BASE_URL}/api/campaigns/${user.id}/campaigns/with-leads`, {
+        const campaignsResponse = await fetch(`${BASE_URL}/campaigns/${user.id}/campaigns/with-leads`, {
             headers: { 
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -243,19 +249,20 @@ const FieldDashboard = () => {
   }, [user, refreshLeads]); // Added refreshLeads to dependencies
   // Campaign Modal Component
   const CampaignModal = ({ campaign, onClose }) => {
+    // eslint-disable-next-line no-unused-vars
     const { user: authUser } = useContext(AuthContext);
     const [showLeads, setShowLeads] = useState(false);
     const [campaignLeads, setCampaignLeads] = useState([]);
     const [isLoadingLeads, setIsLoadingLeads] = useState(false);
+    // eslint-disable-next-line no-unused-vars
     const [displayCount, setDisplayCount] = useState(5);
     const [showingAll, setShowingAll] = useState(false);
 
-    const fetchCampaignLeads = async (campaignId) => {
+    const fetchCampaignLeads = React.useCallback(async (campaignId) => {
       if (!campaignId) {
         toast.error("Campaign ID is missing");
         return;
       }
-      
       setIsLoadingLeads(true);
       try {
         const token = localStorage.getItem("token");
@@ -263,20 +270,16 @@ const FieldDashboard = () => {
           toast.error("Authentication token is missing");
           return;
         }
-
-        const response = await fetch(`${BASE_URL}/api/campaigns/${campaignId}/leads/assigned`, {
+        const response = await fetch(`${BASE_URL}/campaigns/${campaignId}/leads/assigned`, {
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
-
         if (!response.ok) {
           throw new Error('Failed to fetch campaign leads');
         }
-
         const data = await response.json();
-        
         if (data.success) {
           const leadsWithDetails = data.data.map(lead => ({
             ...lead,
@@ -300,14 +303,16 @@ const FieldDashboard = () => {
       } finally {
         setIsLoadingLeads(false);
       }
-    };
+    }, [campaign]);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
       if (campaign?.id) {
         fetchCampaignLeads(campaign.id);
       }
-    }, [campaign]);
+    }, [campaign, fetchCampaignLeads]);
 
+    // eslint-disable-next-line no-unused-vars
     const handleShowMore = () => {
       if (showingAll) {
         setDisplayCount(5);
@@ -655,6 +660,7 @@ const FieldDashboard = () => {
     setCallDuration(0);
   };
 
+  // eslint-disable-next-line no-unused-vars
   const formatDuration = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -682,10 +688,11 @@ const FieldDashboard = () => {
   }, []);  // No need to add startTimer/stopTimer as deps since they're stable
 
   // New function to fetch campaign leads
+  // eslint-disable-next-line no-unused-vars
   const getCampaignLeads = async (campaignId) => {
     setIsLoadingLeads(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/campaigns/${campaignId}/leads`, {
+      const response = await fetch(`${BASE_URL}/campaigns/${campaignId}/leads`, {
         headers: {
           'Authorization': `Bearer ${user.token}`
         }
@@ -707,7 +714,7 @@ const FieldDashboard = () => {
     setIsCampaignModalOpen(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${BASE_URL}/api/campaigns/${campaign.id}/leads/assigned`, {
+      const response = await fetch(`${BASE_URL}/campaigns/${campaign.id}/leads/assigned`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

@@ -1,3 +1,6 @@
+import api from '../config/api';
+import { BASE_URL } from '../config/api'
+import axios from "axios";
 import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
 // import {
@@ -55,7 +58,7 @@ const Updatelead = () => {
     const fetchLeads = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:5000/api/leads", {
+        const response = await api.get(`${BASE_URL}/leads`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data) {
@@ -78,11 +81,11 @@ const Updatelead = () => {
       try {
         const token = localStorage.getItem("token");
         const storedUser = JSON.parse(localStorage.getItem("user"));
-        let endpoint = "http://localhost:5000/api/users";
+        let endpoint = `${process.env.REACT_APP_API_BASE_URL}/users`;
         
         // If user is a manager, only fetch their team members
         if (storedUser?.role === "manager") {
-          endpoint = `http://localhost:5000/api/users?managerId=${storedUser.id}`;
+           endpoint = `${process.env.REACT_APP_API_BASE_URL}/users?managerId=${storedUser.id}`;
         }
 
         const response = await axios.get(endpoint, {
@@ -103,7 +106,7 @@ const Updatelead = () => {
     if (!window.confirm("Are you sure you want to delete this lead?")) return;
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/api/leads/${leadId}`, {
+      await api.delete(`${BASE_URL}/leads/${leadId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const updatedLeads = leads.filter((lead) => lead.id !== leadId);
@@ -138,15 +141,14 @@ const Updatelead = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `http://localhost:5000/api/leads/${editForm.id}`,
+        `${process.env.REACT_APP_API_BASE_URL}/leads/${editForm.id}`,
         editForm,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       // Fetch the updated lead details
-      const updatedLeadRes = await axios.get(
-        `http://localhost:5000/api/leads/${editForm.id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const updatedLeadRes = await api.get(`/leads/${editForm.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const updatedLead = updatedLeadRes.data.data;
       // Update local state
       const updatedLeads = leads.map((lead) =>

@@ -23,6 +23,7 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
   const [user, setUser] = useState(null);
   const [availableLeads, setAvailableLeads] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState([]);
+   // eslint-disable-next-line 
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
@@ -39,7 +40,7 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
         }
 
         const leadsRes = await axios.get(
-          `http://localhost:5000/api/leads?role=manager`,
+           `${process.env.REACT_APP_API_BASE_URL}/leads?role=manager`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -85,7 +86,7 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
         // First fetch current user details to get role
         try {
           const userResponse = await axios.get(
-            'http://localhost:5000/api/auth/me',
+             `${process.env.REACT_APP_API_BASE_URL}/auth/me`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
 
@@ -106,7 +107,7 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
 
           // If user is manager, proceed with fetching team members and leads
           const teamRes = await axios.get(
-            `http://localhost:5000/api/managers/teams/${managerId}`,
+             `${process.env.REACT_APP_API_BASE_URL}/managers/teams/${managerId}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           
@@ -119,7 +120,7 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
             if (teamMembers.length === 0) {
               // If no team members found, fetch unassigned users
               const unassignedRes = await axios.get(
-                'http://localhost:5000/api/managers/unassigned-users',
+                 `${process.env.REACT_APP_API_BASE_URL}/managers/unassigned-users`,
                 { headers: { Authorization: `Bearer ${token}` } }
               );
               
@@ -142,7 +143,7 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
 
           // Fetch available leads
           const leadsRes = await axios.get(
-            `http://localhost:5000/api/leads?role=manager`,
+             `${process.env.REACT_APP_API_BASE_URL}/leads?role=manager`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
 
@@ -187,7 +188,7 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
       
       // Create campaign with leads
       const campaignRes = await axios.post(
-        'http://localhost:5000/api/campaigns',
+         `${process.env.REACT_APP_API_BASE_URL}/campaigns`,
         { 
           name, 
           description, 
@@ -216,7 +217,7 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
 
         // Then refresh from server to ensure sync
         const leadsRes = await axios.get(
-          `http://localhost:5000/api/leads?role=manager`,
+           `${process.env.REACT_APP_API_BASE_URL}/leads?role=manager`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -266,8 +267,9 @@ const CreateCampaignWithUsers = ({ onSuccess, onClose }) => {
         : [...prev, leadId]
     );
   };
-
+ // eslint-disable-next-line 
   // Filter leads based on search term
+   // eslint-disable-next-line 
   const filteredLeads = availableLeads.filter(lead => 
     lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     lead.phone_no?.includes(searchTerm) ||

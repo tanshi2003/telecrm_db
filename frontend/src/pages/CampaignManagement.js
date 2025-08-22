@@ -8,8 +8,8 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const CampaignManagement = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [setLoading] = useState(true);
+  const [error] = useState(null);
   const [campaigns, setCampaigns] = useState([]);
     const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [allCampaigns, setAllCampaigns] = useState([]);
@@ -17,7 +17,7 @@ const CampaignManagement = () => {
   const [viewCampaign, setViewCampaign] = useState(null);
   const [assignLeadCampaign, setAssignLeadCampaign] = useState(null);
   const [user, setUser] = useState(null);
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeFilter] = useState('all');
   const [showColorInfo, setShowColorInfo] = useState(null); // Store campaign ID for showing color info // 'all', 'active', 'leads'
   const [showAllCampaignsModal, setShowAllCampaignsModal] = useState(false);
   const [showActiveCampaignsModal, setShowActiveCampaignsModal] = useState(false);
@@ -38,9 +38,8 @@ const CampaignManagement = () => {
     }
 
     setUser(storedUser);
-    fetchCampaigns();
-    fetchEmployees();
-    fetchAllCampaigns();
+    // fetchCampaigns();
+    // fetchEmployees();
   }, [navigate]);
 
   useEffect(() => {
@@ -58,7 +57,7 @@ const CampaignManagement = () => {
       }
 
       const response = await axios.get(
-        `http://localhost:5000/api/campaigns/manager/${user.id}`,
+         `${process.env.REACT_APP_API_BASE_URL}/campaigns/manager/${user.id}`,
         { 
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -78,6 +77,7 @@ const CampaignManagement = () => {
       toast.error('Failed to fetch campaigns');
     } finally {
     }
+     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchAllCampaigns = async () => {
@@ -85,7 +85,7 @@ const CampaignManagement = () => {
       const token = localStorage.getItem('token');
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const response = await axios.get(
-        `http://localhost:5000/api/campaigns/manager/${storedUser.id}`,
+         `${process.env.REACT_APP_API_BASE_URL}/campaigns/manager/${storedUser.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (response.data.success && Array.isArray(response.data.data)) {
@@ -102,7 +102,7 @@ const CampaignManagement = () => {
       setAllCampaigns([]);
     }
   };
-
+ // eslint-disable-next-line 
   const fetchEmployees = async () => {
     try {
       setLoading(true);
@@ -117,7 +117,7 @@ const CampaignManagement = () => {
       const managerId = storedUser.id.toString().trim();
 
       const response = await axios.get(
-        `http://localhost:5000/api/managers/teams/${managerId}`,
+         `${process.env.REACT_APP_API_BASE_URL}/managers/teams/${managerId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -139,7 +139,7 @@ const CampaignManagement = () => {
       const userIdsArray = Array.isArray(userIds) ? userIds : [userIds];
 
       const response = await axios.post(
-        `http://localhost:5000/api/campaigns/${campaignId}/assign-users`,
+         `${process.env.REACT_APP_API_BASE_URL}/campaigns/${campaignId}/assign-users`,
         { user_ids: userIdsArray },
         { 
           headers: { 
@@ -173,7 +173,7 @@ const CampaignManagement = () => {
       const token = localStorage.getItem('token');
       
       const response = await axios.post(
-        'http://localhost:5000/api/campaigns/unassign',
+         `${process.env.REACT_APP_API_BASE_URL}/campaigns/unassign`,
         {
           campaign_id: campaignId,
           user_id: userId
@@ -256,7 +256,7 @@ const CampaignManagement = () => {
       const token = localStorage.getItem('token');
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const response = await axios.get(
-        `http://localhost:5000/api/leads?role=manager`,
+         `${process.env.REACT_APP_API_BASE_URL}/leads?role=manager`,
         { 
           headers: { 
             'Authorization': `Bearer ${token}`,
@@ -289,7 +289,7 @@ const CampaignManagement = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        `http://localhost:5000/api/leads/assign-campaign`,
+         `${process.env.REACT_APP_API_BASE_URL}/leads/assign-campaign`,
         { 
           campaignId: assignLeadCampaign,
           leadId: selectedLeads[0] // If multiple leads, we'll need to make multiple requests
@@ -307,7 +307,7 @@ const CampaignManagement = () => {
         if (selectedLeads.length > 1) {
           for (let i = 1; i < selectedLeads.length; i++) {
             await axios.post(
-              `http://localhost:5000/api/leads/assign-campaign`,
+               `${process.env.REACT_APP_API_BASE_URL}/leads/assign-campaign`,
               { 
                 campaignId: assignLeadCampaign,
                 leadId: selectedLeads[i]

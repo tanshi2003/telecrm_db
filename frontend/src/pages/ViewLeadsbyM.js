@@ -1,8 +1,10 @@
+import api from '../config/api';
 import React, { useEffect, useState, useCallback } from "react";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Plus } from "lucide-react";
+import { BASE_URL } from '../config/api'
 
 const ViewLeads = () => {
   const [user, setUser] = useState(null);
@@ -22,7 +24,7 @@ const ViewLeads = () => {
       }
 
       // Get leads for manager
-      const response = await axios.get(`http://localhost:5000/api/leads`, {
+      const response = await api.get(`${BASE_URL}/leads`, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -45,7 +47,7 @@ const ViewLeads = () => {
 
       // Fetch team members
       const usersResponse = await axios.get(
-        `http://localhost:5000/api/managers/${storedUser.id}/team-members`, 
+         `${process.env.REACT_APP_API_BASE_URL}/managers/${storedUser.id}/team-members`, 
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -96,7 +98,7 @@ const ViewLeads = () => {
         return;
       }
 
-      const response = await axios.delete(`http://localhost:5000/api/leads/${id}`, {
+      const response = await api.delete(`${BASE_URL}/leads/${id}`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

@@ -1,8 +1,10 @@
+import api from '../config/api';
+import { BASE_URL } from '../config/api'
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
-import axios from "axios";
+
 
 const Viewlead = () => {
   const { id } = useParams(); // Get the lead ID from the URL
@@ -27,7 +29,7 @@ const Viewlead = () => {
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:5000/api/users", {
+        const response = await api.get(`${BASE_URL}/users`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data?.data) {
@@ -46,7 +48,7 @@ const Viewlead = () => {
       const fetchLead = async () => {
         try {
           const token = localStorage.getItem("token");
-          const response = await axios.get(`http://localhost:5000/api/leads/${id}`, {
+           const response = await api.get(`${BASE_URL}/leads/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (response.data) {

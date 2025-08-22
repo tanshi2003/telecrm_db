@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import api from '../config/api';
 import axios from "axios";
 import Sidebar from "../components/Sidebar";
 import BackButton from "../components/BackButton";
@@ -30,7 +31,7 @@ const ManageCampaigns = () => {
     const fetchLeads = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:5000/api/leads", {
+        const response = await api.get("/leads", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setLeads(response.data.data || []);
@@ -42,7 +43,7 @@ const ManageCampaigns = () => {
     const fetchAssignedLeads = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:5000/api/campaigns/assigned-leads", {
+        const response = await api.get("/campaigns/assigned-leads", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setAssignedLeadIds(response.data.assignedLeadIds || []);
@@ -102,7 +103,7 @@ const ManageCampaigns = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.post("http://localhost:5000/api/campaigns", submitData, {
+      await api.post("/campaigns", submitData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -123,7 +124,7 @@ const ManageCampaigns = () => {
   const handleUpdateCampaign = async () => {
     const submitData = { ...formData, lead_count: formData.leads.length.toString() };
     try {
-      await axios.put(`/api/campaigns/${editId}`, submitData);
+       await axios.put(`/campaigns/${editId}`, submitData);
       resetForm();
       setSuccessMessage("Campaign updated successfully!");
     } catch (error) {

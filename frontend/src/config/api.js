@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+export const BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 const api = axios.create({
     baseURL: 'https://telecrm-backend.onrender.com/api',
     headers: {
@@ -26,7 +28,6 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // Handle unauthorized access
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = '/login';
@@ -35,4 +36,4 @@ api.interceptors.response.use(
     }
 );
 
-export default api; 
+export default api;

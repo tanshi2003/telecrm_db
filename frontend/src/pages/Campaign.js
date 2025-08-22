@@ -5,7 +5,7 @@ import axios from "axios";
 
 const Campaign = () => {
   const [user, setUser] = useState(null);
-  const [filters, setFilters] = useState({
+  const [filters] = useState({
     status: "",
     priority: "",
     dateRange: { start: "", end: "" },
@@ -32,7 +32,7 @@ const Campaign = () => {
   const fetchCampaigns = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/campaigns", {
+      const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/campaigns`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -55,7 +55,7 @@ const Campaign = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/api/campaigns/${id}`, {
+      await axios.delete(`${process.env.REACT_APP_API_BASE_URL}/campaigns/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCampaigns((prev) => prev.filter((c) => c.id !== id));
@@ -65,20 +65,7 @@ const Campaign = () => {
     }
   };
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    if (name === "dateRange.start" || name === "dateRange.end") {
-      setFilters((prev) => ({
-        ...prev,
-        dateRange: {
-          ...prev.dateRange,
-          [name.split(".")[1]]: value,
-        },
-      }));
-    } else {
-      setFilters((prev) => ({ ...prev, [name]: value }));
-    }
-  };
+  // ...existing code...
 
   const filteredCampaigns = campaigns.filter((campaign) => {
     const matchesStatus = filters.status ? campaign.status === filters.status : true;

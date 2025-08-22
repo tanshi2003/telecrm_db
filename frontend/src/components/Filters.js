@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from '../config/api';
 
 const defaultLeadStatuses = [
   "New", "Contacted", "Follow-Up Scheduled", "Interested", "Not Interested", "Call Back Later", "Under Review", "Converted", "Lost", "Not Reachable", "On Hold"
@@ -34,7 +34,6 @@ const Filters = ({ type = "users", onApply, onReset, removeWorkingHours }) => {
   const [manager, setManager] = useState("");
   const [performance, setPerformance] = useState("");
   const [workingHours, setWorkingHours] = useState({ min: "", max: "" });
-
   // Campaigns
   const [campStatus, setCampStatus] = useState("");
   const [priority, setPriority] = useState("");
@@ -47,45 +46,22 @@ const Filters = ({ type = "users", onApply, onReset, removeWorkingHours }) => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (type === "leads" || type === "users" || type === "campaigns") {
-      axios.get("http://localhost:5000/api/users", { headers: { Authorization: `Bearer ${token}` } })
+      api.get("/users", { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setUsers(res.data?.data || []))
         .catch(() => {});
     }
     if (type === "leads" || type === "campaigns") {
-      axios.get("http://localhost:5000/api/campaigns", { headers: { Authorization: `Bearer ${token}` } })
+      api.get("/campaigns", { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setCampaigns(res.data?.data || []))
-        .catch(() => {});
-    }
-    if (type === "users") {
-      // Managers for manager dropdown
-      axios.get("http://localhost:5000/api/users?role=Manager", { headers: { Authorization: `Bearer ${token}` } })
-        .then(res => setManagers(res.data?.data || []))
         .catch(() => {});
     }
     if (type === "campaigns") {
       // Admins for createdBy dropdown
-      axios.get("http://localhost:5000/api/users?role=Admin", { headers: { Authorization: `Bearer ${token}` } })
+      api.get("/users?role=Admin", { headers: { Authorization: `Bearer ${token}` } })
         .then(res => setAdmins(res.data?.data || []))
         .catch(() => {});
     }
   }, [type]);
-
-  // Fetch managers data
-  useEffect(() => {
-    const fetchManagers = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/managers');
-        const data = await response.json();
-        if (data.success) {
-          setManagers(data.data);
-        }
-      } catch (error) {
-        console.error('Error fetching managers:', error);
-      }
-    };
-
-    fetchManagers();
-  }, []);
 
   // Reset all fields
   const handleReset = () => {

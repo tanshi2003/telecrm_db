@@ -24,8 +24,8 @@ const activityController = {
                         a.created_at,
                         u.name as user_name,
                         u.role as user_role
-                    FROM activity_logs a
-                    JOIN users u ON a.user_id = u.id
+                    FROM Activity_logs a
+                    JOIN Users u ON a.user_id = u.id
                     ORDER BY a.created_at DESC
                     LIMIT 100
                 `;
@@ -46,9 +46,9 @@ const activityController = {
                         a.created_at,
                         u.name as user_name,
                         u.role as user_role
-                    FROM activity_logs a
-                    JOIN users u ON a.user_id = u.id
-                    LEFT JOIN campaigns c ON a.reference_type = 'campaign' AND a.reference_id = c.id
+                    FROM Activity_logs a
+                    JOIN Users u ON a.user_id = u.id
+                    LEFT JOIN Campaigns c ON a.reference_type = 'campaign' AND a.reference_id = c.id
                     WHERE a.user_id = ? 
                         OR (a.reference_type = 'campaign' AND c.manager_id = ?)
                         OR a.activity_type LIKE 'campaign_%'
@@ -73,9 +73,9 @@ const activityController = {
                         a.created_at,
                         u.name as user_name,
                         u.role as user_role
-                    FROM activity_logs a
-                    JOIN users u ON a.user_id = u.id
-                    LEFT JOIN campaigns c ON a.reference_type = 'campaign' AND a.reference_id = c.id
+                    FROM Activity_logs a
+                    JOIN Users u ON a.user_id = u.id
+                    LEFT JOIN Campaigns c ON a.reference_type = 'campaign' AND a.reference_id = c.id
                     LEFT JOIN campaign_users cu ON c.id = cu.campaign_id
                     WHERE a.user_id = ?
                         OR (a.reference_type = 'campaign' AND cu.user_id = ?)
@@ -116,7 +116,7 @@ const activityController = {
         try {            const { userId, role, activityType, description, referenceType, referenceId, location } = req.body;
 
             const [result] = await db.promise().query(
-                `INSERT INTO activity_logs 
+                `INSERT INTO Activity_logs 
                 (user_id, role, activity_type, activity_description, reference_type, reference_id, location) 
                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
                 [userId, role, activityType, description, referenceType, referenceId, location]

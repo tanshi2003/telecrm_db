@@ -66,7 +66,7 @@ const DialerModal = ({ user, leads, onClose }) => {
         
         // Step 1: Initiate call
         const initiateResponse = await axios.post(
-            `${BASE_URL}/api/calls/initiate`,
+            `${BASE_URL}/calls/initiate`,
             {
                 to: phoneNumber,
                 from: user.phone || process.env.REACT_APP_DEFAULT_CALLER,
@@ -82,7 +82,7 @@ const DialerModal = ({ user, leads, onClose }) => {
             
             // Step 2: Connect call
             const connectResponse = await axios.post(
-                `${BASE_URL}/api/calls/connect`,
+                `${BASE_URL}/calls/connect`,
                 {
                     callId,
                     to: phoneNumber,

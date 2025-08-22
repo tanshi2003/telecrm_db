@@ -121,7 +121,7 @@ router.post('/initiate', authenticateToken, (req, res) => {
             formData.append('Record', 'true');
             formData.append('PlayDtmf', 'true');
             formData.append('CallerName', 'TeleCRM');
-            formData.append('StatusCallback', 'http://localhost:5000/api/calls/status');
+            formData.append('StatusCallback', `${process.env.API_BASE_URL}/api/calls/status`);
             formData.append('StatusCallbackMethod', 'POST');
             formData.append('StatusCallbackEvent', 'initiated,ringing,answered,completed');
             formData.append('AgentNumber', formattedFrom);

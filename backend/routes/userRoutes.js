@@ -3,7 +3,7 @@ const router = express.Router();
 const userController = require("../controllers/userController");
 const { authenticateToken } = require("../middleware/auth");
 const roleMiddleware = require("../middleware/checkRole");
-const User = require("../models/user");
+const User = require("../models/User");
 const Activity = require("../models/Activity");
 
 // Public routes

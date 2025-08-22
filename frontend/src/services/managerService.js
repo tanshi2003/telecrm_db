@@ -10,14 +10,14 @@ const getAuthHeader = () => {
 
 // Get dashboard statistics
 export const getDashboardStats = async () => {
-    const response = await api.get('/api/managers/dashboard-stats');
+    const response = await api.get('/managers/dashboard-stats');
     return response.data;
 };
 
 // Get team performance
 export const getTeamPerformance = async () => {
     try {
-        const response = await api.get('/api/managers/team-performance');
+        const response = await api.get('/managers/team-performance');
         console.log('Team Performance API Response:', response.data);
         
         // Ensure we have an array of team members
@@ -47,7 +47,7 @@ export const getCampaignPerformance = async (managerId) => {
     try {
         const token = localStorage.getItem('token');
         const response = await fetch(
-            `http://localhost:5000/api/campaigns`,
+            `${process.env.REACT_APP_API_BASE_URL}/campaigns`,
             {
                 headers: { 
                     Authorization: `Bearer ${token}`,
@@ -86,14 +86,14 @@ export const getCampaignPerformance = async (managerId) => {
 
 // Get unassigned users
 export const getUnassignedUsers = async () => {
-    const response = await api.get('/api/managers/unassigned-users');
+    const response = await api.get('/managers/unassigned-users');
     return response.data;
 };
 
 // Get all teams
 export const getTeams = async () => {
     try {
-        const response = await api.get('/api/managers/teams');
+        const response = await api.get('/managers/teams');
         return response.data;
     } catch (error) {
         throw error.response?.data || error.message;
@@ -102,7 +102,7 @@ export const getTeams = async () => {
 
 // Assign users to team
 export const assignUsersToTeam = async (manager_id, user_ids) => {
-    const response = await api.post('/api/managers/assign-users', { manager_id, user_ids });
+    const response = await api.post('/managers/assign-users', { manager_id, user_ids });
     return response.data;
 };
 
@@ -110,7 +110,7 @@ export const assignUsersToTeam = async (manager_id, user_ids) => {
 export const assignLeads = async (selectedMember, selectedLeads) => {
     // Ensure selectedLeads is an array
     const leadsArray = Array.isArray(selectedLeads) ? selectedLeads : [selectedLeads];
-    const response = await api.post('/api/managers/assign-leads', { 
+    const response = await api.post('/managers/assign-leads', { 
         selectedMember, 
         selectedLeads: leadsArray 
     }, getAuthHeader());
@@ -123,7 +123,7 @@ export const getUsers = async () => {
     const user = JSON.parse(localStorage.getItem('user'));
     const managerId = user.id;
     // Use the dedicated team-members endpoint
-    const response = await api.get(`/api/managers/${managerId}/team-members`, getAuthHeader());
+    const response = await api.get(`/managers/${managerId}/team-members`, getAuthHeader());
     return {
       success: true,
       data: response.data.data || []
@@ -136,7 +136,7 @@ export const getUsers = async () => {
 // Update user status
 export const updateUserStatus = async (userId, status) => {
   try {
-    const response = await api.put(`/api/users/${userId}/status`, { status }, getAuthHeader());
+    const response = await api.put(`/users/${userId}/status`, { status }, getAuthHeader());
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -146,7 +146,7 @@ export const updateUserStatus = async (userId, status) => {
 // Assign lead to user
 export const assignLead = async (leadId, userId) => {
   try {
-    const response = await api.post('/api/managers/leads/assign', { leadId, userId }, getAuthHeader());
+    const response = await api.post('/managers/leads/assign', { leadId, userId }, getAuthHeader());
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -155,14 +155,14 @@ export const assignLead = async (leadId, userId) => {
 
 // Get specific team by ID
 export const getTeamById = async (teamId) => {
-    const response = await api.get(`/api/managers/teams/${teamId}`);
+    const response = await api.get(`/managers/teams/${teamId}`);
     return response.data;
 };
 
 // Get unassigned leads
 export const getUnassignedLeads = async () => {
     try {
-        const response = await api.get('/api/managers/unassigned-leads');
+        const response = await api.get('/managers/unassigned-leads');
         return response.data;
     } catch (error) {
         throw error.response?.data || error.message;

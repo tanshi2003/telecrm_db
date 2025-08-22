@@ -2,7 +2,7 @@ const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const responseFormatter = require("../utils/responseFormatter");
-const User = require("../models/user");
+const User = require("../models/User");
 
 // Register a new user
 exports.registerUser = (req, res) => {
@@ -134,9 +134,9 @@ exports.getUsers = async (req, res) => {
                 u.created_at,
                 u.updated_at,
                 COALESCE(m.name, '') as manager_name,
-                -- Total leads assigned to user
-                (SELECT COUNT(*) FROM leads l WHERE l.assigned_to = u.id) as total_leads,
-                -- Campaigns handled by user
+                -- Total leads assigned to User
+                (SELECT COUNT(*) FROM Leads l WHERE l.assigned_to = u.id) as total_leads,
+                -- Campaigns handled by User
                 (SELECT COUNT(DISTINCT cu.campaign_id) FROM campaign_users cu WHERE cu.user_id = u.id) as campaigns_handled,
                 -- Total working hours (sum of call logs in hours)
                 COALESCE((
@@ -198,7 +198,7 @@ exports.getCampaignsHandledByUser = (req, res) => {
         SELECT 
             c.id, c.name, c.description, c.status, c.priority, c.start_date, c.end_date
         FROM 
-            campaigns c
+            Campaigns c
         INNER JOIN 
             campaign_users cu ON c.id = cu.campaign_id
         WHERE 
@@ -259,7 +259,7 @@ exports.getCampaignsByUserId = (req, res) => {
             c.id, c.name, c.description, c.status, c.priority,
             c.start_date, c.end_date, c.created_at, c.updated_at
         FROM 
-            campaigns c
+            Campaigns c
         INNER JOIN 
             campaign_users cu ON c.id = cu.campaign_id
         WHERE 
@@ -296,7 +296,7 @@ exports.updateUser = (req, res) => {
         }
 
         // Update lead assignments
-        db.query("UPDATE leads SET assigned_to = NULL WHERE assigned_to = ?", [id], err => {
+        db.query("UPDATE Leads SET assigned_to = NULL WHERE assigned_to = ?", [id], err => {
             if (err) {
                 console.error("Error clearing lead assignments:", err);
                 return res.status(500).json(responseFormatter(false, "Error updating leads", err));
@@ -304,7 +304,7 @@ exports.updateUser = (req, res) => {
 
             if (assigned_leads.length > 0) {
                 db.query(
-                    "UPDATE leads SET assigned_to = ? WHERE id IN (?)",
+                    "UPDATE Leads SET assigned_to = ? WHERE id IN (?)",
                     [id, assigned_leads],
                     err => {
                         if (err) {
@@ -389,13 +389,13 @@ exports.deleteUser = (req, res) => {
         if (results.length === 0) return res.status(404).json(responseFormatter(false, "User not found"));
 
         // Remove or update all related records
-        db.query("DELETE FROM activity_logs WHERE user_id = ?", [id], err => {
+        db.query("DELETE FROM Activity_logs WHERE user_id = ?", [id], err => {
             if (err) return res.status(500).json(responseFormatter(false, "Error deleting activity logs", err));
 
             db.query("DELETE FROM campaign_users WHERE user_id = ?", [id], err => {
                 if (err) return res.status(500).json(responseFormatter(false, "Error deleting campaign assignments", err));
 
-                db.query("UPDATE leads SET assigned_to = NULL WHERE assigned_to = ?", [id], err => {
+                db.query("UPDATE Leads SET assigned_to = NULL WHERE assigned_to = ?", [id], err => {
                     if (err) return res.status(500).json(responseFormatter(false, "Error updating leads", err));
 
                     // ...repeat for other tables as needed...
@@ -571,7 +571,7 @@ exports.getUserStats = (req, res) => {
             COUNT(DISTINCT cu.campaign_id) as campaigns_handled,
             COALESCE(SUM(TIME_TO_SEC(TIMEDIFF(cl.end_time, cl.start_time))/3600), 0) as total_working_hours
         FROM Users u
-        LEFT JOIN leads l ON u.id = l.assigned_to
+        LEFT JOIN Leads l ON u.id = l.assigned_to
         LEFT JOIN campaign_users cu ON u.id = cu.user_id
         LEFT JOIN call_logs cl ON u.id = cl.user_id
         WHERE u.id = ?
@@ -656,10 +656,10 @@ exports.getUnassignedUsers = (req, res) => {
     const query = `
         SELECT 
             u.id, u.name, u.email, u.phone_no, u.role, u.status, u.location, u.created_at,
-            COALESCE((SELECT COUNT(*) FROM leads WHERE assigned_to = u.id), 0) as total_leads,
+            COALESCE((SELECT COUNT(*) FROM Leads WHERE assigned_to = u.id), 0) as total_leads,
             COALESCE((SELECT COUNT(*) FROM campaign_users WHERE user_id = u.id), 0) as campaigns_handled
         FROM 
-            users u 
+            Users u 
         WHERE 
             u.manager_id IS NULL 
             AND u.role != 'manager'
