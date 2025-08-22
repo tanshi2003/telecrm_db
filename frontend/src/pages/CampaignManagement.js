@@ -17,7 +17,7 @@ const CampaignManagement = () => {
   const [viewCampaign, setViewCampaign] = useState(null);
   const [assignLeadCampaign, setAssignLeadCampaign] = useState(null);
   const [user, setUser] = useState(null);
-  const [activeFilter] = useState('all');
+  const [activeFilter, setActiveFilter] = useState('all');
   const [showColorInfo, setShowColorInfo] = useState(null); // Store campaign ID for showing color info // 'all', 'active', 'leads'
   const [showAllCampaignsModal, setShowAllCampaignsModal] = useState(false);
   const [showActiveCampaignsModal, setShowActiveCampaignsModal] = useState(false);

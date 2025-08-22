@@ -2,7 +2,6 @@ import api from '../config/api';
 import { BASE_URL } from '../config/api'
 import axios from "axios";
 import React, { useEffect, useState, useContext } from "react";
-import axios from "axios";
 // import {
 //   FaPhone,
 //   FaEnvelope,
