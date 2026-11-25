@@ -1,6 +1,6 @@
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+const { generateToken } = require("../utils/jwt");
 const responseFormatter = require("../utils/responseFormatter");
 const User = require("../models/User");
 
@@ -45,7 +45,7 @@ exports.registerUser = (req, res) => {
         return res.status(500).json({ message: "Error registering user", error: err });
       }
 
-      const token = jwt.sign({ id: result.insertId, role }, process.env.JWT_SECRET, { expiresIn: "24h" });
+      const token = generateToken(result.insertId, role);
 
       db.query("UPDATE users SET token = ? WHERE id = ?", [token, result.insertId], (err) => {
         if (err) {
@@ -90,7 +90,7 @@ exports.loginUser = (req, res) => {
         bcrypt.compare(password, user.password, (err, isMatch) => {
             if (err || !isMatch) return res.status(400).json(responseFormatter(false, "Invalid email or password"));
 
-            const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "24h" });
+            const token = generateToken(user.id, user.role);
 
             const lastLogin = new Date();
             db.query(
