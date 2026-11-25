@@ -16,7 +16,7 @@ const CallController = {
 
             // First create call record
             const [result] = await db.promise().query(
-                `INSERT INTO Calls (caller_id, lead_id, start_time, status, call_type, disposition)
+                `INSERT INTO calls (caller_id, lead_id, start_time, status, call_type, disposition)
                  VALUES (?, ?, NOW(), 'initiated', 'outbound', 'pending')`,
                 [callerId, leadId]
             );
@@ -64,7 +64,7 @@ const CallController = {
 
             // Update call record with Exotel SID
             await db.promise().query(
-                `UPDATE Calls SET exotel_call_sid = ?, status = 'connected' WHERE id = ?`,
+                `UPDATE calls SET exotel_call_sid = ?, status = 'connected' WHERE id = ?`,
                 [response.data.Call.Sid, callId]
             );
 
@@ -113,7 +113,7 @@ const CallController = {
 
             // Update call status in database
             const query = `
-                UPDATE Calls 
+                UPDATE calls 
                 SET status = 'in-progress',
                     disposition = 'answered'
                 WHERE id = ?
@@ -209,7 +209,7 @@ const CallController = {
 
             // Update call record in database
             const query = `
-                UPDATE Calls 
+                UPDATE calls 
                 SET end_time = NOW(),
                     duration = ?,
                     status = CASE 
@@ -273,7 +273,7 @@ const CallController = {
                 caller_id
             } = req.body;
             db.query(
-                `INSERT INTO Calls (
+                `INSERT INTO calls (
                     lead_id, 
                     caller_id, 
                     start_time,
@@ -517,7 +517,7 @@ const CallController = {
             } = req.body;
 
             const query = `
-                UPDATE Calls 
+                UPDATE calls 
                 SET end_time = ?, 
                     duration = ?, 
                     status = ?,
