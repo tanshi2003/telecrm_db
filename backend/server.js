@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const db = require("./config/db");
 const viewsRoutes = require('./routes/viewsRoutes');
+const monthlyCallerStatsRoutes = require('./routes/monthlyCallerStatsRoutes');
 const http = require('http');
 const jwt = require('jsonwebtoken');
 const morgan = require('morgan');
@@ -76,6 +77,7 @@ app.use('/api/calls', callRoutes);
 app.use('/api/settings', settingsRoutes);
 
 // Backward-compatible root aliases for older frontend pages that omit /api.
+app.use('/monthly_caller_stats', monthlyCallerStatsRoutes);
 app.use("/admins", adminRoutes);
 app.use("/users", userRoutes);
 app.use("/leads", leadRoutes);
