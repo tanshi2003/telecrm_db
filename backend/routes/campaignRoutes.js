@@ -110,7 +110,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
             LEFT JOIN users u ON c.manager_id = u.id
             LEFT JOIN leads l ON c.id = l.campaign_id
             WHERE cu.user_id = ?
-                AND c.status = 'active'
+                AND c.status = 'Active'
             GROUP BY c.id
             ORDER BY c.created_at DESC
         `;
