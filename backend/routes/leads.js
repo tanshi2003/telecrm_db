@@ -24,7 +24,7 @@ router.post("/", authenticateToken, async (req, res) => {
     }
 
     const [result] = await pool.query(
-      `INSERT INTO Leads 
+      `INSERT INTO leads 
       (title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
