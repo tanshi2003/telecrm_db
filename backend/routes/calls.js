@@ -441,7 +441,7 @@ router.get('/stats/performance/:callerId', authenticateToken, async (req, res) =
       SELECT 
         COUNT(*) as total_calls,
         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_calls,
-        SUM(CASE WHEN disposition = 'success' THEN 1 ELSE 0 END) as successful_calls,
+        SUM(CASE WHEN disposition = 'interested' THEN 1 ELSE 0 END) as successful_calls,
         AVG(duration) as avg_duration,
         SUM(CASE WHEN callback_datetime IS NOT NULL THEN 1 ELSE 0 END) as scheduled_callbacks
       FROM calls 
@@ -601,7 +601,7 @@ router.get('/stats/monthly/:callerId', authenticateToken, async (req, res) => {
         COUNT(*) as total_calls,
         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_calls,
         AVG(duration) as avg_duration,
-        SUM(CASE WHEN disposition = 'success' THEN 1 ELSE 0 END) as successful_calls
+        SUM(CASE WHEN disposition = 'interested' THEN 1 ELSE 0 END) as successful_calls
       FROM calls 
       WHERE caller_id = ?
       GROUP BY DATE_FORMAT(start_time, '%Y-%m')
@@ -642,7 +642,7 @@ router.get('/stats/caller/:callerId', authenticateToken, async (req, res) => {
         COUNT(*) as total_calls,
         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_calls,
         AVG(duration) as avg_duration,
-        SUM(CASE WHEN disposition = 'success' THEN 1 ELSE 0 END) as successful_calls,
+        SUM(CASE WHEN disposition = 'interested' THEN 1 ELSE 0 END) as successful_calls,
         SUM(CASE WHEN callback_datetime IS NOT NULL THEN 1 ELSE 0 END) as scheduled_callbacks,
         MAX(start_time) as last_call_time
       FROM calls 
