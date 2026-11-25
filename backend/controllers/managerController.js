@@ -9,7 +9,7 @@ const getDashboardStats = async (req, res) => {
     const usersQuery = `
       SELECT 
         COUNT(*) as total_users,
-        SUM(CASE WHEN status = 'Active' THEN 1 ELSE 0 END) as active_users,
+        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_users,
         SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) as inactive_users
       FROM users 
       WHERE manager_id = ?
