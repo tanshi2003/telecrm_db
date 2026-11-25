@@ -64,7 +64,7 @@ const CallController = {
 
             // Update call record with Exotel SID
             await db.promise().query(
-                `UPDATE calls SET exotel_call_sid = ?, status = 'connected' WHERE id = ?`,
+                `UPDATE calls SET exotel_call_sid = ?, status = 'in-progress' WHERE id = ?`,
                 [response.data.Call.Sid, callId]
             );
 
