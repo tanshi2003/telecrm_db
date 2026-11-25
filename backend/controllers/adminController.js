@@ -25,7 +25,7 @@ exports.registerAdmin = (req, res) => {
     }
 
     // Check if admin already exists
-    db.query(`SELECT * FROM admins WHERE email = ?`, [email], (err, results) => {
+    db.query(`SELECT email FROM admins`, (err, results) => {
         if (err) {
             console.error('Error querying the database:', err);
             return res.status(500).json(responseFormatter(false, "Database error", err));
