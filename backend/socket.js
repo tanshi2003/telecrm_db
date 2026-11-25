@@ -6,10 +6,20 @@ const config = require('./config/config.json');
 const userSockets = new Map();
 
 function initializeSocket(server) {
+  const allowedOrigins = new Set([
+    ...(process.env.CORS_ORIGIN || '').split(',').map((origin) => origin.trim()).filter(Boolean),
+    'https://tanshi2003.github.io',
+    'https://telecrmio.netlify.app',
+    'http://localhost:3000'
+  ]);
+
   const io = new Server(server, {
     cors: {
-      origin: "http://localhost:3000",
-      methods: ["GET", "POST"],
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+        return callback(new Error('Origin not allowed by Socket.IO CORS'));
+      },
+      methods: ['GET', 'POST'],
       credentials: true
     },
     transports: ['websocket', 'polling']
@@ -17,10 +27,7 @@ function initializeSocket(server) {
 
   // Authentication middleware
   io.use((socket, next) => {
-    console.log('Socket.IO authentication attempt:', {
-      auth: socket.handshake.auth,
-      headers: socket.handshake.headers
-    });
+    // Never log socket handshake auth or headers because they may contain credentials.
 
     const token = socket.handshake.auth.token;
     if (!token) {
@@ -46,12 +53,7 @@ function initializeSocket(server) {
       socket.user = decoded;
       next();
     } catch (err) {
-      console.error('Socket.IO authentication error:', {
-        error: err.message,
-        stack: err.stack,
-        token: token.substring(0, 10) + '...',
-        name: err.name
-      });
+      console.error('Socket.IO authentication rejected:', err.name);
       next(new Error('Invalid authentication token'));
     }
   });
