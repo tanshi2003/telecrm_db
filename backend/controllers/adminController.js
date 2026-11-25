@@ -1,6 +1,6 @@
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+
 const responseFormatter = require("../utils/responseFormatter");
 const { generateToken } = require("../utils/helpers"); // Move JWT logic here
 
@@ -121,11 +121,7 @@ exports.loginAdmin = (req, res) => {
                 }
 
                 // Generate a new JWT token
-                const token = jwt.sign(
-                    { id: admin.id, role: admin.role },
-                    process.env.JWT_SECRET || 'secret',
-                    { expiresIn: '24h' }
-                );
+                const token = generateToken(admin.id, admin.role);
 
                 // Update token and last login time using a transaction
                 db.getConnection((err, connection) => {
