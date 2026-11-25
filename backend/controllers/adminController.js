@@ -1,5 +1,7 @@
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const { JWT_SECRET } = require("../utils/jwt");
 
 const responseFormatter = require("../utils/responseFormatter");
 const { generateToken } = require("../utils/helpers"); // Move JWT logic here
@@ -11,6 +13,9 @@ exports.registerAdmin = (req, res) => {
     // Validate input
     if (!name || !email || !phone_no || !password || !role) {
         return res.status(400).json(responseFormatter(false, "All fields are required"));
+    }
+    if (role !== 'admin') {
+        return res.status(400).json(responseFormatter(false, "Admin registration must use the admin role"));
     }
 
     // Simple Email Validation
@@ -26,8 +31,20 @@ exports.registerAdmin = (req, res) => {
             return res.status(500).json(responseFormatter(false, "Database error", err));
         }
 
+        // Permit public bootstrap only when no admin exists yet. Once an admin exists,
+        // require a valid admin JWT for any additional admin registration.
         if (results.length > 0) {
-            return res.status(400).json(responseFormatter(false, "Admin already exists"));
+            const authHeader = req.headers.authorization || '';
+            const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+            let decoded = null;
+            try {
+                if (token) decoded = jwt.verify(token, JWT_SECRET);
+            } catch (_) {
+                decoded = null;
+            }
+            if (!decoded || decoded.role !== 'admin') {
+                return res.status(403).json(responseFormatter(false, "Only an authenticated admin can register another admin"));
+            }
         }
 
         // Hash the password before saving
