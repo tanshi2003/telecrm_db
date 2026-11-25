@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const { generateToken } = require('../utils/jwt');
 const { authenticateToken } = require("../middleware/auth");
 
 // Login route
@@ -37,11 +37,7 @@ router.post('/login', (req, res) => {
                     });
                 }
 
-                const token = jwt.sign(
-    { id: admin.id, role: admin.role || 'admin' },
-    process.env.JWT_SECRET || 'secret',
-    { expiresIn: '7d' }
-);
+                const token = generateToken(admin.id, admin.role || 'admin', '7d');
 
                 // Update token and last login in database
                 db.query(
@@ -102,11 +98,7 @@ router.post('/login', (req, res) => {
                         });
                     }
 
-                    const token = jwt.sign(
-                        { id: user.id, role: user.role },
-                        process.env.JWT_SECRET,
-                        { expiresIn: '24h' }
-                    );
+                    const token = generateToken(user.id, user.role);
 
                     // Update token and last login
                     db.query(
