@@ -120,6 +120,7 @@ const schemaBootstrap = [
         INDEX idx_calls_lead_id (lead_id),
         INDEX idx_calls_created_at (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+    `ALTER TABLE calls MODIFY disposition ENUM('pending','in-progress','completed','failed','busy','no-answer','interested','not-interested') DEFAULT 'pending'`,
     `CREATE TABLE IF NOT EXISTS activity_logs (
         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
