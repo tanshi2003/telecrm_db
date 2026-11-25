@@ -31,6 +31,10 @@ exports.registerAdmin = (req, res) => {
             return res.status(500).json(responseFormatter(false, "Database error", err));
         }
 
+        if (results.some((adminRow) => adminRow.email.toLowerCase() === email.toLowerCase())) {
+            return res.status(409).json(responseFormatter(false, "Admin already exists with this email"));
+        }
+
         // Permit public bootstrap only when no admin exists yet. Once an admin exists,
         // require a valid admin JWT for any additional admin registration.
         if (results.length > 0) {
