@@ -161,8 +161,24 @@ exports.getUsers = async (req, res) => {
         query += ` ORDER BY u.name ASC`;
 
         db.query(query, queryParams, (err, users) => {
+            // Optional call_logs metrics should not break the user directory on legacy DBs.
+            if (err && err.code === "ER_NO_SUCH_TABLE" && /call_logs/i.test(err.message || "")) {
+                console.warn("getUsers: call_logs table missing; defaulting total_working_hours to 0");
+                const fallbackQuery = query.replace(
+                    /COALESCE\(\(\s*SELECT SUM\([\s\S]*?\)\s*FROM call_logs cl WHERE cl\.user_id = u\.id\s*\), 0\) as total_working_hours/,
+                    "0 as total_working_hours"
+                );
+                return db.query(fallbackQuery, queryParams, (fallbackErr, fallbackUsers) => {
+                    if (fallbackErr) {
+                        console.error("getUsers fallback query failed:", fallbackErr.code, fallbackErr.message);
+                        return res.status(500).json({ success: false, message: "Database error" });
+                    }
+                    res.json({ success: true, data: fallbackUsers });
+                });
+            }
             if (err) {
-                return res.status(500).json({ success: false, message: "Database error", error: err });
+                console.error("getUsers query failed:", err.code, err.message);
+                return res.status(500).json({ success: false, message: "Database error" });
             }
             res.json({
                 success: true,
