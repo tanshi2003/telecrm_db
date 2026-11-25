@@ -18,15 +18,15 @@ exports.search = async (req, res) => {
   let params = [`%${query}%`, `%${query}%`];
 
   if (category === "users") {
-    sql = `SELECT * FROM Users WHERE (name LIKE ? OR email LIKE ?)`;
+    sql = `SELECT * FROM users WHERE (name LIKE ? OR email LIKE ?)`;
     if (role) {
       sql += ` AND role = ?`; // Add role filter if provided
       params.push(role);
     }
   } else if (category === "campaigns") {
-    sql = `SELECT * FROM Campaigns WHERE name LIKE ? OR description LIKE ?`;
+    sql = `SELECT * FROM campaigns WHERE name LIKE ? OR description LIKE ?`;
   } else if (category === "leads") {
-    sql = `SELECT * FROM Leads WHERE name LIKE ? OR phone_no LIKE ?`;
+    sql = `SELECT * FROM leads WHERE name LIKE ? OR phone_no LIKE ?`;
   } else {
     return res.status(400).json({ message: "Invalid category." });
   }
@@ -56,11 +56,11 @@ exports.getSuggestions = async (req, res) => {
   let params = [`%${query}%`];
 
   if (category === "users") {
-    sql = `SELECT name, role FROM Users WHERE name LIKE ? LIMIT 5`;
+    sql = `SELECT name, role FROM users WHERE name LIKE ? LIMIT 5`;
   } else if (category === "campaigns") {
-    sql = `SELECT name FROM Campaigns WHERE name LIKE ? LIMIT 5`;
+    sql = `SELECT name FROM campaigns WHERE name LIKE ? LIMIT 5`;
   } else if (category === "leads") {
-    sql = `SELECT name FROM Leads WHERE name LIKE ? LIMIT 5`;
+    sql = `SELECT name FROM leads WHERE name LIKE ? LIMIT 5`;
   } else {
     return res.status(400).json({ message: "Invalid category." });
   }
