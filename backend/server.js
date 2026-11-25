@@ -158,6 +158,7 @@ const schemaBootstrap = [
         last_login DATETIME DEFAULT NULL,
         total_leads INT DEFAULT 0,
         campaigns_handled INT DEFAULT 0,
+        working_hours DECIMAL(5,2) DEFAULT 0,
         daily_call_target INT DEFAULT 50,
         monthly_call_target INT DEFAULT 1000,
         daily_calling_hours DECIMAL(4,2) DEFAULT 8.00,
@@ -222,6 +223,11 @@ const schemaBootstrap = [
     try {
         for (const statement of schemaBootstrap) {
             await db.promise().query(statement);
+        }
+        // Add the legacy model field safely for databases created before this bootstrap.
+        const [workingHoursColumn] = await db.promise().query("SHOW COLUMNS FROM users LIKE 'working_hours'");
+        if (workingHoursColumn.length === 0) {
+            await db.promise().query("ALTER TABLE users ADD COLUMN working_hours DECIMAL(5,2) DEFAULT 0");
         }
         console.info("Core schema bootstrap checked/ready (users, campaigns, campaign_users, leads).");
         server.listen(PORT, () => console.log(`✅ Server is running on port ${PORT}`));
