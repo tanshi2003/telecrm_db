@@ -149,7 +149,14 @@ const schemaBootstrap = [
     INDEX idx_leads_campaign_id (campaign_id),
     INDEX idx_leads_status (status),
     INDEX idx_leads_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+    `CREATE TABLE IF NOT EXISTS call_logs (
+        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        start_time DATETIME DEFAULT NULL,
+        end_time DATETIME DEFAULT NULL,
+        INDEX idx_call_logs_user_id (user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
 ];
 
 (async () => {
