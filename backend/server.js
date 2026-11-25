@@ -38,10 +38,21 @@ console.log = (...args) => {
     console.info(`[${timestamp}]`, ...args);
 };
 
-// ✅ CORS FIRST — before routes!
+// CORS FIRST — before routes. Keep existing configured origins and allow GitHub Pages.
+const allowedOrigins = new Set([
+    ...(process.env.CORS_ORIGIN || '').split(',').map((origin) => origin.trim()).filter(Boolean),
+    'https://tanshi2003.github.io',
+    'https://telecrmio.netlify.app'
+]);
+
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*', // Use a more secure setting for production
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.has(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error('Origin not allowed by CORS'));
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
 }));
 
@@ -63,6 +74,11 @@ app.use('/api/auth', authRoutes);
 app.use('/api/managers', managerRoutes);
 app.use('/api/calls', callRoutes);
 app.use('/api/settings', settingsRoutes);
+
+// Lightweight health check for deployment platforms.
+app.get("/health", (req, res) => {
+    res.status(200).json({ success: true, status: "healthy" });
+});
 
 // Root Endpoint
 app.get("/", (req, res) => {
