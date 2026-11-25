@@ -223,9 +223,9 @@ const campaignController = {
                     // Fetch lead stats for all campaigns
                     db.query(
                         `SELECT campaign_id, 
-                                SUM(status='Cold') AS cold,
-                                SUM(status='Warm') AS warm,
-                                SUM(status='Hot') AS hot,
+                                SUM(lead_category = 'Cold Lead') AS cold,
+                                SUM(lead_category = 'Warm Lead') AS warm,
+                                SUM(lead_category = 'Hot Lead') AS hot,
                                 SUM(status='Converted') AS converted,
                                 COUNT(*) AS total
                          FROM leads
@@ -425,9 +425,9 @@ const campaignController = {
                 const leadQuery = `
                     SELECT 
                         COUNT(*) AS total_leads,
-                        SUM(status='Cold') AS cold,
-                        SUM(status='Warm') AS warm,
-                        SUM(status='Hot') AS hot,
+                        SUM(lead_category = 'Cold Lead') AS cold,
+                        SUM(lead_category = 'Warm Lead') AS warm,
+                        SUM(lead_category = 'Hot Lead') AS hot,
                         SUM(status='Converted') AS converted
                     FROM leads WHERE campaign_id = ?
                 `;
@@ -673,7 +673,7 @@ const campaignController = {
     // Get active campaigns count
     getActiveCampaignsCount: (req, res) => {
         db.query(
-            "SELECT COUNT(*) AS activeCount FROM campaigns WHERE status = 'active'",
+            "SELECT COUNT(*) AS activeCount FROM campaigns WHERE status = 'Active'",
             (err, result) => {
                 if (err) {
                     return res.status(500).json({ success: false, message: "Database error", error: err.message });

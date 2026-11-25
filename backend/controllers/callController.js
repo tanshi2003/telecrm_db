@@ -16,7 +16,7 @@ const CallController = {
 
             // First create call record
             const [result] = await db.promise().query(
-                `INSERT INTO Calls (caller_id, lead_id, start_time, status, call_type, disposition)
+                `INSERT INTO calls (caller_id, lead_id, start_time, status, call_type, disposition)
                  VALUES (?, ?, NOW(), 'initiated', 'outbound', 'pending')`,
                 [callerId, leadId]
             );
@@ -64,7 +64,7 @@ const CallController = {
 
             // Update call record with Exotel SID
             await db.promise().query(
-                `UPDATE Calls SET exotel_call_sid = ?, status = 'connected' WHERE id = ?`,
+                `UPDATE calls SET exotel_call_sid = ?, status = 'in-progress' WHERE id = ?`,
                 [response.data.Call.Sid, callId]
             );
 
@@ -113,7 +113,7 @@ const CallController = {
 
             // Update call status in database
             const query = `
-                UPDATE Calls 
+                UPDATE calls 
                 SET status = 'in-progress',
                     disposition = 'answered'
                 WHERE id = ?
@@ -209,7 +209,7 @@ const CallController = {
 
             // Update call record in database
             const query = `
-                UPDATE Calls 
+                UPDATE calls 
                 SET end_time = NOW(),
                     duration = ?,
                     status = CASE 
@@ -273,7 +273,7 @@ const CallController = {
                 caller_id
             } = req.body;
             db.query(
-                `INSERT INTO Calls (
+                `INSERT INTO calls (
                     lead_id, 
                     caller_id, 
                     start_time,
@@ -320,7 +320,7 @@ const CallController = {
         try {
             const { callerId } = req.params;
             db.query(
-                'SELECT * FROM Calls WHERE caller_id = ? ORDER BY created_at DESC',
+                'SELECT * FROM calls WHERE caller_id = ? ORDER BY created_at DESC',
                 [callerId],
                 (err, calls) => {
                     if (err) {
@@ -344,8 +344,8 @@ const CallController = {
 
             let query = `
                 SELECT c.*, l.name as lead_name 
-                FROM Calls c
-                LEFT JOIN Leads l ON c.lead_id = l.id
+                FROM calls c
+                LEFT JOIN leads l ON c.lead_id = l.id
                 WHERE c.caller_id = ?
             `;
             const params = [callerId];
@@ -387,7 +387,7 @@ const CallController = {
                     COUNT(*) as totalCalls,
                     AVG(duration) as averageCallDuration,
                     (COUNT(CASE WHEN status = 'Completed' THEN 1 END) * 100.0 / COUNT(*)) as successRate
-                FROM Calls 
+                FROM calls 
                 WHERE caller_id = ?
                 AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
             `, [callerId], (err, metrics) => {
@@ -416,7 +416,7 @@ const CallController = {
                     DATE(created_at) as date,
                     COUNT(*) as totalCalls,
                     COUNT(CASE WHEN status = 'Completed' THEN 1 END) as successfulCalls
-                FROM Calls 
+                FROM calls 
                 WHERE caller_id = ?
                 AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
                 GROUP BY DATE(created_at)
@@ -443,7 +443,7 @@ const CallController = {
                     HOUR(created_at) as hour,
                     COUNT(*) as totalCalls,
                     (COUNT(CASE WHEN status = 'Completed' THEN 1 END) * 100.0 / COUNT(*)) as successRate
-                FROM Calls 
+                FROM calls 
                 WHERE caller_id = ?
                 AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
                 GROUP BY HOUR(created_at)
@@ -476,7 +476,7 @@ const CallController = {
                 SELECT 
                     COUNT(*) as totalCallbacks,
                     COUNT(CASE WHEN status = 'Completed' THEN 1 END) as successfulCallbacks
-                FROM Calls 
+                FROM calls 
                 WHERE caller_id = ?
                 AND callback_datetime IS NOT NULL
                 AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
@@ -517,7 +517,7 @@ const CallController = {
             } = req.body;
 
             const query = `
-                UPDATE Calls 
+                UPDATE calls 
                 SET end_time = ?, 
                     duration = ?, 
                     status = ?,
@@ -567,9 +567,9 @@ const CallController = {
             const { id } = req.params;
             db.query(`
                 SELECT c.*, u.name as caller_name, l.name as lead_name 
-                FROM Calls c
-                JOIN Users u ON c.caller_id = u.id
-                JOIN Leads l ON c.lead_id = l.id
+                FROM calls c
+                JOIN users u ON c.caller_id = u.id
+                JOIN leads l ON c.lead_id = l.id
                 WHERE c.id = ?
             `, [id], (err, calls) => {
                 if (err) {
@@ -636,7 +636,7 @@ const CallController = {
                     COUNT(CASE WHEN call_type = 'follow-up' THEN 1 END) as total_callbacks,
                     ROUND(AVG(duration)/60, 2) as avg_call_duration_minutes,
                     ROUND(SUM(duration)/3600, 2) as total_hours
-                FROM Calls 
+                FROM calls 
                 WHERE caller_id = ?
                 ${start_date && end_date ? 'AND created_at BETWEEN ? AND ?' : ''}
             `;
@@ -690,7 +690,7 @@ const CallController = {
                     COUNT(CASE WHEN disposition = 'interested' THEN 1 END) as interested,
                     COUNT(CASE WHEN disposition = 'not_interested' THEN 1 END) as notInterested,
                     COUNT(CASE WHEN disposition = 'callback' THEN 1 END) as callback
-                FROM Calls 
+                FROM calls 
                 WHERE created_at >= ?`,
                 [startDate]
             );

@@ -33,7 +33,7 @@ const generateToken = (userId, role) => {
 
 // Find user by email
 const findUserByEmail = (email, callback) => {
-    db.query("SELECT * FROM Users WHERE email = ?", [email], (err, results) => {
+    db.query("SELECT * FROM users WHERE email = ?", [email], (err, results) => {
         if (err) return callback(err, null);
         if (results.length === 0) return callback(null, null);
         callback(null, results[0]);

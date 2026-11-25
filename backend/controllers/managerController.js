@@ -20,7 +20,7 @@ const getDashboardStats = async (req, res) => {
     const leadsQuery = `
       SELECT 
         COUNT(*) as total_leads,
-        SUM(CASE WHEN assigned_user_id IS NULL THEN 1 ELSE 0 END) as unassigned_leads
+        SUM(CASE WHEN assigned_to IS NULL THEN 1 ELSE 0 END) as unassigned_leads
       FROM leads 
       WHERE manager_id = ?
     `;
@@ -30,7 +30,7 @@ const getDashboardStats = async (req, res) => {
     const campaignsQuery = `
       SELECT COUNT(*) as active_campaigns 
       FROM campaigns 
-      WHERE manager_id = ? AND status = 'active'
+      WHERE manager_id = ? AND status = 'Active'
     `;
     const [campaignsResult] = await db.query(campaignsQuery, [managerId]);
 
@@ -165,7 +165,7 @@ const assignLead = async (req, res) => {
     const assignQuery = `
       UPDATE leads 
       SET 
-        assigned_user_id = ?,
+        assigned_to = ?,
         updated_at = NOW()
       WHERE id = ?
     `;
