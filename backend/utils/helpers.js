@@ -1,4 +1,4 @@
-// const jwt = require("jsonwebtoken");
+// const { generateToken } = require("./jwt");
 
 // // Helper function to generate JWT token
 // const generateToken = (id, role) => {
@@ -27,9 +27,7 @@ const comparePasswords = async (plainPassword, hashedPassword) => {
 };
 
 // Generate JWT
-const generateToken = (userId, role) => {
-    return jwt.sign({ id: userId, role }, process.env.JWT_SECRET, { expiresIn: "24h" });
-};
+
 
 // Find user by email
 const findUserByEmail = (email, callback) => {
