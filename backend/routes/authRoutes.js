@@ -38,8 +38,8 @@ router.post('/login', (req, res) => {
                 }
 
                 const token = jwt.sign(
-    { id: user.id, role: user.role }, // include both id and role
-    process.env.JWT_SECRET,
+    { id: admin.id, role: admin.role || 'admin' },
+    process.env.JWT_SECRET || 'secret',
     { expiresIn: '7d' }
 );
 
@@ -62,7 +62,7 @@ router.post('/login', (req, res) => {
                            user: {
                                id: admin.id,
                                role: 'admin',
-                               username: admin.name // or admin.username if you have that field
+                               username: admin.name
                          }
                      });
                     }
