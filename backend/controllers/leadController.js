@@ -101,7 +101,7 @@ exports.createLead = async (req, res) => {
             const updated_at = new Date();
 
             const [result] = await db.promise().query(
-                `INSERT INTO Leads 
+                `INSERT INTO leads 
                 (title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, manager_id, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [title, description, status, lead_category, name, phone_no, address, assigned_to, admin_id, campaign_id, notes, manager_id, created_at, updated_at]
@@ -273,20 +273,20 @@ exports.getLeadById = (req, res) => {
     const userRole = req.user.role;
 
     // Build query based on user role
-    let query = `SELECT leads.*, Users.name AS assigned_to_name 
+    let query = `SELECT leads.*, users.name AS assigned_to_name 
                  FROM leads 
-                 LEFT JOIN users ON Leads.assigned_to = Users.id 
-                 WHERE Leads.id = ?`;
+                 LEFT JOIN users ON leads.assigned_to = users.id 
+                 WHERE leads.id = ?`;
     let params = [id];
 
     // For managers, only show leads assigned to their team members
     if (userRole === 'manager') {
-        query += ` AND (Leads.assigned_to IN (SELECT id FROM users WHERE manager_id = ?) OR Leads.assigned_to IS NULL)`;
+        query += ` AND (leads.assigned_to IN (SELECT id FROM users WHERE manager_id = ?) OR leads.assigned_to IS NULL)`;
         params.push(userId);
     }
     // For callers, only show their assigned leads or unassigned leads
     else if (userRole === 'caller') {
-        query += ` AND (Leads.assigned_to = ? OR Leads.assigned_to IS NULL)`;
+        query += ` AND (leads.assigned_to = ? OR leads.assigned_to IS NULL)`;
         params.push(userId);
     }
 
@@ -346,7 +346,7 @@ exports.updateLead = (req, res) => {
             }
 
             if (!hasAccess) {
-                return res.status(403).json(responseFormatter(false, "Access denied. You can only update leads assigned to you or created by you."));
+                return res.status(403).json(responseFormatter(false, "Access denied. You can only UPDATE leads assigned to you or created by you."));
             }
 
             // Proceed with update if authorized
@@ -464,7 +464,7 @@ exports.addLeadForAllUsers = (req, res) => {
     }
 
     db.query(
-        `INSERT INTO Leads (name, phone_no, lead_category, status, address, notes, assigned_to, created_by, created_at, updated_at)
+        `INSERT INTO leads (name, phone_no, lead_category, status, address, notes, assigned_to, created_by, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [name, phone_no, lead_category, status, address, notes, assigned_to, created_by, created_at, updated_at],
         (err, result) => {
@@ -494,7 +494,7 @@ exports.createLeadByManager = (req, res) => {
     }
 
     db.query(
-        `INSERT INTO Leads (name, phone_no, lead_category, status, address, notes, assigned_to, campaign_id, created_by, created_at, updated_at)
+        `INSERT INTO leads (name, phone_no, lead_category, status, address, notes, assigned_to, campaign_id, created_by, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [name, phone_no, lead_category, status, address, notes, assigned_to, campaign_id, created_by, created_at, updated_at],
         (err, result) => {
@@ -526,7 +526,7 @@ exports.updateLeadByManager = (req, res) => {
             return res.status(404).json(responseFormatter(false, "Lead not found"));
         }
         db.query(
-            `UPDATE Leads SET name = ?, phone_no = ?, lead_category = ?, status = ?, address = ?, notes = ?, assigned_to = ?, campaign_id = ?, updated_at = ? WHERE id = ?`,
+            `UPDATE leads SET name = ?, phone_no = ?, lead_category = ?, status = ?, address = ?, notes = ?, assigned_to = ?, campaign_id = ?, updated_at = ? WHERE id = ?`,
             [name, phone_no, lead_category, status, address, notes, assigned_to, campaign_id, updated_at, id],
             (err, result) => {
                 if (err) {
@@ -550,7 +550,7 @@ exports.assignCampaignToLead = (req, res) => {
         return res.status(400).json(responseFormatter(false, "leadId and campaignId are required"));
     }
     db.query(
-        "UPDATE Leads SET campaign_id = ? WHERE id = ?",
+        "UPDATE leads SET campaign_id = ? WHERE id = ?",
         [campaignId, leadId],
         (err, result) => {
             if (err) {
@@ -571,7 +571,7 @@ exports.assignUserToLead = (req, res) => {
         return res.status(400).json(responseFormatter(false, "leadId and userId are required"));
     }
     db.query(
-        "UPDATE Leads SET assigned_to = ? WHERE id = ?",
+        "UPDATE leads SET assigned_to = ? WHERE id = ?",
         [userId, leadId],
         (err, result) => {
             if (err) {
