@@ -25,13 +25,13 @@ router.post("/register", roleMiddleware(['admin']), userController.registerUser)
 // User management
 router.get("/", roleMiddleware(['admin', 'manager', 'caller', 'field_employee']), userController.getUsers);
 
+// User status management. Keep static routes before parameter routes.
+router.put("/bulk-status", roleMiddleware(['admin']), userController.updateBulkStatus);
+
 // Routes with :id parameter
 router.get("/:id", roleMiddleware(['admin']), userController.getUserById);
 router.put("/:id", roleMiddleware(['admin']), userController.updateUser);
 router.delete("/:id", roleMiddleware(['admin']), userController.deleteUser);
-
-// User status management
-router.put("/bulk-status", roleMiddleware(['admin']), userController.updateBulkStatus);
 router.put("/:id/status", roleMiddleware(['admin']), userController.updateUserStatus);
 
 // Role management
