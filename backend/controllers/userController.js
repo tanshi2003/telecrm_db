@@ -39,7 +39,7 @@ exports.registerUser = (req, res) => {
       // Leave token blank now
     };
 
-    db.query("INSERT INTO Users SET ?", newUser, (err, result) => {
+    db.query("INSERT INTO users SET ?", newUser, (err, result) => {
       if (err) {
         console.error("Error inserting user into database:", err);
         return res.status(500).json({ message: "Error registering user", error: err });
@@ -47,7 +47,7 @@ exports.registerUser = (req, res) => {
 
       const token = jwt.sign({ id: result.insertId, role }, process.env.JWT_SECRET, { expiresIn: "24h" });
 
-      db.query("UPDATE Users SET token = ? WHERE id = ?", [token, result.insertId], (err) => {
+      db.query("UPDATE users SET token = ? WHERE id = ?", [token, result.insertId], (err) => {
         if (err) {
           console.error("Error saving token:", err);
           return res.status(500).json({ message: "Error saving token", error: err });
@@ -81,7 +81,7 @@ exports.loginUser = (req, res) => {
         return res.status(400).json(responseFormatter(false, "All fields are required"));
     }
 
-    db.query("SELECT * FROM Users WHERE email = ?", [email], (err, results) => {
+    db.query("SELECT * FROM users WHERE email = ?", [email], (err, results) => {
         if (err) return res.status(500).json(responseFormatter(false, "Database error", err));
         if (results.length === 0) return res.status(400).json(responseFormatter(false, "Invalid email or password"));
 
@@ -94,7 +94,7 @@ exports.loginUser = (req, res) => {
 
             const lastLogin = new Date();
             db.query(
-                "UPDATE Users SET token = ?, last_login = ? WHERE id = ?",
+                "UPDATE users SET token = ?, last_login = ? WHERE id = ?",
                 [token, lastLogin, user.id],
                 (err) => {
                     if (err) return res.status(500).json(responseFormatter(false, "Error updating token", err));
@@ -135,16 +135,16 @@ exports.getUsers = async (req, res) => {
                 u.updated_at,
                 COALESCE(m.name, '') as manager_name,
                 -- Total leads assigned to User
-                (SELECT COUNT(*) FROM Leads l WHERE l.assigned_to = u.id) as total_leads,
-                -- Campaigns handled by User
+                (SELECT COUNT(*) FROM leads l WHERE l.assigned_to = u.id) as total_leads,
+                -- campaigns handled by User
                 (SELECT COUNT(DISTINCT cu.campaign_id) FROM campaign_users cu WHERE cu.user_id = u.id) as campaigns_handled,
                 -- Total working hours (sum of call logs in hours)
                 COALESCE((
                   SELECT SUM(TIME_TO_SEC(TIMEDIFF(cl.end_time, cl.start_time))/3600)
                   FROM call_logs cl WHERE cl.user_id = u.id
                 ), 0) as total_working_hours
-            FROM Users u 
-            LEFT JOIN Users m ON u.manager_id = m.id
+            FROM users u 
+            LEFT JOIN users m ON u.manager_id = m.id
             WHERE 1=1
         `;
 
@@ -194,7 +194,7 @@ exports.getUsers = async (req, res) => {
 exports.getUserById = (req, res) => {
     const { id } = req.params;
     
-    db.query("SELECT * FROM Users WHERE id = ?", [id], (err, results) => {
+    db.query("SELECT * FROM users WHERE id = ?", [id], (err, results) => {
         if (err) return res.status(500).json(responseFormatter(false, "Database error", err));
         if (results.length === 0) return res.status(404).json(responseFormatter(false, "User not found"));
         
@@ -214,7 +214,7 @@ exports.getCampaignsHandledByUser = (req, res) => {
         SELECT 
             c.id, c.name, c.description, c.status, c.priority, c.start_date, c.end_date
         FROM 
-            Campaigns c
+            campaigns c
         INNER JOIN 
             campaign_users cu ON c.id = cu.campaign_id
         WHERE 
@@ -227,7 +227,7 @@ exports.getCampaignsHandledByUser = (req, res) => {
             return res.status(500).json(responseFormatter(false, "Database error", err.message));
         }
 
-        res.status(200).json(responseFormatter(true, "Campaigns handled fetched successfully", results));
+        res.status(200).json(responseFormatter(true, "campaigns handled fetched successfully", results));
     });
 };
 
@@ -239,7 +239,7 @@ exports.getLeadsByUserId = (req, res) => {
     console.log('Fetching leads for user:', userId);
 
     const query = `
-        SELECT * FROM Leads 
+        SELECT * FROM leads 
         WHERE created_by = ? 
         OR assigned_to = ?
         OR manager_id = ?
@@ -260,7 +260,7 @@ exports.getLeadsByUserId = (req, res) => {
 
         res.json({
             success: true,
-            message: "Leads fetched successfully",
+            message: "leads fetched successfully",
             data: results
         });
     });
@@ -275,7 +275,7 @@ exports.getCampaignsByUserId = (req, res) => {
             c.id, c.name, c.description, c.status, c.priority,
             c.start_date, c.end_date, c.created_at, c.updated_at
         FROM 
-            Campaigns c
+            campaigns c
         INNER JOIN 
             campaign_users cu ON c.id = cu.campaign_id
         WHERE 
@@ -288,7 +288,7 @@ exports.getCampaignsByUserId = (req, res) => {
             return res.status(500).json(responseFormatter(false, "Database error", err.message));
         }
 
-        res.json(responseFormatter(true, "Campaigns fetched successfully", results));
+        res.json(responseFormatter(true, "campaigns fetched successfully", results));
     });
 };
 
@@ -305,14 +305,14 @@ exports.updateUser = (req, res) => {
     };
 
     // Update user details
-    db.query("UPDATE Users SET ? WHERE id = ?", [updatedUser, id], (err, result) => {
+    db.query("UPDATE users SET ? WHERE id = ?", [updatedUser, id], (err, result) => {
         if (err) {
             console.error("Error updating user:", err);
             return res.status(500).json(responseFormatter(false, "Error updating user", err));
         }
 
         // Update lead assignments
-        db.query("UPDATE Leads SET assigned_to = NULL WHERE assigned_to = ?", [id], err => {
+        db.query("UPDATE leads SET assigned_to = NULL WHERE assigned_to = ?", [id], err => {
             if (err) {
                 console.error("Error clearing lead assignments:", err);
                 return res.status(500).json(responseFormatter(false, "Error updating leads", err));
@@ -320,7 +320,7 @@ exports.updateUser = (req, res) => {
 
             if (assigned_leads.length > 0) {
                 db.query(
-                    "UPDATE Leads SET assigned_to = ? WHERE id IN (?)",
+                    "UPDATE leads SET assigned_to = ? WHERE id IN (?)",
                     [id, assigned_leads],
                     err => {
                         if (err) {
@@ -387,7 +387,7 @@ exports.updateUser = (req, res) => {
 // Update User role
 exports.updateUserRole = async (id, role) => {
     const [result] = await db.promise().query(
-        "UPDATE Users SET role = ? WHERE id = ?",
+        "UPDATE users SET role = ? WHERE id = ?",
         [role, id]
     );
     if (result.affectedRows === 0) {
@@ -400,24 +400,24 @@ exports.updateUserRole = async (id, role) => {
 exports.deleteUser = (req, res) => {
     const { id } = req.params;
 
-    db.query("SELECT * FROM Users WHERE id = ?", [id], (err, results) => {
+    db.query("SELECT * FROM users WHERE id = ?", [id], (err, results) => {
         if (err) return res.status(500).json(responseFormatter(false, "Database error", err));
         if (results.length === 0) return res.status(404).json(responseFormatter(false, "User not found"));
 
         // Remove or update all related records
-        db.query("DELETE FROM Activity_logs WHERE user_id = ?", [id], err => {
+        db.query("DELETE FROM activity_logs WHERE user_id = ?", [id], err => {
             if (err) return res.status(500).json(responseFormatter(false, "Error deleting activity logs", err));
 
             db.query("DELETE FROM campaign_users WHERE user_id = ?", [id], err => {
                 if (err) return res.status(500).json(responseFormatter(false, "Error deleting campaign assignments", err));
 
-                db.query("UPDATE Leads SET assigned_to = NULL WHERE assigned_to = ?", [id], err => {
+                db.query("UPDATE leads SET assigned_to = NULL WHERE assigned_to = ?", [id], err => {
                     if (err) return res.status(500).json(responseFormatter(false, "Error updating leads", err));
 
                     // ...repeat for other tables as needed...
 
                     // Now delete the user
-                    db.query("DELETE FROM Users WHERE id = ?", [id], (err) => {
+                    db.query("DELETE FROM users WHERE id = ?", [id], (err) => {
                         if (err) return res.status(500).json(responseFormatter(false, "Database error", err));
                         res.json(responseFormatter(true, "User deleted successfully"));
                     });
@@ -437,12 +437,12 @@ exports.assignManager = (req, res) => {
     }
 
     // Check if manager exists and is a manager
-    db.query("SELECT * FROM Users WHERE id = ? AND role = 'manager'", [manager_id], (err, results) => {
+    db.query("SELECT * FROM users WHERE id = ? AND role = 'manager'", [manager_id], (err, results) => {
         if (err) return res.status(500).json({ message: "Database error", error: err });
         if (results.length === 0) return res.status(404).json({ message: "Manager not found" });
 
         // Assign manager to user
-        db.query("UPDATE Users SET manager_id = ? WHERE id = ?", [manager_id, id], (err, result) => {
+        db.query("UPDATE users SET manager_id = ? WHERE id = ?", [manager_id, id], (err, result) => {
             if (err) return res.status(500).json({ message: "Error assigning manager", error: err });
             if (result.affectedRows === 0) return res.status(404).json({ message: "User not found" });
 
@@ -466,7 +466,7 @@ exports.updateBulkStatus = (req, res) => {
   }
 
   const placeholders = userIds.map(() => '?').join(',');
-  const checkQuery = `SELECT id FROM Users WHERE id IN (${placeholders})`;
+  const checkQuery = `SELECT id FROM users WHERE id IN (${placeholders})`;
 
   db.query(checkQuery, userIds, (checkErr, checkResults) => {
     if (checkErr) {
@@ -487,7 +487,7 @@ exports.updateBulkStatus = (req, res) => {
       });
     }
 
-    const updateQuery = `UPDATE Users SET status = ?, updated_at = NOW() WHERE id IN (${placeholders})`;
+    const updateQuery = `UPDATE users SET status = ?, updated_at = NOW() WHERE id IN (${placeholders})`;
     db.query(updateQuery, [status, ...userIds], (updateErr, updateResults) => {
       if (updateErr) {
         console.error("❌ Error updating statuses:", updateErr);
@@ -532,7 +532,7 @@ exports.updateUserStatus = (req, res) => {
         });
     }
 
-    const query = "UPDATE Users SET status = ? WHERE id = ?";
+    const query = "UPDATE users SET status = ? WHERE id = ?";
     db.query(query, [status, id], (err, result) => {
         if (err) {
             console.error("Error updating user status:", err);
@@ -559,7 +559,7 @@ exports.updateUserStatus = (req, res) => {
 
 // Get all managers
 exports.getManagers = (req, res) => {
-    const query = "SELECT id, name, email, phone_no FROM Users WHERE role = 'manager'";
+    const query = "SELECT id, name, email, phone_no FROM users WHERE role = 'manager'";
     db.query(query, (err, results) => {
         if (err) {
             console.error("Error fetching managers:", err);
@@ -586,8 +586,8 @@ exports.getUserStats = (req, res) => {
             COUNT(DISTINCT l.id) as total_leads,
             COUNT(DISTINCT cu.campaign_id) as campaigns_handled,
             COALESCE(SUM(TIME_TO_SEC(TIMEDIFF(cl.end_time, cl.start_time))/3600), 0) as total_working_hours
-        FROM Users u
-        LEFT JOIN Leads l ON u.id = l.assigned_to
+        FROM users u
+        LEFT JOIN leads l ON u.id = l.assigned_to
         LEFT JOIN campaign_users cu ON u.id = cu.user_id
         LEFT JOIN call_logs cl ON u.id = cl.user_id
         WHERE u.id = ?
@@ -633,7 +633,7 @@ exports.forgotPassword = async (req, res) => {
     try {
         // Check if user exists with the given email and role
         const [users] = await db.query(
-            "SELECT * FROM Users WHERE email = ? AND role = ?",
+            "SELECT * FROM users WHERE email = ? AND role = ?",
             [email, role]
         );
 
@@ -653,7 +653,7 @@ exports.forgotPassword = async (req, res) => {
         // Store the reset token and its expiry in the database
         const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
         await db.query(
-            "UPDATE Users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?",
+            "UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?",
             [resetToken, resetTokenExpiry, user.id]
         );
 
@@ -672,10 +672,10 @@ exports.getUnassignedUsers = (req, res) => {
     const query = `
         SELECT 
             u.id, u.name, u.email, u.phone_no, u.role, u.status, u.location, u.created_at,
-            COALESCE((SELECT COUNT(*) FROM Leads WHERE assigned_to = u.id), 0) as total_leads,
+            COALESCE((SELECT COUNT(*) FROM leads WHERE assigned_to = u.id), 0) as total_leads,
             COALESCE((SELECT COUNT(*) FROM campaign_users WHERE user_id = u.id), 0) as campaigns_handled
         FROM 
-            Users u 
+            users u 
         WHERE 
             u.manager_id IS NULL 
             AND u.role != 'manager'
@@ -709,7 +709,7 @@ exports.removeManager = (req, res) => {
     const { id } = req.params;
     
     db.query(
-        "UPDATE Users SET manager_id = NULL WHERE id = ?",
+        "UPDATE users SET manager_id = NULL WHERE id = ?",
         [id],
         (error, result) => {
             if (error) {
