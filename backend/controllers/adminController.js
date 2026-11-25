@@ -20,7 +20,7 @@ exports.registerAdmin = (req, res) => {
     }
 
     // Check if admin already exists
-    db.query(`SELECT * FROM Admins WHERE email = ?`, [email], (err, results) => {
+    db.query(`SELECT * FROM admins WHERE email = ?`, [email], (err, results) => {
         if (err) {
             console.error('Error querying the database:', err);
             return res.status(500).json(responseFormatter(false, "Database error", err));
@@ -38,7 +38,7 @@ exports.registerAdmin = (req, res) => {
             }
 
             // Insert new admin into DB
-            db.query(`INSERT INTO Admins (name, email, phone_no, password, role) VALUES (?, ?, ?, ?, ?)`, 
+            db.query(`INSERT INTO admins (name, email, phone_no, password, role) VALUES (?, ?, ?, ?, ?)`, 
                 [name, email, phone_no, hash, role], (err, results) => {
                     if (err) {
                         console.error('Error inserting into the database:', err);
@@ -46,7 +46,7 @@ exports.registerAdmin = (req, res) => {
                     }
 
                     // Fetch the newly created admin data
-                    db.query(`SELECT id, name, email, phone_no, role, status FROM Admins WHERE id = ?`, [results.insertId], 
+                    db.query(`SELECT id, name, email, phone_no, role, status FROM admins WHERE id = ?`, [results.insertId], 
                         (err, newAdmin) => {
                             if (err) {
                                 console.error('Error querying the database:', err);
@@ -60,7 +60,7 @@ exports.registerAdmin = (req, res) => {
 
                             // Update the admin with token and last login time
                             const lastLogin = new Date();
-                            db.query("UPDATE Admins SET token = ?, last_login = ? WHERE id = ?", 
+                            db.query("UPDATE admins SET token = ?, last_login = ? WHERE id = ?", 
                                 [token, lastLogin, admin.id], (err) => {
                                     if (err) {
                                         console.error('Error updating the database with token:', err);
@@ -96,7 +96,7 @@ exports.loginAdmin = (req, res) => {
     }
 
     // Check if the admin exists
-    db.query(`SELECT id, name, email, phone_no, password, role, status FROM Admins WHERE email = ?`, [email], 
+    db.query(`SELECT id, name, email, phone_no, password, role, status FROM admins WHERE email = ?`, [email], 
         (err, results) => {
             if (err) {
                 console.error('Error querying the database:', err);
@@ -143,7 +143,7 @@ exports.loginAdmin = (req, res) => {
 
                         const lastLogin = new Date();
                         connection.query(
-                            "UPDATE Admins SET token = ?, last_login = ? WHERE id = ?",
+                            "UPDATE admins SET token = ?, last_login = ? WHERE id = ?",
                             [token, lastLogin, admin.id],
                             (err) => {
                                 if (err) {
@@ -190,7 +190,7 @@ exports.loginAdmin = (req, res) => {
 
 // Get all admins
 exports.getAdmins = (req, res) => {
-    db.query("SELECT id, name, email, phone_no, role, status FROM Admins", (err, results) => {
+    db.query("SELECT id, name, email, phone_no, role, status FROM admins", (err, results) => {
         if (err) {
             console.error('Error querying the database:', err);
             return res.status(500).json(responseFormatter(false, "Database error", err));
@@ -206,7 +206,7 @@ exports.getAdmins = (req, res) => {
             status: admin.status
         }));
 
-        res.json(responseFormatter(true, "Admins fetched successfully", admins));
+        res.json(responseFormatter(true, "admins fetched successfully", admins));
     });
 };
 
@@ -220,7 +220,7 @@ exports.updateAdmin = (req, res) => {
     }
 
     // Update admin details
-    db.query("UPDATE Admins SET name = ?, email = ?, phone_no = ?, role = ?, status = ? WHERE id = ?", 
+    db.query("UPDATE admins SET name = ?, email = ?, phone_no = ?, role = ?, status = ? WHERE id = ?", 
         [name, email, phone_no, role, status, id], (err, results) => {
             if (err) {
                 console.error('Error updating the database:', err);
@@ -228,7 +228,7 @@ exports.updateAdmin = (req, res) => {
             }
 
             // Fetch the updated admin details
-            db.query("SELECT id, name, email, phone_no, role, status FROM Admins WHERE id = ?", 
+            db.query("SELECT id, name, email, phone_no, role, status FROM admins WHERE id = ?", 
                 [id], (err, updatedAdmin) => {
                     if (err) {
                         console.error('Error querying the database:', err);
@@ -253,7 +253,7 @@ exports.updateAdmin = (req, res) => {
 exports.deleteAdmin = (req, res) => {
     const { id } = req.params;
 
-    db.query("DELETE FROM Admins WHERE id = ?", [id], (err, results) => {
+    db.query("DELETE FROM admins WHERE id = ?", [id], (err, results) => {
         if (err) {
             console.error('Error deleting from the database:', err);
             return res.status(500).json(responseFormatter(false, "Database error", err));
