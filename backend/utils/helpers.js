@@ -12,7 +12,7 @@
 // module.exports = { generateToken };
 // utils/helpers.js
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+const { generateToken } = require("./jwt");
 const db = require("../config/db");
 
 // Hash password
