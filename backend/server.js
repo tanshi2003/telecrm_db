@@ -85,6 +85,62 @@ app.use("/campaigns", campaignRoutes);
 
 // Additive schema bootstrap for missing core tables. These statements never drop or overwrite existing tables.
 const schemaBootstrap = [
+    `CREATE TABLE IF NOT EXISTS admins (
+        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone_no VARCHAR(15) NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        role VARCHAR(50) NOT NULL,
+        status VARCHAR(50) DEFAULT 'active',
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        token VARCHAR(255) DEFAULT NULL,
+        last_login DATETIME DEFAULT NULL,
+        UNIQUE KEY uq_admins_email (email)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+    `CREATE TABLE IF NOT EXISTS calls (
+        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        exotel_call_sid VARCHAR(255) DEFAULT NULL,
+        caller_id INT NOT NULL,
+        lead_id INT NOT NULL,
+        start_time DATETIME NOT NULL,
+        end_time DATETIME DEFAULT NULL,
+        duration INT DEFAULT NULL,
+        status ENUM('initiated','in-progress','completed','missed','no-answer','busy','failed') NOT NULL DEFAULT 'initiated',
+        call_type ENUM('outbound','inbound','follow-up') NOT NULL,
+        disposition ENUM('pending','in-progress','completed','failed','busy','no-answer') DEFAULT 'pending',
+        notes TEXT DEFAULT NULL,
+        callback_datetime DATETIME DEFAULT NULL,
+        recording_url VARCHAR(255) DEFAULT NULL,
+        callback_scheduled DATETIME DEFAULT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_calls_caller_id (caller_id),
+        INDEX idx_calls_lead_id (lead_id),
+        INDEX idx_calls_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+    `CREATE TABLE IF NOT EXISTS activity_logs (
+        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        role VARCHAR(50) NOT NULL,
+        activity_type VARCHAR(50) NOT NULL,
+        activity_description TEXT NOT NULL,
+        reference_type VARCHAR(50) DEFAULT NULL,
+        reference_id INT DEFAULT NULL,
+        location VARCHAR(255) DEFAULT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_activity_logs_user_id (user_id),
+        INDEX idx_activity_logs_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+    `CREATE TABLE IF NOT EXISTS exotel_config (
+        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        sid VARCHAR(255) NOT NULL,
+        token VARCHAR(255) NOT NULL,
+        phone_number VARCHAR(20) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
     `CREATE TABLE IF NOT EXISTS users (
         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
