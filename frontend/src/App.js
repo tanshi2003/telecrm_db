@@ -1,6 +1,6 @@
 import React, { useEffect, useContext } from "react";
 import { AuthContext } from "./context/AuthContext";
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
