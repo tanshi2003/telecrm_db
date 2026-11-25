@@ -30,7 +30,7 @@ const Navbar = () => {
         className="flex items-center space-x-3 cursor-pointer"
         onClick={() => navigate('/landing')}
       >
-        <img src="/assets/icons/logo.png" alt="CRM Logo" className="h-8" />
+        <img src="./assets/icons/logo.png" alt="CRM Logo" className="h-8" />
         <h1 className="text-xl font-bold font-['Kiwi_Maru']">
           CRM<span className="italic font-cursive text-white">.io</span>
         </h1>
