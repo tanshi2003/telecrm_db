@@ -40,7 +40,7 @@ exports.createLead = async (req, res) => {
 
         // Check if manager exists if manager_id is provided
         if (manager_id) {
-            db.query("SELECT id, role FROM Users WHERE id = ?", [manager_id], (err, result) => {
+            db.query("SELECT id, role FROM users WHERE id = ?", [manager_id], (err, result) => {
                 if (err) {
                     console.error("Manager check error:", err);
                     return res.status(500).json(responseFormatter(false, "Database error", err.message));
@@ -57,7 +57,7 @@ exports.createLead = async (req, res) => {
                 // If assigned_to is provided, check if user exists and belongs to this manager
                 if (assigned_to) {
                     db.query(
-                        "SELECT id FROM Users WHERE id = ? AND manager_id = ?",
+                        "SELECT id FROM users WHERE id = ? AND manager_id = ?",
                         [assigned_to, manager_id],
                         (err, userResult) => {
                             if (err) {
@@ -79,7 +79,7 @@ exports.createLead = async (req, res) => {
         } else {
             // If no manager_id, just check assigned_to if provided
             if (assigned_to) {
-                db.query("SELECT id FROM Users WHERE id = ?", [assigned_to], (err, result) => {
+                db.query("SELECT id FROM users WHERE id = ?", [assigned_to], (err, result) => {
                     if (err) {
                         console.error("User check error:", err);
                         return res.status(500).json(responseFormatter(false, "Database error", err.message));
@@ -119,7 +119,7 @@ exports.createLead = async (req, res) => {
                 req.body.location
             );
 
-            db.query("SELECT * FROM Leads WHERE id = ?", [leadId], (err, lead) => {
+            db.query("SELECT * FROM leads WHERE id = ?", [leadId], (err, lead) => {
                 if (err) {
                     return res.status(500).json(responseFormatter(false, "Fetch new lead failed", err.message));
                 }
@@ -273,15 +273,15 @@ exports.getLeadById = (req, res) => {
     const userRole = req.user.role;
 
     // Build query based on user role
-    let query = `SELECT Leads.*, Users.name AS assigned_to_name 
-                 FROM Leads 
-                 LEFT JOIN Users ON Leads.assigned_to = Users.id 
+    let query = `SELECT leads.*, Users.name AS assigned_to_name 
+                 FROM leads 
+                 LEFT JOIN users ON Leads.assigned_to = Users.id 
                  WHERE Leads.id = ?`;
     let params = [id];
 
     // For managers, only show leads assigned to their team members
     if (userRole === 'manager') {
-        query += ` AND (Leads.assigned_to IN (SELECT id FROM Users WHERE manager_id = ?) OR Leads.assigned_to IS NULL)`;
+        query += ` AND (Leads.assigned_to IN (SELECT id FROM users WHERE manager_id = ?) OR Leads.assigned_to IS NULL)`;
         params.push(userId);
     }
     // For callers, only show their assigned leads or unassigned leads
@@ -402,7 +402,7 @@ exports.updateLead = (req, res) => {
 exports.deleteLead = (req, res) => {
     const { id } = req.params;
 
-    db.query("SELECT id FROM Leads WHERE id = ?", [id], (err, result) => {
+    db.query("SELECT id FROM leads WHERE id = ?", [id], (err, result) => {
         if (err) {
             return res.status(500).json(responseFormatter(false, "Server error", err.message));
         }
@@ -411,7 +411,7 @@ exports.deleteLead = (req, res) => {
             return res.status(404).json(responseFormatter(false, "Lead not found"));
         }
 
-        db.query("DELETE FROM Leads WHERE id = ?", [id], (err, delResult) => {
+        db.query("DELETE FROM leads WHERE id = ?", [id], (err, delResult) => {
             if (err) {
                 return res.status(500).json(responseFormatter(false, "Server error", err.message));
             }
@@ -430,7 +430,7 @@ exports.getUserLeadCounts = (req, res) => {
             COUNT(*) as total_leads,
             SUM(CASE WHEN status IN ('New', 'Contacted', 'Follow-Up Scheduled', 'Interested', 'Under Review', 'On Hold') THEN 1 ELSE 0 END) as active_leads,
             SUM(CASE WHEN status = 'Converted' THEN 1 ELSE 0 END) as converted_leads
-        FROM Leads 
+        FROM leads 
         WHERE assigned_to = ?
     `;
 
@@ -472,7 +472,7 @@ exports.addLeadForAllUsers = (req, res) => {
                 console.error("Add lead error:", err);
                 return res.status(500).json(responseFormatter(false, "Database error", err.message));
             }
-            db.query("SELECT * FROM Leads WHERE id = ?", [result.insertId], (err, lead) => {
+            db.query("SELECT * FROM leads WHERE id = ?", [result.insertId], (err, lead) => {
                 if (err) {
                     return res.status(500).json(responseFormatter(false, "Fetch new lead failed", err.message));
                 }
@@ -502,7 +502,7 @@ exports.createLeadByManager = (req, res) => {
                 console.error("Add lead by manager error:", err);
                 return res.status(500).json(responseFormatter(false, "Database error", err.message));
             }
-            db.query("SELECT * FROM Leads WHERE id = ?", [result.insertId], (err, lead) => {
+            db.query("SELECT * FROM leads WHERE id = ?", [result.insertId], (err, lead) => {
                 if (err) {
                     return res.status(500).json(responseFormatter(false, "Fetch new lead failed", err.message));
                 }
@@ -518,7 +518,7 @@ exports.updateLeadByManager = (req, res) => {
     const { name, phone_no, lead_category, status, address, notes, assigned_to, campaign_id } = req.body;
     const updated_at = new Date();
 
-    db.query("SELECT * FROM Leads WHERE id = ?", [id], (err, leads) => {
+    db.query("SELECT * FROM leads WHERE id = ?", [id], (err, leads) => {
         if (err) {
             return res.status(500).json(responseFormatter(false, "Database error", err.message));
         }
@@ -532,7 +532,7 @@ exports.updateLeadByManager = (req, res) => {
                 if (err) {
                     return res.status(500).json(responseFormatter(false, "Database error", err.message));
                 }
-                db.query("SELECT * FROM Leads WHERE id = ?", [id], (err, lead) => {
+                db.query("SELECT * FROM leads WHERE id = ?", [id], (err, lead) => {
                     if (err) {
                         return res.status(500).json(responseFormatter(false, "Fetch updated lead failed", err.message));
                     }
@@ -590,10 +590,10 @@ exports.getUnassignedLeads = (req, res) => {
     const managerId = req.user.id;
     const query = `
         SELECT l.*, u.name as assigned_to_name 
-        FROM Leads l 
-        LEFT JOIN Users u ON l.assigned_to = u.id 
+        FROM leads l 
+        LEFT JOIN users u ON l.assigned_to = u.id 
         WHERE l.assigned_to IS NULL 
-        OR l.assigned_to IN (SELECT id FROM Users WHERE manager_id = ?)
+        OR l.assigned_to IN (SELECT id FROM users WHERE manager_id = ?)
         ORDER BY l.created_at DESC`;
 
     db.query(query, [managerId], (err, leads) => {
@@ -712,10 +712,10 @@ exports.getLeadsByUserId = (req, res) => {
             SELECT 
                 ul.*,
                 COALESCE(COUNT(DISTINCT c.id), 0) as call_count,
-                COALESCE(COUNT(DISTINCT n.id), 0) as note_count
+                MAX(CASE WHEN ul.notes IS NOT NULL AND TRIM(ul.notes) <> '' THEN 1 ELSE 0 END) as note_count
             FROM UserLeads ul
             LEFT JOIN calls c ON ul.id = c.lead_id
-            LEFT JOIN notes n ON ul.id = n.lead_id
+            
             GROUP BY ul.id
             ORDER BY ul.created_at DESC
         `;
