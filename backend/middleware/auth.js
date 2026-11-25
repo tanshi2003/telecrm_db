@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../utils/jwt');
 const db = require('../config/db');
 
 const auth = (req, res, next) => {
@@ -16,7 +17,7 @@ const auth = (req, res, next) => {
 
   try {
     // Verify token without using promises
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
       if (err) {
         console.error('Auth error:', err.message);
         return res.status(401).json({
