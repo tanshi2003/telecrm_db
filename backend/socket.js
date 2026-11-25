@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const config = require('./config/config.json');
+const JWT_SECRET = process.env.JWT_SECRET || config.production.jwtSecret;
 
 // Store user socket mappings
 const userSockets = new Map();
@@ -43,7 +44,7 @@ function initializeSocket(server) {
       }
 
       // Decode and verify token
-      const decoded = jwt.verify(token, config.development.jwtSecret);
+      const decoded = jwt.verify(token, JWT_SECRET);
       console.log('Socket.IO authentication successful:', {
         userId: decoded.id,
         role: decoded.role,
