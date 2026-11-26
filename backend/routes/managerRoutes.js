@@ -453,7 +453,12 @@ router.get('/team-performance', authenticateToken, checkManagerAccess, async (re
 });
 
 // Get users assigned to a manager
-router.get('/:id/users', authenticateToken, checkManagerAccess, managerController.getUsersByManagerId);
+router.get('/:id/users', authenticateToken, checkManagerAccess, (req, res, next) => {
+    if (req.user.role === 'manager' && Number(req.params.id) !== Number(req.user.id)) {
+        return res.status(403).json({ success: false, message: 'You can only view your own team members' });
+    }
+    next();
+}, managerController.getUsersByManagerId);
 
 // Get manager's team members
 router.get('/:managerId/team', authenticateToken, checkManagerAccess, async (req, res) => {
