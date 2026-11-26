@@ -92,10 +92,10 @@ const AppContent = () => {
   }, [user, navigate]);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="telecrm-shell flex min-h-screen">
       {/* Sidebar is conditionally rendered based on user login status */}
       {user?.isLoggedIn && <Sidebar user={user} />}
-      <div className={user?.isLoggedIn ? "ml-64 flex-grow" : "w-full"}>
+      <div className={user?.isLoggedIn ? "telecrm-content flex-grow" : "telecrm-content public-content w-full"}>
         <Navbar />
         <AnimatePresence mode="wait">
           <Routes>
