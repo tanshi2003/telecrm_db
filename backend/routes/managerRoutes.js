@@ -244,8 +244,8 @@ router.post('/assign-users', authenticateToken, checkManagerAccess, (req, res) =
         }
 
         // Update users
-        const updateQuery = 'UPDATE users SET manager_id = ? WHERE id IN (?) AND role IN ("caller", "field_employee")';
-        db.query(updateQuery, [manager_id, user_ids], (err) => {
+        const updateQuery = 'UPDATE users SET manager_id = ? WHERE id IN (?) AND role IN ("caller", "field_employee") AND (manager_id IS NULL OR manager_id = ?)';
+        db.query(updateQuery, [manager_id, user_ids, manager_id], (err, result) => {
             if (err) {
                 console.error('Database error:', err);
                 return res.status(500).json({
@@ -254,9 +254,13 @@ router.post('/assign-users', authenticateToken, checkManagerAccess, (req, res) =
                 });
             }
 
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ success: false, message: 'No eligible users found to assign' });
+            }
             res.json({
                 success: true,
-                message: 'Users assigned to manager successfully'
+                message: 'Users assigned to manager successfully',
+                affected: result.affectedRows
             });
         });
     });
@@ -292,8 +296,9 @@ router.post('/assign-leads', authenticateToken, checkManagerAccess, async (req, 
             `UPDATE leads 
              SET assigned_to = ?,
                  updated_at = NOW() 
-             WHERE id IN (?) 
-             AND (assigned_to IS NULL 
+             WHERE id IN (?)
+             AND manager_id = ?
+             AND (assigned_to IS NULL
                   OR assigned_to IN (
                      SELECT id FROM (
                          SELECT u.id 
@@ -301,7 +306,7 @@ router.post('/assign-leads', authenticateToken, checkManagerAccess, async (req, 
                          WHERE u.manager_id = ?
                      ) AS subq
                   ))`,
-            [userId, leadIds, managerId]
+            [userId, leadIds, managerId, managerId]
         );
 
         res.json({
