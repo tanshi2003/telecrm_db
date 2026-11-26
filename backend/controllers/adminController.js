@@ -28,7 +28,7 @@ exports.registerAdmin = (req, res) => {
     db.query(`SELECT email FROM admins`, (err, results) => {
         if (err) {
             console.error('Error querying the database:', err);
-            return res.status(500).json(responseFormatter(false, "Database error", err));
+            return res.status(500).json(responseFormatter(false, "Database error"));
         }
 
         if (results.some((adminRow) => adminRow.email.toLowerCase() === email.toLowerCase())) {
@@ -55,7 +55,7 @@ exports.registerAdmin = (req, res) => {
         bcrypt.hash(password, 10, (err, hash) => {
             if (err) {
                 console.error('Error hashing the password:', err);
-                return res.status(500).json(responseFormatter(false, "Error hashing password", err));
+                return res.status(500).json(responseFormatter(false, "Error hashing password"));
             }
 
             // Insert new admin into DB
@@ -63,7 +63,7 @@ exports.registerAdmin = (req, res) => {
                 [name, email, phone_no, hash, role], (err, results) => {
                     if (err) {
                         console.error('Error inserting into the database:', err);
-                        return res.status(500).json(responseFormatter(false, "Database error", err));
+                        return res.status(500).json(responseFormatter(false, "Database error"));
                     }
 
                     // Fetch the newly created admin data
@@ -71,7 +71,7 @@ exports.registerAdmin = (req, res) => {
                         (err, newAdmin) => {
                             if (err) {
                                 console.error('Error querying the database:', err);
-                                return res.status(500).json(responseFormatter(false, "Database error", err));
+                                return res.status(500).json(responseFormatter(false, "Database error"));
                             }
 
                             const admin = newAdmin[0];
@@ -85,7 +85,7 @@ exports.registerAdmin = (req, res) => {
                                 [token, lastLogin, admin.id], (err) => {
                                     if (err) {
                                         console.error('Error updating the database with token:', err);
-                                        return res.status(500).json(responseFormatter(false, "Database error", err));
+                                        return res.status(500).json(responseFormatter(false, "Database error"));
                                     }
 
                                     // Return response with sanitized admin data and token
@@ -121,7 +121,7 @@ exports.loginAdmin = (req, res) => {
         (err, results) => {
             if (err) {
                 console.error('Error querying the database:', err);
-                return res.status(500).json(responseFormatter(false, "Database error", err));
+                return res.status(500).json(responseFormatter(false, "Database error"));
             }
 
             if (results.length === 0) {
@@ -134,7 +134,7 @@ exports.loginAdmin = (req, res) => {
             bcrypt.compare(password, admin.password, (err, isMatch) => {
                 if (err) {
                     console.error('Error comparing passwords:', err);
-                    return res.status(500).json(responseFormatter(false, "Error comparing passwords", err));
+                    return res.status(500).json(responseFormatter(false, "Error comparing passwords"));
                 }
 
                 if (!isMatch) {
@@ -210,7 +210,7 @@ exports.getAdmins = (req, res) => {
     db.query("SELECT id, name, email, phone_no, role, status FROM admins", (err, results) => {
         if (err) {
             console.error('Error querying the database:', err);
-            return res.status(500).json(responseFormatter(false, "Database error", err));
+            return res.status(500).json(responseFormatter(false, "Database error"));
         }
 
         // Map through results and return sanitized data
@@ -232,8 +232,15 @@ exports.updateAdmin = (req, res) => {
     const { id } = req.params;
     const { name, email, phone_no, role, status } = req.body;
 
+    if (!Number.isInteger(Number(id)) || Number(id) <= 0) {
+        return res.status(400).json(responseFormatter(false, "Invalid admin ID"));
+    }
     if (!name || !email || !phone_no || !role || !status) {
         return res.status(400).json(responseFormatter(false, "All fields are required"));
+    }
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,6}$/;
+    if (!emailRegex.test(email) || role !== 'admin' || !['active', 'inactive'].includes(status)) {
+        return res.status(400).json(responseFormatter(false, "Invalid email, role, or status"));
     }
 
     // Update admin details
@@ -241,7 +248,7 @@ exports.updateAdmin = (req, res) => {
         [name, email, phone_no, role, status, id], (err, results) => {
             if (err) {
                 console.error('Error updating the database:', err);
-                return res.status(500).json(responseFormatter(false, "Database error", err));
+                return res.status(500).json(responseFormatter(false, "Database error"));
             }
 
             // Fetch the updated admin details
@@ -249,7 +256,11 @@ exports.updateAdmin = (req, res) => {
                 [id], (err, updatedAdmin) => {
                     if (err) {
                         console.error('Error querying the database:', err);
-                        return res.status(500).json(responseFormatter(false, "Database error", err));
+                        return res.status(500).json(responseFormatter(false, "Database error"));
+                    }
+
+                    if (!updatedAdmin.length) {
+                        return res.status(404).json(responseFormatter(false, "Admin not found"));
                     }
 
                     const adminData = {
@@ -269,13 +280,37 @@ exports.updateAdmin = (req, res) => {
 // Delete admin
 exports.deleteAdmin = (req, res) => {
     const { id } = req.params;
+    if (!Number.isInteger(Number(id)) || Number(id) <= 0) {
+        return res.status(400).json(responseFormatter(false, "Invalid admin ID"));
+    }
 
-    db.query("DELETE FROM admins WHERE id = ?", [id], (err, results) => {
+    db.query("SELECT COUNT(*) AS total FROM admins WHERE status = 'active'", (countErr, countRows) => {
+        if (countErr) {
+            console.error('Error checking active admin count:', countErr);
+            return res.status(500).json(responseFormatter(false, "Database error"));
+        }
+        db.query("SELECT status FROM admins WHERE id = ?", [id], (checkErr, adminRows) => {
+            if (checkErr) {
+                console.error('Error checking admin:', checkErr);
+                return res.status(500).json(responseFormatter(false, "Database error"));
+            }
+            if (!adminRows.length) return res.status(404).json(responseFormatter(false, "Admin not found"));
+            if (adminRows[0].status === 'active' && Number(countRows[0].total) <= 1) {
+                return res.status(409).json(responseFormatter(false, "Cannot delete the last active admin"));
+            }
+
+            db.query("DELETE FROM admins WHERE id = ?", [id], (err, results) => {
         if (err) {
             console.error('Error deleting from the database:', err);
-            return res.status(500).json(responseFormatter(false, "Database error", err));
+            return res.status(500).json(responseFormatter(false, "Database error"));
         }
 
-        res.json(responseFormatter(true, "Admin deleted successfully", null));
+                if (err) {
+                    console.error('Error deleting from the database:', err);
+                    return res.status(500).json(responseFormatter(false, "Database error"));
+                }
+                res.json(responseFormatter(true, "Admin deleted successfully", null));
+            });
+        });
     });
 };
