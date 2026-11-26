@@ -239,7 +239,7 @@ exports.updateAdmin = (req, res) => {
         return res.status(400).json(responseFormatter(false, "All fields are required"));
     }
     const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,6}$/;
-    if (!emailRegex.test(email) || role !== 'admin' || !['active', 'inactive'].includes(status)) {
+    if (!emailRegex.test(email) || role !== 'admin' || !['active', 'inactive', 'suspended'].includes(status)) {
         return res.status(400).json(responseFormatter(false, "Invalid email, role, or status"));
     }
 
@@ -299,12 +299,7 @@ exports.deleteAdmin = (req, res) => {
                 return res.status(409).json(responseFormatter(false, "Cannot delete the last active admin"));
             }
 
-            db.query("DELETE FROM admins WHERE id = ?", [id], (err, results) => {
-        if (err) {
-            console.error('Error deleting from the database:', err);
-            return res.status(500).json(responseFormatter(false, "Database error"));
-        }
-
+            db.query("DELETE FROM admins WHERE id = ?", [id], (err) => {
                 if (err) {
                     console.error('Error deleting from the database:', err);
                     return res.status(500).json(responseFormatter(false, "Database error"));
