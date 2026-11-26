@@ -204,7 +204,15 @@ router.get('/unassigned-users', authenticateToken, checkManagerAccess, (req, res
 router.post('/assign-users', authenticateToken, checkManagerAccess, (req, res) => {
     const { manager_id, user_ids } = req.body;
 
-    if (!manager_id || !user_ids || !Array.isArray(user_ids) || user_ids.length === 0) {
+    if (req.user.role === 'manager' && Number(manager_id) !== Number(req.user.id)) {
+        return res.status(403).json({
+            success: false,
+            message: 'Managers can only assign users to their own team'
+        });
+    }
+
+    if (!manager_id || !user_ids || !Array.isArray(user_ids) || user_ids.length === 0 ||
+        !Number.isInteger(Number(manager_id)) || user_ids.some(id => !Number.isInteger(Number(id)) || Number(id) <= 0)) {
         return res.status(400).json({
             success: false,
             message: 'Invalid request parameters'
@@ -493,6 +501,12 @@ router.get('/:managerId/team', authenticateToken, checkManagerAccess, async (req
 router.get('/:managerId/team-members', authenticateToken, checkManagerAccess, async (req, res) => {
     try {
         const parsedManagerId = parseInt(req.params.managerId);
+        if (!Number.isInteger(parsedManagerId) || parsedManagerId <= 0) {
+            return res.status(400).json({ success: false, message: 'Invalid manager ID' });
+        }
+        if (req.user.role === 'manager' && parsedManagerId !== Number(req.user.id)) {
+            return res.status(403).json({ success: false, message: 'You can only view your own team members' });
+        }
         
         const query = `
             SELECT 
