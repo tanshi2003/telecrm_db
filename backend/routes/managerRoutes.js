@@ -268,6 +268,12 @@ router.post('/assign-leads', authenticateToken, checkManagerAccess, async (req, 
         const { userId, leadIds } = req.body;
         const managerId = req.user.id;
 
+        if (!Number.isInteger(Number(userId)) || Number(userId) <= 0 ||
+            !Array.isArray(leadIds) || leadIds.length === 0 ||
+            leadIds.some(id => !Number.isInteger(Number(id)) || Number(id) <= 0)) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID or lead IDs' });
+        }
+
         // First, verify the user belongs to this manager's team
         const [userCheck] = await db.promise().query(
             'SELECT id FROM users WHERE id = ? AND manager_id = ?',
@@ -406,21 +412,22 @@ router.get('/team-performance', authenticateToken, checkManagerAccess, async (re
                 u.name,
                 COUNT(DISTINCT l.id) as total_leads_handled,
                 (
-                    SELECT COUNT(DISTINCT c.id) 
-                    FROM campaigns c
-                    WHERE c.manager_id = u.manager_id
+                    SELECT COUNT(DISTINCT cu.campaign_id)
+                    FROM campaign_users cu
+                    WHERE cu.user_id = u.id
                 ) as total_campaigns_handled,
                 COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) as conversions,
                 ROUND((COUNT(CASE WHEN l.status = 'Converted' THEN 1 END) * 100.0 / NULLIF(COUNT(DISTINCT l.id), 0)), 2) as conversion_rate,
                 (
-                    SELECT COUNT(DISTINCT c.id) 
-                    FROM campaigns c
-                    WHERE c.manager_id = u.manager_id AND c.status = 'active'
+                    SELECT COUNT(DISTINCT c.id)
+                    FROM campaign_users cu
+                    INNER JOIN campaigns c ON c.id = cu.campaign_id
+                    WHERE cu.user_id = u.id AND LOWER(c.status) = 'active'
                 ) as active_campaigns
             FROM users u
             LEFT JOIN leads l ON l.assigned_to = u.id
             WHERE u.manager_id = ? AND u.role IN ('caller', 'field_employee')
-            GROUP BY u.id, u.name
+            GROUP BY u.id, u.name, u.manager_id
             ORDER BY total_leads_handled DESC`;
 
         const results = await new Promise((resolve, reject) => {
