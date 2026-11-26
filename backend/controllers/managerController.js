@@ -269,21 +269,23 @@ const getUnassignedLeads = (req, res) => {
             u.id as assigned_to
         FROM leads l 
         LEFT JOIN users u ON l.assigned_to = u.id 
-        WHERE l.assigned_to IS NULL 
-        OR l.assigned_to IN (
-            SELECT id FROM users 
-            WHERE manager_id = ?
+        WHERE l.manager_id = ?
+        AND (
+            l.assigned_to IS NULL
+            OR l.assigned_to IN (
+                SELECT id FROM users
+                WHERE manager_id = ?
+            )
         )
         ORDER BY l.created_at DESC
     `;
 
-    db.query(query, [managerId], (err, leads) => {
+    db.query(query, [managerId, managerId], (err, leads) => {
         if (err) {
             console.error('Error fetching unassigned leads:', err);
             return res.status(500).json({
                 success: false,
-                message: 'Failed to fetch unassigned leads',
-                error: err.message
+                message: 'Failed to fetch unassigned leads'
             });
         }
 
