@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { FaUser, FaBullhorn, FaChartLine, FaPencilAlt, FaPhone } from "react-icons/fa";
 import { toast } from 'react-toastify';
 import { AuthContext } from "../context/AuthContext";
-import Sidebar from "../components/Sidebar";
 import io from 'socket.io-client';  
 
 // Add base URL constant
@@ -745,7 +744,7 @@ const FieldDashboard = () => {
 
   return (
     <div className="relative flex min-h-screen">
-      <Sidebar user={user} />
+      
       <div className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold">Field Employee Dashboard</h1>
