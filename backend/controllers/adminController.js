@@ -25,13 +25,14 @@ exports.registerAdmin = (req, res) => {
     }
 
     // Check if admin already exists
-    db.query(`SELECT email FROM admins`, (err, results) => {
+    db.query(`SELECT id, email, status, role FROM admins`, (err, results) => {
         if (err) {
             console.error('Error querying the database:', err);
             return res.status(500).json(responseFormatter(false, "Database error"));
         }
 
-        if (results.some((adminRow) => adminRow.email.toLowerCase() === email.toLowerCase())) {
+        const normalizedEmail = email.trim().toLowerCase();
+        if (results.some((adminRow) => adminRow.email.toLowerCase() === normalizedEmail)) {
             return res.status(409).json(responseFormatter(false, "Admin already exists with this email"));
         }
 
@@ -46,8 +47,12 @@ exports.registerAdmin = (req, res) => {
             } catch (_) {
                 decoded = null;
             }
-            if (!decoded || decoded.role !== 'admin') {
+            if (!decoded || decoded.role !== 'admin' || !Number.isInteger(Number(decoded.id))) {
                 return res.status(403).json(responseFormatter(false, "Only an authenticated admin can register another admin"));
+            }
+            const requestingAdmin = results.find((row) => Number(row.id) === Number(decoded.id));
+            if (!requestingAdmin || requestingAdmin.role !== 'admin' || requestingAdmin.status !== 'active') {
+                return res.status(403).json(responseFormatter(false, "Admin authorization is no longer valid"));
             }
         }
 
@@ -60,7 +65,7 @@ exports.registerAdmin = (req, res) => {
 
             // Insert new admin into DB
             db.query(`INSERT INTO admins (name, email, phone_no, password, role) VALUES (?, ?, ?, ?, ?)`, 
-                [name, email, phone_no, hash, role], (err, results) => {
+                [name, normalizedEmail, phone_no, hash, role], (err, results) => {
                     if (err) {
                         console.error('Error inserting into the database:', err);
                         return res.status(500).json(responseFormatter(false, "Database error"));
@@ -129,6 +134,11 @@ exports.loginAdmin = (req, res) => {
             }
 
             const admin = results[0];
+
+            // Inactive or suspended admins must not authenticate.
+            if (admin.status !== 'active') {
+                return res.status(403).json(responseFormatter(false, "Admin account is not active"));
+            }
 
             // Compare the password
             bcrypt.compare(password, admin.password, (err, isMatch) => {
@@ -243,9 +253,20 @@ exports.updateAdmin = (req, res) => {
         return res.status(400).json(responseFormatter(false, "Invalid email, role, or status"));
     }
 
-    // Update admin details
-    db.query("UPDATE admins SET name = ?, email = ?, phone_no = ?, role = ?, status = ? WHERE id = ?", 
-        [name, email, phone_no, role, status, id], (err, results) => {
+    // Prevent case-insensitive duplicate emails and normalize storage.
+    const normalizedEmail = email.trim().toLowerCase();
+    db.query("SELECT id FROM admins WHERE LOWER(email) = ? AND id <> ? LIMIT 1", [normalizedEmail, id], (checkErr, duplicateRows) => {
+        if (checkErr) {
+            console.error('Error checking admin email:', checkErr);
+            return res.status(500).json(responseFormatter(false, "Database error"));
+        }
+        if (duplicateRows.length) {
+            return res.status(409).json(responseFormatter(false, "Email is already used by another admin"));
+        }
+
+        // Update admin details
+        db.query("UPDATE admins SET name = ?, email = ?, phone_no = ?, role = ?, status = ? WHERE id = ?", 
+        [name, normalizedEmail, phone_no, role, status, id], (err, results) => {
             if (err) {
                 console.error('Error updating the database:', err);
                 return res.status(500).json(responseFormatter(false, "Database error"));
@@ -275,6 +296,7 @@ exports.updateAdmin = (req, res) => {
                     res.json(responseFormatter(true, "Admin updated successfully", adminData));
                 });
         });
+    });
 };
 
 // Delete admin
