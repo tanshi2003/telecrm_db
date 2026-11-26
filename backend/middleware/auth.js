@@ -26,7 +26,29 @@ const auth = (req, res, next) => {
         });
       }
 
-      // Add user data to request
+      // Admin JWTs must also reflect the current database account status.
+      // This prevents deactivated/suspended admins from using previously issued tokens.
+      if (decoded.role === 'admin') {
+        return db.query("SELECT status FROM admins WHERE id = ? LIMIT 1", [decoded.id], (adminErr, adminRows) => {
+          if (adminErr) {
+            console.error('Admin status lookup failed:', adminErr);
+            return res.status(500).json({
+              success: false,
+              message: 'Authentication verification failed'
+            });
+          }
+          if (!adminRows.length || adminRows[0].status !== 'active') {
+            return res.status(401).json({
+              success: false,
+              message: 'Admin account is no longer active'
+            });
+          }
+          req.user = decoded;
+          next();
+        });
+      }
+
+      // Add user data to request for non-admin roles
       req.user = decoded;
       next();
     });
