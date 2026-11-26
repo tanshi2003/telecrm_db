@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
 import {  Users,
   Phone,
@@ -120,8 +119,6 @@ const ManagerDashboard = () => {
   return (
     <div className="relative flex min-h-screen">
       {/* Sidebar */}
-      {user && <Sidebar user={user} />}
-
       {/* Main Content */}
       <div className="flex-grow bg-gray-100 p-6 ml-64 mt-16">
         {/* Header Section */}
