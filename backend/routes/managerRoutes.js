@@ -346,26 +346,26 @@ router.get('/dashboard-stats', authenticateToken, checkManagerAccess, (req, res)
     Promise.all([
         new Promise((resolve, reject) => {
             db.query(queries.totalTeamMembers, [req.user.id], (err, results) => {
-                if (err) reject(err);
-                resolve(results[0].total);
+                if (err) return reject(err);
+                resolve(results?.[0]?.total ?? 0);
             });
         }),
         new Promise((resolve, reject) => {
             db.query(queries.activeTeamMembers, [req.user.id], (err, results) => {
-                if (err) reject(err);
-                resolve(results[0].total);
+                if (err) return reject(err);
+                resolve(results?.[0]?.total ?? 0);
             });
         }),
         new Promise((resolve, reject) => {
             db.query(queries.totalCampaigns, [req.user.id, req.user.id], (err, results) => {
-                if (err) reject(err);
-                resolve(results[0].total);
+                if (err) return reject(err);
+                resolve(results?.[0]?.total ?? 0);
             });
         }),
         new Promise((resolve, reject) => {
             db.query(queries.activeCampaigns, [req.user.id, req.user.id], (err, results) => {
-                if (err) reject(err);
-                resolve(results[0].total);
+                if (err) return reject(err);
+                resolve(results?.[0]?.total ?? 0);
             });
         })
     ])
