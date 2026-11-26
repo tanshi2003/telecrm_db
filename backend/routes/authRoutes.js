@@ -22,6 +22,12 @@ router.post('/login', (req, res) => {
         if (admins.length > 0) {
             // Admin login
             const admin = admins[0];
+            if (admin.status !== 'active') {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Admin account is not active'
+                });
+            }
             bcrypt.compare(password, admin.password, (err, isMatch) => {
                 if (err) {
                     return res.status(500).json({
